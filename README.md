@@ -1,4 +1,4 @@
-# Fuzzy Spam Filter
+# Inbox Guard
 
 Projekat iz predmeta **Meko računarstvo**. Sistem za detekciju spam emailova zasnovan na **fazi logici (fuzzy logic)** — umesto da email klasifikuje kao strogo spam ili ne-spam, sistem računa *stepen* sumnjivoosti na skali od 0 do 100%.
 
