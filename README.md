@@ -1,153 +1,186 @@
 # Inbox Guard
 
-Projekat iz predmeta **Meko računarstvo**. Sistem za detekciju spam emailova zasnovan na **fazi logici (fuzzy logic)** — umesto da email klasifikuje kao strogo spam ili ne-spam, sistem računa *stepen* sumnjivoosti na skali od 0 do 100%.
+**Inbox Guard** is a web-based email spam detection system based on **Fuzzy Logic**. Instead of classifying emails strictly as spam or not spam (binary classification), this system calculates the *degree of suspicion* on a scale from 0% to 100% using fuzzy inference. 
+
+The application features a responsive web interface with full bilingual support (**English** and **Serbian**).
 
 ---
 
-## Kako radi
+## Features
 
-Klasični spam filteri rade sa pravilima tipa "ako email sadrži reč FREE → spam". Fazi pristup je drugačiji: svaka karakteristika emaila se mapira na **stepen pripadnosti** fazi skupu, pravila se kombinuju kroz **Mamdani inferenciju**, a konačni score se dobija **centroid defazifikacijom**.
-
-Sistem analizira četiri ulazne karakteristike i proizvodi jedan izlaz:
-
-| Ulaz | Opis |
-|---|---|
-| `kljucne_reci` | Broj prepoznatih spam reči/fraza (0–10) |
-| `broj_linkova` | Broj URL linkova u emailu (0–10) |
-| `caps_procenat` | Procenat velikih slova u tekstu (0–100%) |
-| `interpunkcija` | Gustina uzvičnika i upitnika (0–100%) |
-
-Izlaz `spam_score` (0–100%) se klasifikuje u jednu od tri kategorije: **LEGITIMAN**, **SUMNJIVO**, ili **SPAM**.
+- **Fuzzy Inference System (FIS):** Employs Mamdani fuzzy inference to evaluate multiple email attributes simultaneously.
+- **Bilingual Interface:** Real-time translation toggle between English and Serbian.
+- **History Tracking:** View and recall previous checks performed during the active session.
+- **Sample Loader:** Instantly load random pre-defined test emails to see the system in action.
+- **Modern UI:** Sleek dark-mode dashboard styled with CSS.
 
 ---
 
-## Tehnologije
+## How It Works
 
-- **Python** — fazi logika (`scikit-fuzzy`, `numpy`, `scipy`)
-- **Flask** — web server i REST rute
-- **HTML + CSS** — korisnički interfejs
+Traditional spam filters use rigid rules (e.g., "if email contains *FREE* → spam"). The fuzzy approach maps features to **degrees of membership** in fuzzy sets, combines them using rules through Mamdani inference, and defuzzifies the result using the **centroid method** to produce a final score.
+
+### Input Variables (0–10 or 0–100%)
+The system extracts and analyzes four input features from the email text:
+
+| Input | Description | Range |
+|---|---|---|
+| `kljucne_reci` (Keywords) | Count of identified spam keywords/phrases | 0–10 |
+| `broj_linkova` (Links) | Total URL links found in the body | 0–10 |
+| `caps_procenat` (Caps % ) | Percentage of uppercase letters in the text | 0–100% |
+| `interpunkcija` (Punctuation) | Density of exclamation marks and question marks | 0–100% |
+
+The output `spam_score` (0–100%) is classified into one of three linguistic terms based on the highest membership degree: **LEGITIMATE** (LEGITIMAN), **SUSPICIOUS** (SUMNJIVO), or **SPAM** (SPAM).
 
 ---
 
-## Struktura projekta
+## Technology Stack
 
-```
+- **Backend:** Python 3 (Flask, `scikit-fuzzy`, `numpy`, `scipy`)
+- **Frontend:** HTML5, CSS3, Vanilla JavaScript (bilingual localization, interactive state management)
+
+---
+
+## Project Structure
+
+```text
 spam_filter/
 ├── fazi/
-│   ├── skupovi.py          # Definicije fazi skupova (trapezoid, trougao)
-│   ├── pravila.py          # Fazi pravila i fuzzifikacija ulaza
-│   ├── zakljucivanje.py    # Pokretanje FIS-a (fuzzy inference system)
-│   └── defazifikacija.py   # Centroid defazifikacija i određivanje kategorije
+│   ├── skupovi.py          # Fuzzy set definitions (trapezoidal and triangular membership functions)
+│   ├── pravila.py          # Fuzzy rules and fuzzification of inputs
+│   ├── zakljucivanje.py    # Main fuzzy inference controller
+│   └── defazifikacija.py   # Centroid defuzzification and category determination
 ├── veb/
 │   ├── static/
 │   │   ├── fonts/
 │   │   │   └── MonaSansVF[wght,opsz].woff2
-│   │   └── style.css       # Stilovi — tamna tema, responzivan layout
+│   │   ├── style.css       # Styling (Dark mode, responsive grid layout)
+│   │   └── ikona.svg       # Application logo
 │   └── sabloni/
-│       ├── index.html      # Glavna stranica sa formom i rezultatima
-│       └── rezultat.html   # HTML prikaz rezultata (fallback bez JS-a)
+│       └── index.html      # Main GUI page containing forms, history, and bilingual scripts
 ├── obrada_teksta/
-│   └── analizator.py       # Ekstrakcija karakteristika iz teksta emaila
-├── main.py                 # Flask aplikacija i rute
-├── potrebne_biblioteke.txt # Spisak zavisnosti
-├── ulazi_i_izlazi.txt      # Dokumentacija fazi varijabli
-├── primeri.txt             # Testni emailovi (separator: ---)
+│   └── analizator.py       # Email text analyzer (feature extraction and sample parsing)
+├── main.py                 # Flask web application entrypoint & REST API routes
+├── requirements.txt        # Python package dependencies
+├── primeri.txt             # Pre-configured test emails (separated by '---')
+├── Procfile                # Deployment configuration (web: python main.py)
 └── .gitignore
 ```
 
 ---
 
-## Instalacija i pokretanje
+## Installation & Running Locally
 
-```bash
-# Kloniranje repozitorijuma
-git clone https://github.com/DusanSl/Fuzzy-spam-filter.git
-cd spam_filter
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd spam_filter
+   ```
 
-# Instalacija zavisnosti
-pip install -r potrebne_biblioteke.txt
+2. **Set up a virtual environment (optional but recommended):**
+   ```bash
+   python -m venv .venv
+   # On Windows:
+   .venv\Scripts\activate
+   # On macOS/Linux:
+   source .venv/bin/activate
+   ```
 
-# Pokretanje
-python main.py
-```
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Aplikacija se pokreće na `http://localhost:5000`.
-
----
-
-## Fazi skupovi
-
-Svaka ulazna varijabla je podeljena na tri lingvistička termina. Krajnji skupovi su trapezoidni (drže kraj ose), srednji su trouglasti.
-
-**Ključne reči** `[0–10]`
-- `zanemarljive` — trapmf `[0, 0, 1, 3]`
-- `zastupljene` — trimf `[1, 4, 7]`
-- `dominantne` — trapmf `[5, 7, 10, 10]`
-
-**Broj linkova** `[0–10]`
-- `minimalni` — trapmf `[0, 0, 0, 1]`
-- `umereni` — trimf `[0, 1, 3]`
-- `brojni` — trapmf `[2, 4, 10, 10]`
-
-**CAPS procenat** `[0–100%]`
-- `uobicajen` — trapmf `[0, 0, 1, 10]`
-- `poviseni` — trimf `[7, 18, 35]`
-- `agresivan` — trapmf `[25, 45, 100, 100]`
-
-**Interpunkcija** `[0–100%]`
-- `retka` — trapmf `[0, 0, 2, 5]`
-- `umerena` — trimf `[3, 10, 20]`
-- `agresivna` — trapmf `[15, 25, 100, 100]`
-
-**Spam score** `[0–100]`
-- `score_legitiman` — trapmf `[0, 0, 10, 25]`
-- `score_sumnjiv` — trimf `[15, 35, 55]`
-- `score_spam` — trapmf `[45, 65, 100, 100]`
+4. **Run the Flask application:**
+   ```bash
+   python main.py
+   ```
+   The application will run locally at `http://127.0.0.1:5000`.
 
 ---
 
-## Fazi pravila
+## Fuzzy Sets Configuration
 
-| Pravilo | Uslov | Zaključak |
+The boundaries for membership functions are configured in [fazi/skupovi.py](file:///c:/Users/Win%2011/PycharmProjects/Spam%20filter/fazi/skupovi.py):
+
+* **Keywords** `[0–10]`
+  - `zanemarljive` (Negligible) — `trapmf [0, 0, 1, 3]`
+  - `zastupljene` (Present) — `trimf [1, 4, 7]`
+  - `dominantne` (Dominant) — `trapmf [5, 7, 10, 10]`
+
+* **Link Count** `[0–10]`
+  - `minimalni` (Minimal) — `trapmf [0, 0, 0, 1]`
+  - `umereni` (Moderate) — `trimf [0, 1, 3]`
+  - `brojni` (Numerous) — `trapmf [2, 4, 10, 10]`
+
+* **Caps Percentage** `[0–100%]`
+  - `uobicajen` (Normal) — `trapmf [0, 0, 1, 10]`
+  - `poviseni` (Elevated) — `trimf [7, 18, 35]`
+  - `agresivan` (Aggressive) — `trapmf [25, 45, 100, 100]`
+
+* **Punctuation** `[0–100%]`
+  - `retka` (Sparse) — `trapmf [0, 0, 2, 5]`
+  - `umerena` (Moderate) — `trimf [3, 10, 20]`
+  - `agresivna` (Aggressive) — `trapmf [15, 25, 100, 100]`
+
+* **Spam Score (Output)** `[0–100]`
+  - `score_legitiman` (Legitimate) — `trapmf [0, 0, 8, 20]`
+  - `score_sumnjiv` (Suspicious) — `trimf [20, 40, 65]`
+  - `score_spam` (Spam) — `trapmf [55, 75, 100, 100]`
+
+---
+
+## Fuzzy Rules
+
+The rules mapping fuzzy inputs to decisions are set up in [fazi/pravila.py]:
+
+| Rule | Condition | Consequent |
 |---|---|---|
-| p01 | zanemarljive AND minimalni AND uobicajen AND retka | legitiman |
-| p02 | zastupljene AND umereni AND poviseni AND umerena | sumnjiv |
-| p03 | zastupljene AND minimalni linkovi | sumnjiv |
-| p04 | (zanemarljive OR zastupljene) AND umereni linkovi | sumnjiv |
-| p05 | dominantne AND uobicajen caps | sumnjiv |
-| p06 | dominantne OR brojni | spam |
-| p07 | zastupljene AND (agresivan caps OR agresivna interpunkcija) | spam |
-| p08 | umereni linkovi AND (agresivan caps OR agresivna interpunkcija) | spam |
-| p09 | dominantne ključne reči | spam |
+| **p01** | `zanemarljive` (negligible) AND `minimalni` (minimal) AND `uobicajen` (normal) AND `retka` (sparse) | **LEGITIMATE** |
+| **p02** | `zastupljene` (present) AND `umereni` (moderate) AND `poviseni` (elevated) AND `umerena` (moderate) | **SUSPICIOUS** |
+| **p03** | `zastupljene` (present) AND `minimalni` (minimal) links | **SUSPICIOUS** |
+| **p04** | (`zanemarljive` (negligible) OR `zastupljene` (present)) AND `umereni` (moderate) links | **SUSPICIOUS** |
+| **p05** | `dominantne` (dominant) AND `uobicajen` (normal) caps | **SUSPICIOUS** |
+| **p06** | `dominantne` (dominant) OR `brojni` (numerous) | **SPAM** |
+| **p07** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
+| **p08** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
+| **p09** | `dominantne` (dominant) keywords | **SPAM** |                                                                             | **SPAM** |
 
 ---
 
-## API
+## API Documentation
 
 ### `POST /analiziraj`
 
-Prima JSON sa tekstom emaila, vraća rezultat analize.
+Analyzes an email's body text and returns the computed fuzzy attributes and classifications.
 
-**Zahtev:**
+**Request Body (JSON):**
 ```json
 {
   "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!"
 }
 ```
 
-**Odgovor:**
+**Response (JSON):**
 ```json
 {
-  "tekst": "...",
-  "kljucne_reci": 7,
-  "broj_linkova": 1,
-  "caps_procenat": 28.57,
-  "interpunkcija": 4.35,
-  "spam_score": 74.21,
-  "kategorija": "SPAM"
+  "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!", // Text
+  "kljucne_reci": 7,       // Keywords
+  "broj_linkova": 1,       // Link count
+  "caps_procenat": 50.00,  // Caps percentage
+  "interpunkcija": 7.14,   // Punctuation
+  "spam_score": 82.02,     // Spam score
+  "kategorija": "SPAM"     // Category
 }
 ```
 
 ### `GET /primer`
 
-Vraća nasumičan testni email iz `primeri.txt`.
+Returns a random pre-configured email string from `primeri.txt`.
+
+**Response (JSON):**
+```json
+{
+  "tekst": "Hi, just wanted to confirm our meeting tomorrow at 3pm..."
+}
+```
