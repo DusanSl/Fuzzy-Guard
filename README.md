@@ -157,7 +157,7 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
 **Request Body (JSON):**
 ```json
 {
-  "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!"
+  "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!" // Text
 }
 ```
 
@@ -181,6 +181,6 @@ Returns a random pre-configured email string from `primeri.txt`.
 **Response (JSON):**
 ```json
 {
-  "tekst": "Hi, just wanted to confirm our meeting tomorrow at 3pm..."
+  "tekst": "Hi, just wanted to confirm our meeting tomorrow at 3pm..." // Text
 }
 ```
