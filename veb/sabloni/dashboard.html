@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuzzy Guard</title>
+    <link rel="icon" href="{{ url_for('static', filename='ikona.svg') }}?" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ url_for('static', filename='izgled.css') }}">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-zaglavlje">
+            <div class="logo">Fuzzy Guard</div>
+            <div class="zaglavlje-dugmad">
+                <button class="jezik-dugme" id="jezik-dugme" onclick="promeniJezik()">Srpski</button>
+                <button class="meni-dugme" id="meni-dugme" onclick="toggleMeni()" aria-label="Menu" aria-expanded="false">☰</button>
+            </div>
+        </div>
+
+        <div class="sidebar-sadrzaj" id="sidebar-sadrzaj">
+            <div class="sidebar-dugmad">
+                <button class="sb-dugme sb-dugme-primarno" data-i18n="novaProvera" onclick="novaProvera()">New check</button>
+                <button class="sb-dugme sb-dugme-sekundarno" data-i18n="primerProvera" onclick="ucitajRandom()">Sample check</button>
+            </div>
+
+            <div class="sidebar-sekcija-naslov" data-i18n="prethodneProvere">PREVIOUS CHECKS</div>
+            <div class="istorija" id="istorija">
+            </div>
+        </div>
+    </aside>
+
+    <main class="glavni">
+
+        <div class="email-panel">
+
+            <div class="email-kartica" id="email-kartica">
+                <div class="email-od">
+                    <span class="email-od-labela" data-i18n="od">From:</span>
+                    <span class="email-od-vrednost" data-i18n="odVrednost">testing@spam-filter</span>
+                </div>
+                <textarea
+                    id="tekst"
+                    data-i18n-placeholder="placeholder"
+                    placeholder="Write or paste the email text here..."
+                    oninput="resetujRezultate()"
+                ></textarea>
+            </div>
+
+            <div class="akcija-red">
+                <button class="dugme-analiziraj" data-i18n="pokreniAnalizu" onclick="pokreniAnalizu()">
+                    Run analysis
+                </button>
+            </div>
+
+            <div class="rezultati-grid" id="rezultati-grid">
+                <div class="rezultat-kartica rezultat-score" id="kartica-score">
+                    <div class="rezultat-broj" id="vrednost-score">—</div>
+                    <div class="rezultat-labela" data-i18n="spamScore">SPAM SCORE</div>
+                    <div class="rezultat-indikator" id="indikator-score"></div>
+                </div>
+                <div class="rezultat-kartica" id="kartica-kljucne">
+                    <div class="rezultat-broj" id="vrednost-kljucne">—</div>
+                    <div class="rezultat-labela" data-i18n="kljucneReci">KEYWORDS</div>
+                </div>
+                <div class="rezultat-kartica" id="kartica-linkovi">
+                    <div class="rezultat-broj" id="vrednost-linkovi">—</div>
+                    <div class="rezultat-labela" data-i18n="brojLinkova">LINK COUNT</div>
+                </div>
+                <div class="rezultat-kartica" id="kartica-caps">
+                    <div class="rezultat-broj" id="vrednost-caps">—</div>
+                    <div class="rezultat-labela" data-i18n="caps">CAPS</div>
+                </div>
+                <div class="rezultat-kartica" id="kartica-interpunkcija">
+                    <div class="rezultat-broj" id="vrednost-interpunkcija">—</div>
+                    <div class="rezultat-labela" data-i18n="interpunkcija">PUNCTUATION</div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script src="{{ url_for('static', filename='engine.js') }}"></script>
+
+</body>
+</html>
