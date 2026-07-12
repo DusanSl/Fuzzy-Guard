@@ -1,8 +1,10 @@
 # Inbox Guard
 
-**Inbox Guard** is a web-based email spam detection system based on **Fuzzy Logic**. Instead of classifying emails strictly as spam or not spam (binary classification), this system calculates the *degree of suspicion* on a scale from 0% to 100% using fuzzy inference. 
+**Inbox Guard** is a web-based email spam detection system based on **Fuzzy Logic**. Instead of classifying emails strictly as spam or not spam (binary classification), this system calculates the *degree of suspicion* on a scale from 0% to 100% using fuzzy inference.
 
 The application features a responsive web interface with full bilingual support (**English** and **Serbian**).
+
+**Live website:** [dusan86.pythonanywhere.com](https://dusan86.pythonanywhere.com/)
 
 ---
 
@@ -16,11 +18,23 @@ The application features a responsive web interface with full bilingual support 
 
 ---
 
+## Screenshots
+
+**Legitimate email - low suspicion score:**
+
+![Legitimate email example](screenshots/Legit-example.webp)
+
+**Spam email - high suspicion score, flagged across all signals:**
+
+![Spam email example](screenshots/Spam-example.png)
+
+---
+
 ## How It Works
 
 Traditional spam filters use rigid rules (e.g., "if email contains *FREE* → spam"). The fuzzy approach maps features to **degrees of membership** in fuzzy sets, combines them using rules through Mamdani inference, and defuzzifies the result using the **centroid method** to produce a final score.
 
-### Input Variables (0–10 or 0–100%)
+### Input Variables (0-10 or 0-100%)
 The system extracts and analyzes four input features from the email text:
 
 | Input | Description | Range |
@@ -30,7 +44,7 @@ The system extracts and analyzes four input features from the email text:
 | `caps_procenat` (Caps % ) | Percentage of uppercase letters in the text | 0–100% |
 | `interpunkcija` (Punctuation) | Density of exclamation marks and question marks | 0–100% |
 
-The output `spam_score` (0–100%) is classified into one of three linguistic terms based on the highest membership degree: **LEGITIMATE** (LEGITIMAN), **SUSPICIOUS** (SUMNJIVO), or **SPAM** (SPAM).
+The output `spam_score` (0-100%) is classified into one of three linguistic terms based on the highest membership degree: **LEGITIMATE** (LEGITIMAN), **SUSPICIOUS** (SUMNJIVO), or **SPAM** (SPAM).
 
 ---
 
@@ -60,6 +74,9 @@ spam_filter/
 │       └── index.html      # Main GUI page containing forms, history, and bilingual scripts
 ├── obrada_teksta/
 │   └── analizator.py       # Email text analyzer (feature extraction and sample parsing)
+├── screenshots/
+│   ├── Legit-example.webp  # Legitimate email example screenshot
+│   └── Spam-example.png    # Spam email example screenshot
 ├── main.py                 # Flask web application entrypoint & REST API routes
 ├── requirements.txt        # Python package dependencies
 ├── primeri.txt             # Pre-configured test emails (separated by '---')
@@ -73,8 +90,8 @@ spam_filter/
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
-   cd spam_filter
+   git clone https://github.com/DusanSl/Fuzzy-spam-filter
+   cd Fuzzy-spam-filter
    ```
 
 2. **Set up a virtual environment (optional but recommended):**
@@ -101,7 +118,7 @@ spam_filter/
 
 ## Fuzzy Sets Configuration
 
-The boundaries for membership functions are configured in [fazi/skupovi.py](file:///c:/Users/Win%2011/PycharmProjects/Spam%20filter/fazi/skupovi.py):
+The boundaries for membership functions are configured in `fazi/skupovi.py`:
 
 * **Keywords** `[0–10]`
   - `zanemarljive` (Negligible) — `trapmf [0, 0, 1, 3]`
@@ -132,7 +149,7 @@ The boundaries for membership functions are configured in [fazi/skupovi.py](file
 
 ## Fuzzy Rules
 
-The rules mapping fuzzy inputs to decisions are set up in [fazi/pravila.py]:
+The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 
 | Rule | Condition | Consequent |
 |---|---|---|
@@ -144,7 +161,7 @@ The rules mapping fuzzy inputs to decisions are set up in [fazi/pravila.py]:
 | **p06** | `dominantne` (dominant) OR `brojni` (numerous) | **SPAM** |
 | **p07** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p08** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
-| **p09** | `dominantne` (dominant) keywords | **SPAM** |                                                                             | **SPAM** |
+| **p09** | `dominantne` (dominant) keywords | **SPAM** |
 
 ---
 
@@ -184,3 +201,25 @@ Returns a random pre-configured email string from `primeri.txt`.
   "tekst": "Hi, just wanted to confirm our meeting tomorrow at 3pm..." // Text
 }
 ```
+
+---
+
+## License
+
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](http://creativecommons.org/licenses/by-nc-sa/4.0/)
+
+This work is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+Full license: [LICENSE](LICENSE.txt) | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+
+**What this means:**
+
+- **Share** — You can view and fork this repository
+- **Adapt** — You can modify the code for educational purposes
+- **Attribution** — You must give appropriate credit and link to this repository
+- **NonCommercial** — You may not use this work for commercial purposes without permission
+- **ShareAlike** — Modified versions must use the same license
+
+**Copyright © 2026 Dušan Slankamenac**
+
+For commercial licensing inquiries: dusanslankamenac8@gmail.com
