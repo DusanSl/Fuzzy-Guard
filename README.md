@@ -1,6 +1,6 @@
-# Inbox Guard
+# Fuzzy Guard
 
-**Inbox Guard** is a web-based email spam detection system based on **Fuzzy Logic**. Instead of classifying emails strictly as spam or not spam (binary classification), this system calculates the *degree of suspicion* on a scale from 0% to 100% using fuzzy inference.
+**Fuzzy Guard** is a web-based email spam detection system based on **Fuzzy Logic**. Instead of classifying emails strictly as spam or not spam (binary classification), this system calculates the *degree of suspicion* on a scale from 0% to 100% using fuzzy inference.
 
 The application features a responsive web interface with full bilingual support (**English** and **Serbian**).
 
@@ -214,11 +214,11 @@ Full license: [LICENSE](LICENSE.txt) | [CC BY-NC-SA 4.0](https://creativecommons
 
 **What this means:**
 
-- **Share** — You can view and fork this repository
-- **Adapt** — You can modify the code for educational purposes
-- **Attribution** — You must give appropriate credit and link to this repository
-- **NonCommercial** — You may not use this work for commercial purposes without permission
-- **ShareAlike** — Modified versions must use the same license
+- **Share** - You can view and fork this repository
+- **Adapt** - You can modify the code for educational purposes
+- **Attribution** - You must give appropriate credit and link to this repository
+- **NonCommercial** - You may not use this work for commercial purposes without permission
+- **ShareAlike** - Modified versions must use the same license
 
 **Copyright © 2026 Dušan Slankamenac**
 
