@@ -32,7 +32,7 @@ The application features a responsive web interface with full bilingual support 
 
 ## How It Works
 
-Traditional spam filters use rigid rules (e.g., "if email contains *FREE* → spam"). The fuzzy approach maps features to **degrees of membership** in fuzzy sets, combines them using rules through Mamdani inference, and defuzzifies the result using the **centroid method** to produce a final score.
+Traditional spam filters use rigid rules (e.g., "if email contains *FREE* -> spam"). The fuzzy approach maps features to **degrees of membership** in fuzzy sets, combines them using rules through Mamdani inference, and defuzzifies the result using the **centroid method** to produce a final score.
 
 ### Input Variables (0-10 or 0-100%)
 The system extracts and analyzes four input features from the email text:
@@ -58,7 +58,7 @@ The output `spam_score` (0-100%) is classified into one of three linguistic term
 ## Project Structure
 
 ```text
-spam_filter/
+Fuzzy-Guard/
 ├── fazi/
 │   ├── skupovi.py          # Fuzzy set definitions (trapezoidal and triangular membership functions)
 │   ├── pravila.py          # Fuzzy rules and fuzzification of inputs
@@ -68,10 +68,11 @@ spam_filter/
 │   ├── static/
 │   │   ├── fonts/
 │   │   │   └── MonaSansVF[wght,opsz].woff2
-│   │   ├── style.css       # Styling (Dark mode, responsive grid layout)
+│   │   ├── izgled.css      # Styling (Dark mode, responsive grid layout)
+│   │   ├── engine.js       # Client-side logic: i18n, fetch calls, history rendering
 │   │   └── ikona.svg       # Application logo
 │   └── sabloni/
-│       └── index.html      # Main GUI page containing forms, history, and bilingual scripts
+│       └── dashboard.html  # Main GUI markup (forms, history panel, results grid)
 ├── obrada_teksta/
 │   └── analizator.py       # Email text analyzer (feature extraction and sample parsing)
 ├── screenshots/
@@ -83,38 +84,6 @@ spam_filter/
 ├── Procfile                # Deployment configuration (web: python main.py)
 └── .gitignore
 ```
-
----
-
-## Installation & Running Locally
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/DusanSl/Fuzzy-spam-filter
-   cd Fuzzy-spam-filter
-   ```
-
-2. **Set up a virtual environment (optional but recommended):**
-   ```bash
-   python -m venv .venv
-   # On Windows:
-   .venv\Scripts\activate
-   # On macOS/Linux:
-   source .venv/bin/activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run the Flask application:**
-   ```bash
-   python main.py
-   ```
-   The application will run locally at `http://127.0.0.1:5000`.
-
----
 
 ## Fuzzy Sets Configuration
 
@@ -162,6 +131,36 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | **p07** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p08** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p09** | `dominantne` (dominant) keywords | **SPAM** |
+
+---
+
+## Installation & Running Locally
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/DusanSl/Fuzzy-Guard
+   cd Fuzzy-Guard
+   ```
+
+2. **Set up a virtual environment (optional but recommended):**
+   ```bash
+   python -m venv .venv
+   # On Windows:
+   .venv\Scripts\activate
+   # On macOS/Linux:
+   source .venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Run the Flask application:**
+   ```bash
+   python main.py
+   ```
+   The application will run locally at `http://127.0.0.1:5000`.
 
 ---
 
