@@ -51,10 +51,7 @@ def analiziraj():
         "kategorija":    rezultat_fis["kategorija"],
     }
 
-    if request.is_json:
-        return jsonify(rezultat)
-
-    return render_template("rezultat.html", r=rezultat)
+    return jsonify(rezultat)
 
 
 if __name__ == "__main__":
