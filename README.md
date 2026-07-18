@@ -102,15 +102,18 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
 * **Caps Percentage** `[0–100%]`
   - `uobicajen` (Normal) — `trapmf [0, 0, 1, 10]`
   - `poviseni` (Elevated) — `trimf [7, 18, 35]`
-  - `agresivan` (Aggressive) — `trapmf [25, 45, 100, 100]`
+  - `blago_povisen` (Mildly Elevated) — `trimf [10, 35, 60]`
+  - `agresivan` (Aggressive) — `trapmf [60, 85, 100, 100]`
 
 * **Punctuation** `[0–100%]`
   - `retka` (Sparse) — `trapmf [0, 0, 2, 5]`
-  - `umerena` (Moderate) — `trimf [3, 10, 20]`
+  - `blago` (Mild) — `trimf [3, 15, 30]`
+  - `umerena` (Moderate) — `trimf [8, 15, 25]`
   - `agresivna` (Aggressive) — `trapmf [15, 25, 100, 100]`
 
 * **Spam Score (Output)** `[0–100]`
   - `score_legitiman` (Legitimate) — `trapmf [0, 0, 8, 20]`
+  - `score_legitiman_energicno` (Energetically Legitimate) — `trimf [10, 15, 20]`
   - `score_sumnjiv` (Suspicious) — `trimf [20, 40, 65]`
   - `score_spam` (Spam) — `trapmf [55, 75, 100, 100]`
 
@@ -123,14 +126,19 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | Rule | Condition | Consequent |
 |---|---|---|
 | **p01** | `zanemarljive` (negligible) AND `minimalni` (minimal) AND `uobicajen` (normal) AND `retka` (sparse) | **LEGITIMATE** |
-| **p02** | `zastupljene` (present) AND `umereni` (moderate) AND `poviseni` (elevated) AND `umerena` (moderate) | **SUSPICIOUS** |
-| **p03** | `zastupljene` (present) AND `minimalni` (minimal) links | **SUSPICIOUS** |
-| **p04** | (`zanemarljive` (negligible) OR `zastupljene` (present)) AND `umereni` (moderate) links | **SUSPICIOUS** |
-| **p05** | `dominantne` (dominant) AND `uobicajen` (normal) caps | **SUSPICIOUS** |
-| **p06** | `dominantne` (dominant) OR `brojni` (numerous) | **SPAM** |
-| **p07** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
-| **p08** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
-| **p09** | `dominantne` (dominant) keywords | **SPAM** |
+| **p02** | `blago` (mildly elevated) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
+| **p03** | `blago` (mild) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
+| **p04** | `zastupljene` (present) AND `umereni` (moderate) AND `poviseni` (elevated) AND `umerena` (moderate) | **SUSPICIOUS** |
+| **p05** | `zastupljene` (present) AND `minimalni` (minimal) links | **SUSPICIOUS** |
+| **p06** | (`zanemarljive` (negligible) OR `zastupljene` (present)) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **SUSPICIOUS** |
+| **p07** | `dominantne` (dominant) AND `uobicajen` (normal) caps | **SUSPICIOUS** |
+| **p08** | `agresivan` (aggressive) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **SUSPICIOUS** |
+| **p09** | `agresivna` (aggressive) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **SUSPICIOUS** |
+| **p10** | `dominantne` (dominant) keywords OR `brojni` (numerous) links | **SPAM** |
+| **p11** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
+| **p12** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
+| **p13** | `dominantne` (dominant) keywords | **SPAM** |
+| **p14** | (`zastupljene` (present) OR `dominantne` (dominant) keywords) AND (`umereni` (moderate) OR `brojni` (numerous) links) AND (`poviseni` (elevated) OR `agresivan` (aggressive) caps) | **SPAM** |
 
 ---
 
