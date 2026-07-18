@@ -3,10 +3,7 @@ from fazi.pravila import (
     fuzzifikuj,
     kontroler_spam_score,
 )
-from fazi.defazifikacija import (
-    defazifikuj,
-    odredi_kategoriju,
-)
+from fazi.defazifikacija import defazifikuj
 
 
 def pokreni_fis(
@@ -18,11 +15,15 @@ def pokreni_fis(
 
     mu = fuzzifikuj(val_kljucne, val_linkovi, val_caps, val_interpunkcija)
 
-    agregirani_skup = kontroler_spam_score(mu)
+    agregirani_skup, alfe = kontroler_spam_score(mu)
 
     spam_score = defazifikuj(agregirani_skup)
 
-    kategorija = odredi_kategoriju(spam_score)
+    if max(alfe.values()) == 0:
+        kategorija = "LEGITIMAN"
+    else:
+        prioritet = {"SPAM": 2, "SUMNJIVO": 1, "LEGITIMAN": 0}
+        kategorija = max(alfe, key=lambda k: (alfe[k], prioritet[k]))
 
     return {
         "spam_score": spam_score,

@@ -44,8 +44,6 @@ SPAM_RECNIK_FRAZE = [
     "ograničena ponuda", "besplatna nagrada", "osvojio si", "preuzmi nagradu",
 ]
 
-MIN_SLOVA_ZA_CAPS = 15
-
 PUTANJA_PRIMERI = Path(__file__).parent.parent / "primeri.txt"
 
 
@@ -65,7 +63,7 @@ def analiziraj_email(tekst: str) -> dict:
     broj_linkova = min(len(pronadjeni_linkovi), 10)
 
     sva_slova = [karakter for karakter in tekst if karakter.isalpha()]
-    if len(sva_slova) >= MIN_SLOVA_ZA_CAPS:
+    if sva_slova:
         velika_slova = sum(1 for karakter in sva_slova if karakter.isupper())
         caps_procenat = (velika_slova / len(sva_slova)) * 100
     else:
