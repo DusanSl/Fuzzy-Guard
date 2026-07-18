@@ -102,7 +102,7 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
 * **Caps Percentage** `[0–100%]`
   - `uobicajen` (Normal) — `trapmf [0, 0, 1, 10]`
   - `poviseni` (Elevated) — `trimf [7, 18, 35]`
-  - `blago_povisen` (Mildly Elevated) — `trimf [10, 35, 60]`
+  - `blago_povisen` (Mildly Elevated) — `trimf [10, 35, 65]`
   - `agresivan` (Aggressive) — `trapmf [60, 85, 100, 100]`
 
 * **Punctuation** `[0–100%]`
@@ -134,13 +134,13 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | **p07** | `dominantne` (dominant) AND `uobicajen` (normal) caps | **SUSPICIOUS** |
 | **p08** | `agresivan` (aggressive) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **SUSPICIOUS** |
 | **p09** | `agresivna` (aggressive) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **SUSPICIOUS** |
-| **p10** | `dominantne` (dominant) keywords OR `brojni` (numerous) links | **SPAM** |
-| **p11** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
-| **p12** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
-| **p13** | `dominantne` (dominant) keywords | **SPAM** |
-| **p14** | (`zastupljene` (present) OR `dominantne` (dominant) keywords) AND (`umereni` (moderate) OR `brojni` (numerous) links) AND (`poviseni` (elevated) OR `agresivan` (aggressive) caps) | **SPAM** |
-
----
+| **p10** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`poviseni` (elevated) OR `blago_povisen` (mildly elevated)) caps AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
+| **p11** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`umerena` (moderate) OR `blago` (mild)) punctuation AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
+| **p12** | `dominantne` (dominant) keywords OR `brojni` (numerous) links | **SPAM** |
+| **p13** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
+| **p14** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
+| **p15** | `dominantne` (dominant) keywords | **SPAM** |
+| **p16** | (`zastupljene` (present) OR `dominantne` (dominant) keywords) AND (`umereni` (moderate) OR `brojni` (numerous) links) AND (`poviseni` (elevated) OR `agresivan` (aggressive) caps) | **SPAM** |
 
 ## Installation & Running Locally
 
