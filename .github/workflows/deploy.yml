@@ -13,11 +13,11 @@ jobs:
           curl -X POST \
             -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"input": "bash deploy.sh\n"}' \
+            -d "$(printf '{"input": "cd ~/Fuzzy-spam-filter && bash deploy.sh\n"}')" \
             "https://www.pythonanywhere.com/api/v0/user/Dusan86/consoles/46473570/send_input/"
 
       - name: Reload web app
         run: |
           curl -X POST \
             -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
-            "https://www.pythonanywhere.com/api/v0/user/Dusan86/webapps/Dusan86.pythonanywhere.com/reload/"
+            -H "https://www.pythonanywhere.com/api/v0/user/Dusan86/webapps/Dusan86.pythonanywhere.com/reload/"
