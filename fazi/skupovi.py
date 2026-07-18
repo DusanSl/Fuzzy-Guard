@@ -22,7 +22,7 @@ caps_blago_povisen = fuzz.trimf(x_caps_procenat, [10, 35, 65])
 caps_agresivan = fuzz.trapmf(x_caps_procenat, [60, 85, 100, 100])
 
 interpunkcija_retka = fuzz.trapmf(x_interpunkcija, [0, 0, 2, 5])
-interpunkcija_blago = fuzz.trimf(x_interpunkcija, [3, 15, 30])
+interpunkcija_blago = fuzz.trimf(x_interpunkcija, [2, 6, 10])
 interpunkcija_umerena   = fuzz.trimf (x_interpunkcija, [8, 15, 25])
 interpunkcija_agresivna = fuzz.trapmf(x_interpunkcija, [15, 25, 100, 100])
 

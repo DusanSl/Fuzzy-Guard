@@ -107,7 +107,7 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
 
 * **Punctuation** `[0–100%]`
   - `retka` (Sparse) — `trapmf [0, 0, 2, 5]`
-  - `blago` (Mild) — `trimf [3, 15, 30]`
+  - `blago` (Mild) — `trimf [2, 6, 10]`
   - `umerena` (Moderate) — `trimf [8, 15, 25]`
   - `agresivna` (Aggressive) — `trapmf [15, 25, 100, 100]`
 
