@@ -18,7 +18,7 @@ linkovi_brojni    = fuzz.trapmf(x_broj_linkova, [2, 4, 10, 10])
 
 caps_uobicajen = fuzz.trapmf(x_caps_procenat, [0, 0, 1, 10])
 caps_poviseni  = fuzz.trimf (x_caps_procenat, [7, 18, 35])
-caps_blago_povisen = fuzz.trimf(x_caps_procenat, [10, 35, 60])
+caps_blago_povisen = fuzz.trimf(x_caps_procenat, [10, 35, 65])
 caps_agresivan = fuzz.trapmf(x_caps_procenat, [60, 85, 100, 100])
 
 interpunkcija_retka = fuzz.trapmf(x_interpunkcija, [0, 0, 2, 5])

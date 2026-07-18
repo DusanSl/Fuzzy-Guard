@@ -89,27 +89,41 @@ def kontroler_spam_score(mu: dict):
     p09 = min(inter["agresivna"], kljucne["zanemarljive"], linkovi["minimalni"])
     aktivacije.append(np.fmin(p09, score_sumnjiv))
     alfa_sumnjiv.append(p09)
+    p10 = min(
+        np.fmax(linkovi["umereni"], linkovi["brojni"]),
+        np.fmax(caps["poviseni"], caps["blago"]),
+        kljucne["zanemarljive"],
+    )
+    aktivacije.append(np.fmin(p10, score_sumnjiv))
+    alfa_sumnjiv.append(p10)
+    p11 = min(
+        np.fmax(linkovi["umereni"], linkovi["brojni"]),
+        np.fmax(inter["umerena"], inter["blago"]),
+        kljucne["zanemarljive"],
+    )
+    aktivacije.append(np.fmin(p11, score_sumnjiv))
+    alfa_sumnjiv.append(p11)
 
     # SPAM
-    p10 = np.fmax(kljucne["dominantne"], linkovi["brojni"])
-    aktivacije.append(np.fmin(p10, score_spam))
-    alfa_spam.append(p10)
-    p11 = min(kljucne["zastupljene"], np.fmax(caps["agresivan"], inter["agresivna"]))
-    aktivacije.append(np.fmin(p11, score_spam))
-    alfa_spam.append(p11)
-    p12 = min(linkovi["umereni"], np.fmax(caps["agresivan"], inter["agresivna"]))
+    p12 = np.fmax(kljucne["dominantne"], linkovi["brojni"])
     aktivacije.append(np.fmin(p12, score_spam))
     alfa_spam.append(p12)
-    p13 = kljucne["dominantne"]
+    p13 = min(kljucne["zastupljene"], np.fmax(caps["agresivan"], inter["agresivna"]))
     aktivacije.append(np.fmin(p13, score_spam))
     alfa_spam.append(p13)
-    p14 = min(
+    p14 = min(linkovi["umereni"], np.fmax(caps["agresivan"], inter["agresivna"]))
+    aktivacije.append(np.fmin(p14, score_spam))
+    alfa_spam.append(p14)
+    p15 = kljucne["dominantne"]
+    aktivacije.append(np.fmin(p15, score_spam))
+    alfa_spam.append(p15)
+    p16 = min(
         np.fmax(kljucne["zastupljene"], kljucne["dominantne"]),
         np.fmax(linkovi["umereni"], linkovi["brojni"]),
         np.fmax(caps["poviseni"], caps["agresivan"])
     )
-    aktivacije.append(np.fmin(p14, score_spam))
-    alfa_spam.append(p14)
+    aktivacije.append(np.fmin(p16, score_spam))
+    alfa_spam.append(p16)
 
     agregirani_skup = np.fmax.reduce(aktivacije)
     alfe = {
