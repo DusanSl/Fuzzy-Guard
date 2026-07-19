@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-from obrada_teksta.analizator import analiziraj_email, ucitaj_random_primer
+from obrada_teksta.analizator import analiziraj_email, ucitaj_sve_primere
 from fazi.zakljucivanje import pokreni_fis
 import os
 
@@ -9,16 +9,26 @@ app = Flask(
     static_folder="veb/static",
 )
 
+@app.context_processor
+def cache_busting():
+    def verzija_fajla(putanja):
+        try:
+            puna_putanja = os.path.join(app.static_folder, putanja)
+            return int(os.path.getmtime(puna_putanja))
+        except OSError:
+            return 0
+    return dict(verzija_fajla=verzija_fajla)
 
 @app.route("/")
 def index():
     return render_template("dashboard.html")
 
 
-@app.route("/primer")
-def primer():
-    tekst = ucitaj_random_primer()
-    return jsonify({"tekst": tekst})
+@app.route("/primeri-svi")
+def primeri_svi():
+    jezik = request.args.get("jezik", "en")
+    lista = ucitaj_sve_primere(jezik)
+    return jsonify({"primeri": lista})
 
 
 @app.route("/analiziraj", methods=["POST"])

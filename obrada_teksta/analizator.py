@@ -3,23 +3,29 @@ import random
 from pathlib import Path
 
 SPAM_RECNIK_RECI = [
+    # Engleski
     "win", "winner", "won", "free", "click", "offer", "prize",
-    "congratulations", "claim", "cash", "bonus", "reward",
-    "urgent", "limited", "exclusive", "guarantee", "deal",
+    "congratulations", "claim", "cash", "bonus", "reward", "rewards",
+    "urgent", "limited", "exclusive", "guarantee", "guaranteed", "deal",
     "cheap", "discount", "income", "profit", "rich", "million", "dollar",
-    "money", "selected", "opportunity",
+    "dollars", "money", "selected", "opportunity",
+    "account", "verify", "unusual", "eligible", "refund", "confirm",
+    "update", "settings", "subscription", "expire", "expires", "renew",
+    "approved", "loan", "jackpot", "unlimited", "access",
 
+    # Srpski
     "pobedi", "pobednik", "pobedniku", "pobednika",
     "osvojio", "osvojili", "osvojite", "osvoji",
-    "besplatno", "besplatnu", "besplatni", "besplatna", "besplatne",
+    "besplatno", "besplatnu", "besplatni", "besplatna", "besplatne", "besplatan",
     "klikni", "kliknite", "kliknete",
     "ponuda", "ponude", "ponudu",
     "nagrada", "nagradu", "nagrade", "nagradi",
-    "čestitamo", "čestitamo", "čestitamo",
+    "čestitamo", "čestitam",
     "preuzmi", "preuzmite", "preuzmete", "preuzimite",
     "gotovina", "gotovinu", "gotovine",
     "hitno", "hitna", "hitni", "hitne",
     "ograničeno", "ograničena", "ograničenu", "ograničene", "ograničeni",
+    "neograničeno", "neograničena", "neograničenu", "neograničene", "neograničeni",
     "ekskluzivno", "ekskluzivna", "ekskluzivnu", "ekskluzivne", "ekskluzivni",
     "garantovano", "garantovana", "garantujemo", "garantovanu",
     "jeftino", "jeftina", "jeftine", "jeftini", "jeftinu",
@@ -30,25 +36,46 @@ SPAM_RECNIK_RECI = [
     "bogat", "bogata", "bogati", "bogatstvo",
     "milion", "miliona", "milione", "milionima",
     "dolar", "dolara", "dolare", "dolarima",
+    "dinar", "dinara", "dinare", "dinarima",
     "izabran", "izabrana", "izabrani", "izabrano", "izabrane",
     "prilika", "prilike", "priliku", "prilikama",
     "pogodba", "pogodbe", "pogodbu",
+    "nalog", "naloga", "nalogu",
+    "verifikuj", "verifikujte", "verifikuje",
+    "aktivnost", "aktivnosti",
+    "potvrdite", "potvrdi", "potvrdite",
+    "povraćaj", "povraćaja",
+    "ažuriranje", "ažurirajte", "ažurirate",
+    "podešavanja", "podešavanje",
+    "pretplata", "pretplatu", "pretplate",
+    "ističe", "ističu",
+    "obnovite", "obnovi", "obnova",
+    "pristup", "pristupa",
+    "kredit", "kredita",
+    "odobren", "odobrena", "odobreno",
+    "keš",
+    "naplatite", "naplati",
+    "dobitnik", "dobitnica", "dobitnika",
+    "džekpot", "džekpota",
 ]
 
 SPAM_RECNIK_FRAZE = [
     "buy now", "act now", "order now", "click here", "limited time",
     "limited offer", "free prize", "you won", "you have won",
     "claim now", "claim your", "get rich", "make money",
+    "gift card", "get paid", "lose access",
 
     "kupi sad", "deluj odmah", "naruči odmah", "klikni ovde",
     "ograničena ponuda", "besplatna nagrada", "osvojio si", "preuzmi nagradu",
+    "reaguj odmah",
 ]
 
 PUTANJA_PRIMERI = Path(__file__).parent.parent / "primeri.txt"
 
 
 def analiziraj_email(tekst: str) -> dict:
-    tekst_mali = tekst.lower()
+    tekst_bez_linkova = re.sub(r'https?://\S+', '', tekst)
+    tekst_mali = tekst_bez_linkova.lower()
 
     broj_kljucnih_reci = 0
     for rec in SPAM_RECNIK_RECI:
@@ -71,7 +98,6 @@ def analiziraj_email(tekst: str) -> dict:
 
     broj_uzvika = tekst.count('!')
     broj_upitnika = tekst.count('?')
-    tekst_bez_linkova = re.sub(r'https?://\S+', '', tekst)
     ukupno_karaktera = len(tekst_bez_linkova.replace(' ', ''))
     if ukupno_karaktera > 0:
         interpunkcija = round(((broj_uzvika + broj_upitnika) / ukupno_karaktera) * 100, 2)
@@ -86,18 +112,29 @@ def analiziraj_email(tekst: str) -> dict:
     }
 
 
-def ucitaj_random_primer() -> str:
-
+def ucitaj_sve_primere(jezik: str = "en") -> list:
     if not PUTANJA_PRIMERI.exists():
-        return f"Greška: Fajl nije pronađen na lokaciji {PUTANJA_PRIMERI}"
+        return []
 
     try:
         sadrzaj = PUTANJA_PRIMERI.read_text(encoding="utf-8")
-        primeri = [p.strip() for p in sadrzaj.split("---") if p.strip()]
+        blokovi = [b.strip() for b in sadrzaj.split("---") if b.strip()]
 
-        if not primeri:
-            return "Fajl je prazan ili nema separatora ---"
+        primeri_en = []
+        primeri_sr = []
 
-        return random.choice(primeri)
-    except Exception as e:
-        return f"Greška pri čitanju fajla: {str(e)}"
+        for blok in blokovi:
+            linije = blok.split("\n", 1)
+            if len(linije) < 2:
+                continue
+            tag = linije[0].strip().lower()
+            tekst = linije[1].strip()
+
+            if tag == "[en]":
+                primeri_en.append(tekst)
+            elif tag == "[sr]":
+                primeri_sr.append(tekst)
+
+        return primeri_sr if jezik == "sr" else primeri_en
+    except Exception:
+        return []
