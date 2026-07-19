@@ -75,10 +75,35 @@ function toggleMeni() {
     dugme.textContent = otvoren ? '✕' : '☰';
 }
 
+let primeriKes = { en: [], sr: [] };
+let preostaliIndeksi = { en: [], sr: [] };
+
+function promesaj(niz) {
+    const kopija = [...niz];
+    for (let i = kopija.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [kopija[i], kopija[j]] = [kopija[j], kopija[i]];
+    }
+    return kopija;
+}
+
 async function ucitajRandom() {
-    const odgovor = await fetch('/primer?jezik=' + trenutniJezik);
-    const podaci  = await odgovor.json();
-    document.getElementById('tekst').value = podaci.tekst;
+    const jezik = trenutniJezik;
+
+    if (primeriKes[jezik].length === 0) {
+        const odgovor = await fetch('/primeri-svi?jezik=' + jezik);
+        const podaci = await odgovor.json();
+        primeriKes[jezik] = podaci.primeri;
+    }
+
+    if (preostaliIndeksi[jezik].length === 0) {
+        preostaliIndeksi[jezik] = promesaj(
+            [...Array(primeriKes[jezik].length).keys()]
+        );
+    }
+
+    const indeks = preostaliIndeksi[jezik].pop();
+    document.getElementById('tekst').value = primeriKes[jezik][indeks];
     resetujRezultate();
 }
 

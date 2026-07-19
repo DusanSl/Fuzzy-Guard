@@ -85,11 +85,9 @@ def analiziraj_email(tekst: str) -> dict:
         "interpunkcija": float(interpunkcija),
     }
 
-
-def ucitaj_random_primer(jezik: str = "en") -> str:
-
+def ucitaj_sve_primere(jezik: str = "en") -> list:
     if not PUTANJA_PRIMERI.exists():
-        return f"Greška: Fajl nije pronađen na lokaciji {PUTANJA_PRIMERI}"
+        return []
 
     try:
         sadrzaj = PUTANJA_PRIMERI.read_text(encoding="utf-8")
@@ -110,11 +108,6 @@ def ucitaj_random_primer(jezik: str = "en") -> str:
             elif tag == "[sr]":
                 primeri_sr.append(tekst)
 
-        primeri = primeri_sr if jezik == "sr" else primeri_en
-
-        if not primeri:
-            return "Nema primera za izabrani jezik."
-
-        return random.choice(primeri)
-    except Exception as e:
-        return f"Greška pri čitanju fajla: {str(e)}"
+        return primeri_sr if jezik == "sr" else primeri_en
+    except Exception:
+        return []
