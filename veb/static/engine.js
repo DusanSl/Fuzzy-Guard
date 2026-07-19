@@ -76,7 +76,7 @@ function toggleMeni() {
 }
 
 async function ucitajRandom() {
-    const odgovor = await fetch('/primer');
+    const odgovor = await fetch('/primer?jezik=' + trenutniJezik);
     const podaci  = await odgovor.json();
     document.getElementById('tekst').value = podaci.tekst;
     resetujRezultate();

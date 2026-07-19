@@ -86,17 +86,34 @@ def analiziraj_email(tekst: str) -> dict:
     }
 
 
-def ucitaj_random_primer() -> str:
+def ucitaj_random_primer(jezik: str = "en") -> str:
 
     if not PUTANJA_PRIMERI.exists():
         return f"Greška: Fajl nije pronađen na lokaciji {PUTANJA_PRIMERI}"
 
     try:
         sadrzaj = PUTANJA_PRIMERI.read_text(encoding="utf-8")
-        primeri = [p.strip() for p in sadrzaj.split("---") if p.strip()]
+        blokovi = [b.strip() for b in sadrzaj.split("---") if b.strip()]
+
+        primeri_en = []
+        primeri_sr = []
+
+        for blok in blokovi:
+            linije = blok.split("\n", 1)
+            if len(linije) < 2:
+                continue
+            tag = linije[0].strip().lower()
+            tekst = linije[1].strip()
+
+            if tag == "[en]":
+                primeri_en.append(tekst)
+            elif tag == "[sr]":
+                primeri_sr.append(tekst)
+
+        primeri = primeri_sr if jezik == "sr" else primeri_en
 
         if not primeri:
-            return "Fajl je prazan ili nema separatora ---"
+            return "Nema primera za izabrani jezik."
 
         return random.choice(primeri)
     except Exception as e:

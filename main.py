@@ -17,7 +17,8 @@ def index():
 
 @app.route("/primer")
 def primer():
-    tekst = ucitaj_random_primer()
+    jezik = request.args.get("jezik", "en")
+    tekst = ucitaj_random_primer(jezik)
     return jsonify({"tekst": tekst})
 
 
