@@ -3,23 +3,29 @@ import random
 from pathlib import Path
 
 SPAM_RECNIK_RECI = [
+    # Engleski
     "win", "winner", "won", "free", "click", "offer", "prize",
-    "congratulations", "claim", "cash", "bonus", "reward",
-    "urgent", "limited", "exclusive", "guarantee", "deal",
+    "congratulations", "claim", "cash", "bonus", "reward", "rewards",
+    "urgent", "limited", "exclusive", "guarantee", "guaranteed", "deal",
     "cheap", "discount", "income", "profit", "rich", "million", "dollar",
-    "money", "selected", "opportunity",
+    "dollars", "money", "selected", "opportunity",
+    "account", "verify", "unusual", "eligible", "refund", "confirm",
+    "update", "settings", "subscription", "expire", "expires", "renew",
+    "approved", "loan", "jackpot", "unlimited", "access",
 
+    # Srpski
     "pobedi", "pobednik", "pobedniku", "pobednika",
     "osvojio", "osvojili", "osvojite", "osvoji",
-    "besplatno", "besplatnu", "besplatni", "besplatna", "besplatne",
+    "besplatno", "besplatnu", "besplatni", "besplatna", "besplatne", "besplatan",
     "klikni", "kliknite", "kliknete",
     "ponuda", "ponude", "ponudu",
     "nagrada", "nagradu", "nagrade", "nagradi",
-    "čestitamo", "čestitamo", "čestitamo",
+    "čestitamo", "čestitam",
     "preuzmi", "preuzmite", "preuzmete", "preuzimite",
     "gotovina", "gotovinu", "gotovine",
     "hitno", "hitna", "hitni", "hitne",
     "ograničeno", "ograničena", "ograničenu", "ograničene", "ograničeni",
+    "neograničeno", "neograničena", "neograničenu", "neograničene", "neograničeni",
     "ekskluzivno", "ekskluzivna", "ekskluzivnu", "ekskluzivne", "ekskluzivni",
     "garantovano", "garantovana", "garantujemo", "garantovanu",
     "jeftino", "jeftina", "jeftine", "jeftini", "jeftinu",
@@ -30,25 +36,46 @@ SPAM_RECNIK_RECI = [
     "bogat", "bogata", "bogati", "bogatstvo",
     "milion", "miliona", "milione", "milionima",
     "dolar", "dolara", "dolare", "dolarima",
+    "dinar", "dinara", "dinare", "dinarima",
     "izabran", "izabrana", "izabrani", "izabrano", "izabrane",
     "prilika", "prilike", "priliku", "prilikama",
     "pogodba", "pogodbe", "pogodbu",
+    "nalog", "naloga", "nalogu",
+    "verifikuj", "verifikujte", "verifikuje",
+    "aktivnost", "aktivnosti",
+    "potvrdite", "potvrdi", "potvrdite",
+    "povraćaj", "povraćaja",
+    "ažuriranje", "ažurirajte", "ažurirate",
+    "podešavanja", "podešavanje",
+    "pretplata", "pretplatu", "pretplate",
+    "ističe", "ističu",
+    "obnovite", "obnovi", "obnova",
+    "pristup", "pristupa",
+    "kredit", "kredita",
+    "odobren", "odobrena", "odobreno",
+    "keš",
+    "naplatite", "naplati",
+    "dobitnik", "dobitnica", "dobitnika",
+    "džekpot", "džekpota",
 ]
 
 SPAM_RECNIK_FRAZE = [
     "buy now", "act now", "order now", "click here", "limited time",
     "limited offer", "free prize", "you won", "you have won",
     "claim now", "claim your", "get rich", "make money",
+    "gift card", "get paid", "lose access",
 
     "kupi sad", "deluj odmah", "naruči odmah", "klikni ovde",
     "ograničena ponuda", "besplatna nagrada", "osvojio si", "preuzmi nagradu",
+    "reaguj odmah",
 ]
 
 PUTANJA_PRIMERI = Path(__file__).parent.parent / "primeri.txt"
 
 
 def analiziraj_email(tekst: str) -> dict:
-    tekst_mali = tekst.lower()
+    tekst_bez_linkova = re.sub(r'https?://\S+', '', tekst)
+    tekst_mali = tekst_bez_linkova.lower()
 
     broj_kljucnih_reci = 0
     for rec in SPAM_RECNIK_RECI:
@@ -71,7 +98,6 @@ def analiziraj_email(tekst: str) -> dict:
 
     broj_uzvika = tekst.count('!')
     broj_upitnika = tekst.count('?')
-    tekst_bez_linkova = re.sub(r'https?://\S+', '', tekst)
     ukupno_karaktera = len(tekst_bez_linkova.replace(' ', ''))
     if ukupno_karaktera > 0:
         interpunkcija = round(((broj_uzvika + broj_upitnika) / ukupno_karaktera) * 100, 2)
@@ -84,6 +110,7 @@ def analiziraj_email(tekst: str) -> dict:
         "caps_procenat": round(caps_procenat, 2),
         "interpunkcija": float(interpunkcija),
     }
+
 
 def ucitaj_sve_primere(jezik: str = "en") -> list:
     if not PUTANJA_PRIMERI.exists():
