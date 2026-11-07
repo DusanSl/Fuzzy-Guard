@@ -100,22 +100,24 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
   - `brojni` (Numerous): `trapmf [2, 4, 10, 10]`
 
 * **Caps Percentage** `[0-100%]`
-  - `uobicajen` (Normal): `trapmf [0, 0, 1, 10]`
+  - `uobicajen` (Normal): `trapmf [0, 0, 1, 12]`
   - `poviseni` (Elevated): `trimf [7, 18, 35]`
   - `blago_povisen` (Mildly Elevated): `trimf [10, 35, 65]`
-  - `agresivan` (Aggressive): `trapmf [60, 85, 100, 100]`
+  - `agresivan` (Aggressive): `trapmf [45, 70, 100, 100]`
 
 * **Punctuation** `[0-100%]`
   - `retka` (Sparse): `trapmf [0, 0, 2, 5]`
   - `blago` (Mild): `trimf [2, 6, 10]`
   - `umerena` (Moderate): `trimf [8, 15, 25]`
-  - `agresivna` (Aggressive): `trapmf [15, 25, 100, 100]`
+  - `agresivna` (Aggressive): `trapmf [8, 14, 100, 100]`
 
 * **Spam Score (Output)** `[0-100]`
-  - `score_legitiman` (Legitimate): `trapmf [0, 0, 8, 20]`
+  - `score_legitiman` (Legitimate): `trapmf [0, 0, 8, 18]`
   - `score_legitiman_energicno` (Energetically Legitimate): `trimf [10, 15, 20]`
-  - `score_sumnjiv` (Suspicious): `trimf [20, 40, 65]`
-  - `score_spam` (Spam): `trapmf [55, 75, 100, 100]`
+  - `score_blago_sumnjiv` (Mildly Suspicious): `trimf [24, 32, 40]`
+  - `score_sumnjiv` (Suspicious): `trimf [38, 47, 56]`
+  - `score_visoko_sumnjiv` (Highly Suspicious): `trimf [54, 64, 74]`
+  - `score_spam` (Spam): `trapmf [72, 84, 100, 100]`
 
 ---
 
@@ -128,12 +130,14 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | **p01** | `zanemarljive` (negligible) AND `minimalni` (minimal) AND `uobicajen` (normal) AND `retka` (sparse) | **LEGITIMATE** |
 | **p02** | `blago` (mildly elevated) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
 | **p03** | `blago` (mild) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
-| **p04** | `zastupljene` (present) AND `umereni` (moderate) AND `poviseni` (elevated) AND `umerena` (moderate) | **SUSPICIOUS** |
+| **p04** | `zastupljene` (present) AND `umereni` (moderate) AND `poviseni` (elevated) AND `umerena` (moderate) | **HIGH SUSPICION** |
 | **p05** | `zastupljene` (present) AND `minimalni` (minimal) links | **SUSPICIOUS** |
-| **p06** | (`zanemarljive` (negligible) OR `zastupljene` (present)) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **SUSPICIOUS** |
-| **p07** | `dominantne` (dominant) AND `uobicajen` (normal) caps | **SUSPICIOUS** |
-| **p08** | `agresivan` (aggressive) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **SUSPICIOUS** |
-| **p09** | `agresivna` (aggressive) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **SUSPICIOUS** |
+| **p06a** | `zanemarljive` (negligible) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **MILDLY SUSPICIOUS** |
+| **p06b** | `zastupljene` (present) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **SUSPICIOUS** |
+| **p06c** | `dominantne` (dominant) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **HIGH SUSPICION** |
+| **p07** | `dominantne` (dominant) AND `uobicajen` (normal) caps | **HIGH SUSPICION** |
+| **p08** | `agresivan` (aggressive) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **HIGH SUSPICION** |
+| **p09** | `agresivna` (aggressive) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **HIGH SUSPICION** |
 | **p10** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`poviseni` (elevated) OR `blago_povisen` (mildly elevated)) caps AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
 | **p11** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`umerena` (moderate) OR `blago` (mild)) punctuation AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
 | **p12** | `dominantne` (dominant) keywords OR `brojni` (numerous) links | **SPAM** |
@@ -193,7 +197,7 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
   "broj_linkova": 1,       // Link count
   "caps_procenat": 50.00,  // Caps percentage
   "interpunkcija": 7.14,   // Punctuation
-  "spam_score": 82.02,     // Spam score
+  "spam_score": 88.73,     // Spam score
   "kategorija": "SPAM"     // Category
 }
 ```

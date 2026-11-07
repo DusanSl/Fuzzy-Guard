@@ -4,7 +4,8 @@ from fazi.skupovi import (
     x_broj_linkova,  linkovi_minimalni,    linkovi_umereni,     linkovi_brojni,
     x_caps_procenat, caps_uobicajen,       caps_poviseni,       caps_blago_povisen, caps_agresivan,
     x_interpunkcija, interpunkcija_retka,  interpunkcija_blago, interpunkcija_umerena, interpunkcija_agresivna,
-    score_legitiman, score_legitiman_energicno, score_sumnjiv, score_spam,
+    score_legitiman, score_legitiman_energicno, score_blago_sumnjiv,
+    score_sumnjiv, score_visoko_sumnjiv, score_spam,
     stepen_pripadnosti,
 )
 
@@ -42,93 +43,65 @@ def fuzzifikuj(
 
 
 def kontroler_spam_score(mu: dict):
-    kljucne = mu["kljucne_reci"]
-    linkovi = mu["broj_linkova"]
-    caps    = mu["caps_procenat"]
-    inter   = mu["interpunkcija"]
+    k = mu["kljucne_reci"]
+    l = mu["broj_linkova"]
+    c = mu["caps_procenat"]
+    i = mu["interpunkcija"]
 
-    aktivacije = []
-    alfa_legitiman = []
-    alfa_sumnjiv   = []
-    alfa_spam      = []
+    # (naziv, jacina, izlazni skup, kategorija)
+    # Jacina je fuzzy AND (min) / OR (max) nad stepenima pripadnosti.
+    pravila = [
+        # LEGITIMNO
+        ("p01", min(k["zanemarljive"], l["minimalni"], c["uobicajen"], i["retka"]),
+         score_legitiman, "LEGITIMAN"),
+        ("p02", min(c["blago"], k["zanemarljive"], l["minimalni"]),
+         score_legitiman_energicno, "LEGITIMAN"),
+        ("p03", min(i["blago"], k["zanemarljive"], l["minimalni"]),
+         score_legitiman_energicno, "LEGITIMAN"),
 
-    # LEGITIMATE
-    p01 = min(kljucne["zanemarljive"], linkovi["minimalni"], caps["uobicajen"], inter["retka"])
-    aktivacije.append(np.fmin(p01, score_legitiman))
-    alfa_legitiman.append(p01)
+        # BLAGO SUMNJIVO - cist tekst sa jednim do dva linka
+        ("p06a", min(k["zanemarljive"], l["umereni"], c["uobicajen"], i["retka"]),
+         score_blago_sumnjiv, "SUMNJIVO"),
 
-    # LEGITIMATE_ENERGETIC
-    p02 = min(caps["blago"], kljucne["zanemarljive"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p02, score_legitiman_energicno))
-    alfa_legitiman.append(p02)
-    p03 = min(inter["blago"], kljucne["zanemarljive"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p03, score_legitiman_energicno))
-    alfa_legitiman.append(p03)
+        # SUMNJIVO - prisutne kljucne reci, ostalo je jos uobicajeno
+        ("p05",  min(k["zastupljene"], l["minimalni"]),
+         score_sumnjiv, "SUMNJIVO"),
+        ("p06b", min(k["zastupljene"], l["umereni"], c["uobicajen"], i["retka"]),
+         score_sumnjiv, "SUMNJIVO"),
+        ("p10",  min(max(l["umereni"], l["brojni"]), max(c["poviseni"], c["blago"]), k["zanemarljive"]),
+         score_sumnjiv, "SUMNJIVO"),
+        ("p11",  min(max(l["umereni"], l["brojni"]), max(i["umerena"], i["blago"]), k["zanemarljive"]),
+         score_sumnjiv, "SUMNJIVO"),
+        # VISOKO SUMNJIVO - jedan jak signal ili cetiri umerena istovremeno
+        ("p04",  min(k["zastupljene"], l["umereni"], c["poviseni"], i["umerena"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+        ("p06c", min(k["dominantne"], l["umereni"], c["uobicajen"], i["retka"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+        ("p07",  min(k["dominantne"], c["uobicajen"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+        ("p08",  min(c["agresivan"], k["zanemarljive"], l["minimalni"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+        ("p09",  min(i["agresivna"], k["zanemarljive"], l["minimalni"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
 
-    # SUSPICIOUS
-    p04 = min(kljucne["zastupljene"], linkovi["umereni"], caps["poviseni"], inter["umerena"])
-    aktivacije.append(np.fmin(p04, score_sumnjiv))
-    alfa_sumnjiv.append(p04)
-    p05 = min(kljucne["zastupljene"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p05, score_sumnjiv))
-    alfa_sumnjiv.append(p05)
-    p06 = min(
-        np.fmax(kljucne["zanemarljive"], kljucne["zastupljene"]),
-        linkovi["umereni"],
-        caps["uobicajen"],
-        inter["retka"],
-    )
-    aktivacije.append(np.fmin(p06, score_sumnjiv))
-    alfa_sumnjiv.append(p06)
-    p07 = min(kljucne["dominantne"], caps["uobicajen"])
-    aktivacije.append(np.fmin(p07, score_sumnjiv))
-    alfa_sumnjiv.append(p07)
-    p08 = min(caps["agresivan"], kljucne["zanemarljive"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p08, score_sumnjiv))
-    alfa_sumnjiv.append(p08)
-    p09 = min(inter["agresivna"], kljucne["zanemarljive"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p09, score_sumnjiv))
-    alfa_sumnjiv.append(p09)
-    p10 = min(
-        np.fmax(linkovi["umereni"], linkovi["brojni"]),
-        np.fmax(caps["poviseni"], caps["blago"]),
-        kljucne["zanemarljive"],
-    )
-    aktivacije.append(np.fmin(p10, score_sumnjiv))
-    alfa_sumnjiv.append(p10)
-    p11 = min(
-        np.fmax(linkovi["umereni"], linkovi["brojni"]),
-        np.fmax(inter["umerena"], inter["blago"]),
-        kljucne["zanemarljive"],
-    )
-    aktivacije.append(np.fmin(p11, score_sumnjiv))
-    alfa_sumnjiv.append(p11)
+        # SPAM
+        ("p12", np.fmax(k["dominantne"], l["brojni"]), score_spam, "SPAM"),
+        ("p13", min(k["zastupljene"], np.fmax(c["agresivan"], i["agresivna"])),
+         score_spam, "SPAM"),
+        ("p14", min(l["umereni"], np.fmax(c["agresivan"], i["agresivna"])),
+         score_spam, "SPAM"),
+        ("p15", k["dominantne"], score_spam, "SPAM"),
+        ("p16", min(max(k["zastupljene"], k["dominantne"]),
+                    max(l["umereni"], l["brojni"]),
+                    max(c["poviseni"], c["agresivan"])),
+         score_spam, "SPAM"),
+    ]
 
-    # SPAM
-    p12 = np.fmax(kljucne["dominantne"], linkovi["brojni"])
-    aktivacije.append(np.fmin(p12, score_spam))
-    alfa_spam.append(p12)
-    p13 = min(kljucne["zastupljene"], np.fmax(caps["agresivan"], inter["agresivna"]))
-    aktivacije.append(np.fmin(p13, score_spam))
-    alfa_spam.append(p13)
-    p14 = min(linkovi["umereni"], np.fmax(caps["agresivan"], inter["agresivna"]))
-    aktivacije.append(np.fmin(p14, score_spam))
-    alfa_spam.append(p14)
-    p15 = kljucne["dominantne"]
-    aktivacije.append(np.fmin(p15, score_spam))
-    alfa_spam.append(p15)
-    p16 = min(
-        np.fmax(kljucne["zastupljene"], kljucne["dominantne"]),
-        np.fmax(linkovi["umereni"], linkovi["brojni"]),
-        np.fmax(caps["poviseni"], caps["agresivan"])
-    )
-    aktivacije.append(np.fmin(p16, score_spam))
-    alfa_spam.append(p16)
-
+    aktivacije = [np.fmin(jacina, skup) for _, jacina, skup, _ in pravila]
     agregirani_skup = np.fmax.reduce(aktivacije)
-    alfe = {
-        "LEGITIMAN": max(alfa_legitiman),
-        "SUMNJIVO":  max(alfa_sumnjiv),
-        "SPAM":      max(alfa_spam),
-    }
+
+    alfe = {"LEGITIMAN": 0.0, "SUMNJIVO": 0.0, "SPAM": 0.0}
+    for _, jacina, _, kategorija in pravila:
+        alfe[kategorija] = max(alfe[kategorija], float(jacina))
+
     return agregirani_skup, alfe

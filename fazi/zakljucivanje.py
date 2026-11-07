@@ -20,7 +20,10 @@ def pokreni_fis(
     spam_score = defazifikuj(agregirani_skup)
 
     if max(alfe.values()) == 0:
-        kategorija = "LEGITIMAN"
+        # Nijedno pravilo nije aktivirano: odsustvo dokaza nije dokaz odsustva.
+        # Takav email ide na proveru, nikako u LEGITIMAN.
+        spam_score = 47.0
+        kategorija = "SUMNJIVO"
     else:
         prioritet = {"SPAM": 2, "SUMNJIVO": 1, "LEGITIMAN": 0}
         kategorija = max(alfe, key=lambda k: (alfe[k], prioritet[k]))
