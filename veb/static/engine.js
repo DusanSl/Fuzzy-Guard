@@ -17,6 +17,17 @@ const prevodi = {
         brojLinkova: 'BROJ LINKOVA',
         caps: 'CAPS',
         interpunkcija: 'INTERPUNKCIJA',
+        zasto: 'Zašto?',
+        ocisti: 'Očisti',
+        kopiraj: 'Kopiraj rezultat',
+        kopirano: 'Kopirano!',
+        naslovObjasnjenja: 'Zašto ovaj rezultat?',
+        pokriveneReci: 'Prepoznate reči',
+        aktivnaPravila: 'Aktivna pravila',
+        nemaObjasnjenja: 'Nema dovoljno signala za objašnjenje.',
+        izvorRucni: 'ručni',
+        izvorNauceni: 'naučeni',
+        jacina: 'jačina',
         kategorije: { SPAM: 'SPAM', SUMNJIVO: 'SUMNJIVO', LEGITIMAN: 'LEGITIMAN' },
         dugmeJezik: 'English'
     },
@@ -34,6 +45,17 @@ const prevodi = {
         brojLinkova: 'LINK COUNT',
         caps: 'CAPS',
         interpunkcija: 'PUNCTUATION',
+        zasto: 'Why?',
+        ocisti: 'Clear',
+        kopiraj: 'Copy result',
+        kopirano: 'Copied!',
+        naslovObjasnjenja: 'Why this result?',
+        pokriveneReci: 'Matched words',
+        aktivnaPravila: 'Active rules',
+        nemaObjasnjenja: 'Not enough signal to explain.',
+        izvorRucni: 'hand dictionary',
+        izvorNauceni: 'learned lexicon',
+        jacina: 'strength',
         kategorije: { SPAM: 'SPAM', SUMNJIVO: 'SUSPICIOUS', LEGITIMAN: 'LEGITIMATE' },
         dugmeJezik: 'Srpski'
     }
@@ -64,6 +86,12 @@ function primeniJezik() {
     if (!dugme.disabled) dugme.textContent = t.pokreniAnalizu;
 
     if (trenutniPodaci) prikaziIndikator(trenutniPodaci);
+
+    const panel = document.getElementById('objasnjenje-panel');
+    if (trenutniPodaci && panel && !panel.hidden) {
+        panel.innerHTML = napraviObjasnjenje(trenutniPodaci);
+    }
+
     renderIstorija();
 }
 
@@ -115,6 +143,12 @@ function resetujRezultate() {
     scoreKartica.classList.remove('score-spam', 'score-sumnjivo', 'score-legitiman');
     document.getElementById('indikator-score').textContent = '';
     trenutniPodaci = null;
+
+    document.getElementById('dugme-zasto').disabled = true;
+    document.getElementById('dugme-kopiraj').disabled = true;
+    const panel = document.getElementById('objasnjenje-panel');
+    panel.hidden = true;
+    panel.innerHTML = '';
 }
 
 function novaProvera() {
@@ -145,6 +179,112 @@ function prikaziRezultate(podaci) {
     document.getElementById('vrednost-interpunkcija').textContent = podaci.interpunkcija + '%';
 
     prikaziIndikator(podaci);
+
+    document.getElementById('dugme-zasto').disabled = false;
+    document.getElementById('dugme-kopiraj').disabled = false;
+    const panel = document.getElementById('objasnjenje-panel');
+    panel.hidden = true;
+    panel.innerHTML = '';
+}
+
+function toggleObjasnjenje() {
+    const panel = document.getElementById('objasnjenje-panel');
+    if (!trenutniPodaci) return;
+    if (panel.hidden) {
+        panel.innerHTML = napraviObjasnjenje(trenutniPodaci);
+        panel.hidden = false;
+    } else {
+        panel.hidden = true;
+    }
+}
+
+function napraviObjasnjenje(podaci) {
+    const t = prevodi[trenutniJezik];
+    const objasnjenje = podaci.objasnjenje || {};
+    const reci = objasnjenje.pokrivene_reci || [];
+    const pravila = objasnjenje.aktivna_pravila || [];
+
+    if (!reci.length && !pravila.length) {
+        return `<div class="obj-naslov">${t.naslovObjasnjenja}</div>` +
+               `<div class="obj-prazno">${t.nemaObjasnjenja}</div>`;
+    }
+
+    let html = `<div class="obj-naslov">${t.naslovObjasnjenja}</div>`;
+
+    if (reci.length) {
+        html += `<div class="obj-podnaslov">${t.pokriveneReci}</div><div class="obj-cipovi">`;
+        reci.forEach(stavka => {
+            const izvor = stavka.izvor === 'nauceni' ? t.izvorNauceni : t.izvorRucni;
+            const tezina = Number(stavka.tezina).toFixed(2);
+            const puta = stavka.broj > 1 ? ` ×${stavka.broj}` : '';
+            html += `<span class="obj-cip" title="${izvor} · ${tezina}">${stavka.rec}${puta}</span>`;
+        });
+        html += '</div>';
+    }
+
+    if (pravila.length) {
+        html += `<div class="obj-podnaslov">${t.aktivnaPravila}</div><ul class="obj-pravila">`;
+        pravila.forEach(stavka => {
+            const klasa = stavka.kategorija === 'SPAM' ? 'je-spam'
+                        : stavka.kategorija === 'SUMNJIVO' ? 'je-sumnjivo'
+                        : 'je-legitiman';
+            const naziv = t.kategorije[stavka.kategorija] || stavka.kategorija;
+            html += `<li><span class="obj-pravilo">${stavka.pravilo}</span>` +
+                    `<span class="obj-jacina">${t.jacina} ${Number(stavka.jacina).toFixed(2)}</span>` +
+                    `<span class="obj-kat ${klasa}">${naziv}</span></li>`;
+        });
+        html += '</ul>';
+    }
+
+    return html;
+}
+
+async function kopirajRezultat() {
+    if (!trenutniPodaci) return;
+    const t = prevodi[trenutniJezik];
+    const p = trenutniPodaci;
+    const objasnjenje = p.objasnjenje || {};
+
+    const linije = [
+        'Fuzzy Guard',
+        `${t.spamScore}: ${p.spam_score}% (${t.kategorije[p.kategorija] || p.kategorija})`,
+        `${t.kljucneReci}: ${p.kljucne_reci} | ${t.brojLinkova}: ${p.broj_linkova} | ` +
+        `${t.caps}: ${p.caps_procenat}% | ${t.interpunkcija}: ${p.interpunkcija}%`
+    ];
+
+    const reci = (objasnjenje.pokrivene_reci || []).map(stavka => stavka.rec);
+    if (reci.length) linije.push(`${t.pokriveneReci}: ${reci.join(', ')}`);
+
+    const pravila = (objasnjenje.aktivna_pravila || [])
+        .map(stavka => `${stavka.pravilo} (${Number(stavka.jacina).toFixed(2)})`);
+    if (pravila.length) linije.push(`${t.aktivnaPravila}: ${pravila.join(', ')}`);
+
+    const tekst = linije.join('\n');
+    let uspelo = false;
+
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(tekst);
+            uspelo = true;
+        }
+    } catch (e) {
+        uspelo = false;
+    }
+
+    if (!uspelo) {
+        const polje = document.createElement('textarea');
+        polje.value = tekst;
+        polje.style.position = 'fixed';
+        polje.style.opacity = '0';
+        document.body.appendChild(polje);
+        polje.select();
+        try { uspelo = document.execCommand('copy'); } catch (e) { uspelo = false; }
+        document.body.removeChild(polje);
+    }
+
+    const dugme = document.getElementById('dugme-kopiraj');
+    dugme.textContent = uspelo ? t.kopirano : t.kopiraj;
+    if (uspelo) setTimeout(() => { dugme.textContent = t.kopiraj; }, 1500);
 }
 
 async function pokreniAnalizu() {

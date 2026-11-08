@@ -2,6 +2,7 @@ import re
 import random
 import json
 import os
+import html
 from pathlib import Path
 from typing import Optional
 
@@ -83,6 +84,105 @@ NACIN_RECNIKA = os.environ.get("FUZZY_GUARD_RECNIK", "kombinovano").strip().lowe
 
 _NAUCENI_RECNIK = None
 
+# --- normalizacija teksta -------------------------------------------------
+
+# Cirilica koja izgleda kao latinica (homoglifi) menja se samo u tokenima koji
+# mesaju pisma. Tako "frее" (sa cirilicnim e) postaje "free", a pravi cirilicni
+# tekst ostaje netaknut.
+_CIRILICA_U_LATINICU = str.maketrans({
+    "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x",
+    "у": "y", "к": "k", "м": "m", "т": "t", "н": "h", "в": "b",
+    "А": "a", "Е": "e", "О": "o", "Р": "p", "С": "c", "Х": "x",
+    "У": "y", "К": "k", "М": "m", "Т": "t", "Н": "h", "В": "b",
+})
+
+# Leetspeak: "fr33", "v1agra", "c0ngratulat10ns". Primenjuje se samo na tokene
+# koji sadrze bar jedno latinicno slovo, da se cisti brojevi ne bi kvarili.
+_LEET = str.maketrans({
+    "0": "o", "1": "i", "3": "e", "4": "a", "5": "s",
+    "7": "t", "8": "b", "9": "g", "@": "a", "$": "s",
+})
+
+_UZORAK_LINKA = re.compile(r"(?i)\b(?:https?://|hxxps?://|www\.)[^\s<>\"']+")
+_UZORAK_HREF = re.compile(r"(?i)href\s*=\s*[\"']([^\"']+)[\"']")
+_UZORAK_SKRIPT = re.compile(r"(?is)<(script|style)\b.*?</\1>")
+_UZORAK_TAG = re.compile(r"(?s)<[^>]+>")
+
+
+def _ocisti_html(tekst: str) -> str:
+    """Dekodira entitete i uklanja HTML, ostavljajuci vidljivi tekst."""
+    tekst = html.unescape(tekst)
+    tekst = _UZORAK_SKRIPT.sub(" ", tekst)
+    tekst = re.sub(r"(?i)<br\s*/?>|</p>|</div>|</li>|</tr>|</h[1-6]>", " ", tekst)
+    tekst = _UZORAK_TAG.sub(" ", tekst)
+    return re.sub(r"\s+", " ", tekst).strip()
+
+
+def _normalizuj_za_mecovanje(tekst: str) -> str:
+    delovi = []
+    for token in re.split(r"(\W+)", tekst.lower()):
+        if not token or not any(znak.isalnum() for znak in token):
+            delovi.append(token)
+            continue
+
+        ima_latinicu = any("a" <= znak <= "z" for znak in token)
+        ima_cirilicu = any("\u0400" <= znak <= "\u04ff" for znak in token)
+
+        if ima_latinicu and ima_cirilicu:
+            token = token.translate(_CIRILICA_U_LATINICU)
+        if any("a" <= znak <= "z" for znak in token):
+            token = token.translate(_LEET)
+
+        delovi.append(token)
+    return "".join(delovi)
+
+
+def _izvuci_linkove(tekst: str) -> list:
+    """Vraca jedinstvene linkove iz teksta i iz href atributa."""
+    kandidati = _UZORAK_HREF.findall(tekst) + _UZORAK_LINKA.findall(tekst)
+    ocisceni = []
+    for link in kandidati:
+        link = html.unescape(link).strip().rstrip(".,;:!?)]}>\"'")
+        if not link:
+            continue
+        link = re.sub(r"(?i)^hxxp", "http", link)
+        if link.lower().startswith("www."):
+            link = "http://" + link
+        ocisceni.append(link.lower())
+    return list(dict.fromkeys(ocisceni))
+
+
+# Uzorci se kompajliraju jednom; ranije se 271 nauceni izraz ponovo kompajlirao
+# pri svakom zahtevu.
+_RUCNI_UZORCI = [
+    (re.compile(r"\b" + re.escape(rec) + r"\b"), rec, 1.0)
+    for rec in SPAM_RECNIK_RECI
+] + [
+    (re.compile(re.escape(fraza)), fraza, 1.0)
+    for fraza in SPAM_RECNIK_FRAZE
+]
+_RUCNI_TERMINI = set(SPAM_RECNIK_RECI) | set(SPAM_RECNIK_FRAZE)
+
+_NAUCENI_UZORCI = None
+_NAUCENI_IZVOR = None
+
+
+def _nauceni_uzorci() -> list:
+    global _NAUCENI_UZORCI, _NAUCENI_IZVOR
+    recnik = ucitaj_nauceni_recnik()
+    if _NAUCENI_IZVOR is not recnik:
+        uzorci = []
+        for termin, tezina in recnik.items():
+            if " " in termin:
+                uzorak = re.compile(re.escape(termin))
+            else:
+                uzorak = re.compile(r"\b" + re.escape(termin) + r"\b")
+            uzorci.append((uzorak, termin, tezina))
+        _NAUCENI_UZORCI = uzorci
+        _NAUCENI_IZVOR = recnik
+    return _NAUCENI_UZORCI
+
+
 
 def ucitaj_nauceni_recnik() -> dict:
     """Ucitava recnik koji je izvozila neuronska mreza. Vraca {} ako ga nema."""
@@ -99,51 +199,57 @@ def ucitaj_nauceni_recnik() -> dict:
     return _NAUCENI_RECNIK
 
 
-def _izracunaj_kljucne_reci(tekst_mali: str, nacin_recnik: str) -> float:
+def _izracunaj_kljucne_reci(tekst_za_mecovanje: str, nacin_recnik: str):
+    """Vraca (evidencija 0-10, lista najjacih pogodaka za objasnjenje)."""
     evidencija = 0.0
+    pogodjene = []
 
     if nacin_recnik in ("rucni", "kombinovano"):
-        for rec in SPAM_RECNIK_RECI:
-            uzorak = r"\b" + re.escape(rec) + r"\b"
-            evidencija += len(re.findall(uzorak, tekst_mali))
-        for fraza in SPAM_RECNIK_FRAZE:
-            evidencija += len(re.findall(re.escape(fraza), tekst_mali))
+        for uzorak, termin, tezina in _RUCNI_UZORCI:
+            broj = len(uzorak.findall(tekst_za_mecovanje))
+            if broj:
+                evidencija += broj * tezina
+                pogodjene.append(
+                    {"rec": termin, "broj": broj, "tezina": tezina, "izvor": "rucni"}
+                )
 
     if nacin_recnik in ("nauceni", "kombinovano"):
-        rucni_termini = set(SPAM_RECNIK_RECI) | set(SPAM_RECNIK_FRAZE)
-        for termin, tezina in ucitaj_nauceni_recnik().items():
-            if nacin_recnik == "kombinovano" and termin in rucni_termini:
+        for uzorak, termin, tezina in _nauceni_uzorci():
+            if nacin_recnik == "kombinovano" and termin in _RUCNI_TERMINI:
                 continue  # ne broji dvaput isti termin
-            if " " in termin:
-                broj = len(re.findall(re.escape(termin), tekst_mali))
-            else:
-                broj = len(re.findall(r"\b" + re.escape(termin) + r"\b", tekst_mali))
-            evidencija += broj * tezina
+            broj = len(uzorak.findall(tekst_za_mecovanje))
+            if broj:
+                evidencija += broj * tezina
+                pogodjene.append(
+                    {"rec": termin, "broj": broj, "tezina": tezina, "izvor": "nauceni"}
+                )
 
-    return min(evidencija, 10.0)
-
+    pogodjene.sort(key=lambda stavka: stavka["broj"] * stavka["tezina"], reverse=True)
+    return min(evidencija, 10.0), pogodjene[:8]
 
 
 def analiziraj_email(tekst: str, nacin_recnik: Optional[str] = None) -> dict:
-    tekst_bez_linkova = re.sub(r'https?://\S+', '', tekst)
-    tekst_mali = tekst_bez_linkova.lower()
+    vidljivi_tekst = _ocisti_html(tekst)
+    tekst_za_mecovanje = _normalizuj_za_mecovanje(vidljivi_tekst)
 
-    broj_kljucnih_reci = _izracunaj_kljucne_reci(
-        tekst_mali, (nacin_recnik or NACIN_RECNIKA)
+    broj_kljucnih_reci, pogodjene_reci = _izracunaj_kljucne_reci(
+        tekst_za_mecovanje, (nacin_recnik or NACIN_RECNIKA)
     )
 
-    pronadjeni_linkovi = re.findall(r'https?://\S+', tekst)
+    pronadjeni_linkovi = _izvuci_linkove(tekst)
     broj_linkova = min(len(pronadjeni_linkovi), 10)
 
-    sva_slova = [karakter for karakter in tekst if karakter.isalpha()]
+    tekst_bez_linkova = _UZORAK_LINKA.sub(" ", vidljivi_tekst)
+
+    sva_slova = [karakter for karakter in tekst_bez_linkova if karakter.isalpha()]
     if sva_slova:
         velika_slova = sum(1 for karakter in sva_slova if karakter.isupper())
         caps_procenat = (velika_slova / len(sva_slova)) * 100
     else:
         caps_procenat = 0.0
 
-    broj_uzvika = tekst.count('!')
-    broj_upitnika = tekst.count('?')
+    broj_uzvika = tekst_bez_linkova.count('!')
+    broj_upitnika = tekst_bez_linkova.count('?')
     ukupno_karaktera = len(tekst_bez_linkova.replace(' ', ''))
     if ukupno_karaktera > 0:
         interpunkcija = round(((broj_uzvika + broj_upitnika) / ukupno_karaktera) * 100, 2)
@@ -155,6 +261,7 @@ def analiziraj_email(tekst: str, nacin_recnik: Optional[str] = None) -> dict:
         "broj_linkova":  float(broj_linkova),
         "caps_procenat": round(caps_procenat, 2),
         "interpunkcija": float(interpunkcija),
+        "pokrivene_reci": pogodjene_reci,
     }
 
 

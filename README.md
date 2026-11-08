@@ -304,15 +304,15 @@ Corpus: **SpamAssassin** (3,000 emails, 500 spam), 750 test emails, 125 spam.
 
 | Model | Lexicon | Accuracy | Precision | Recall | F1 |
 |---|---|---|---|---|---|
-| Neural network (MLP) | `rucni` | 0.929 | 0.883 | 0.664 | 0.758 |
-| Fuzzy system (Mamdani) | `rucni` | 0.771 | 0.382 | 0.608 | 0.469 |
-| Neural network (MLP) | `nauceni` | 0.956 | 0.942 | 0.784 | 0.856 |
-| Fuzzy system (Mamdani) | `nauceni` | 0.791 | 0.424 | 0.712 | 0.531 |
-| Neural network (MLP) | `kombinovano` | 0.957 | 0.904 | 0.832 | 0.867 |
-| Fuzzy system (Mamdani) | `kombinovano` | 0.792 | 0.432 | 0.784 | **0.557** |
+| Neural network (MLP) | `rucni` | 0.908 | 0.868 | 0.528 | 0.657 |
+| Fuzzy system (Mamdani) | `rucni` | 0.777 | 0.382 | 0.544 | 0.449 |
+| Neural network (MLP) | `nauceni` | 0.931 | 0.910 | 0.648 | 0.757 |
+| Fuzzy system (Mamdani) | `nauceni` | 0.788 | 0.408 | 0.600 | 0.485 |
+| Neural network (MLP) | `kombinovano` | 0.947 | 0.890 | 0.776 | 0.829 |
+| Fuzzy system (Mamdani) | `kombinovano` | 0.803 | 0.445 | 0.744 | **0.557** |
 
-The learned lexicon raises the fuzzy system's F1 from **0.469 to 0.557** and its
-recall from **0.608 to 0.784**, without changing the rule base or the fuzzy
+The learned lexicon raises the fuzzy system's F1 from **0.449 to 0.557** and its
+recall from **0.544 to 0.744**, without changing the rule base or the fuzzy
 inference. The network therefore has a measurable job: it supplies better
 evidence, while the fuzzy rules still make the decision.
 
@@ -323,7 +323,7 @@ dictionary, because its features are calibrated for email — SMS messages have
 almost no capitalisation or links.
 
 The learned lexicon does **not** transfer across domains: on SMS the fuzzy F1 is
-0.062 with the hand dictionary, **0.000** with the learned lexicon, and 0.062
+0.072 with the hand dictionary, **0.000** with the learned lexicon, and 0.072
 with both. The network learned email-specific vocabulary ("mortgage", "dear sir",
 "click link"), not universal spam patterns. That is exactly why the hand-written
 Serbian dictionary stays as the baseline, and why the lexicon should be retrained
@@ -361,6 +361,27 @@ python -m pytest
 The test suite checks rule-base completeness (no input may leave every rule at
 zero), score/category agreement, the 35–45% caps regression, and that obvious
 spam and legitimate emails land in the expected categories.
+
+### Continuous integration
+
+`.github/workflows/tests.yml` runs `pytest` on every push to `master` / `razvoj`
+and on every pull request. It does **not** deploy: PythonAnywhere still needs
+
+```bash
+cd ~/fuzzy-guard && git pull
+```
+
+followed by **Reload** on the Web tab.
+
+### Docker
+
+```bash
+docker build -t fuzzy-guard .
+docker run -p 5000:5000 fuzzy-guard
+```
+
+The learned lexicon (`podaci/recnik_naucen.json`) is copied into the image, so
+the container runs with the full `kombinovano` setup.
 
 Project conventions for contributors and AI agents are in [`AGENTS.md`](AGENTS.md).
 

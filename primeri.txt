@@ -147,3 +147,135 @@ BESPLATNO BESPLATNO BESPLATNO!!! Osvojite NEOGRANIČENE keš nagrade GARANTOVANO
 ---
 [SR]
 HITNO OBAVEŠTENJE!!! Vaša pretplata ISTIČE danas!!! OBNOVITE ODMAH na http://obnovibrzo.biz ili IZGUBITE PRISTUP ZAUVEK!!!
+---
+[EN]
+Dear customer, kindly validate your profile to avoid suspension of your parcel delivery within 48 hours.
+---
+[EN]
+Thanks for sending the updated invoice. Finance will process it on Friday and I'll confirm once it clears.
+---
+[EN]
+Reminder: the team stand-up moved to 9:30 tomorrow. The calendar invite has been updated.
+---
+[EN]
+I've attached the signed contract and the revised timeline. Let me know if anything needs changing.
+---
+[EN]
+Earn 12% daily with our automated trading desk. No experience needed. Deposit today at http://cryptopump.biz
+---
+[EN]
+Your invoice INV-8841 is overdue. Immediate settlement is required to avoid legal action. Pay at http://secure-pay-portal.net
+---
+[EN]
+I saw your profile and felt we should talk. Message me on http://findlove-now.biz before tonight.
+---
+[EN]
+Rank #1 in search results in 7 days. Limited slots available. Reply to this message for pricing.
+---
+[EN]
+Lose weight fast without exercise. Doctor-approved formula. Order now at http://slimlab.biz
+---
+[EN]
+Final notice: your tax refund of 842 EUR is pending. Confirm your bank details at http://refund-tax-eu.info
+---
+[EN]
+Lunch on Thursday? I'll book the place near the office if you're free.
+---
+[EN]
+The deployment finished successfully and monitoring looks normal. I'll keep an eye on it tonight.
+---
+[EN]
+This week in review: three new features, one deprecation, and a short note about upcoming maintenance.
+---
+[EN]
+Work from home and earn 3000 monthly. No interview needed. Send your bank details to start today.
+---
+[EN]
+Your streaming subscription will be suspended in 24 hours. Update payment information at http://stream-renew.biz
+---
+[EN]
+You are the lucky holder of ticket 4471. Settlement of your winnings requires a small processing payment.
+---
+[EN]
+Can you review my pull request when you get a chance? It's a small change in the parser.
+---
+[EN]
+A parcel addressed to you is being held at our depot. Settle the delivery fee to release it.
+---
+[EN]
+Sorry for the late reply — I was travelling. Let's reschedule the call for Monday.
+---
+[EN]
+Private placement open for a few investors. Our members report strong results. Reply for details.
+---
+[EN]
+Your October account statement is ready. Log in to review recent activity.
+---
+[EN]
+The printer on the second floor is out of toner again. Facilities said they'll replace it tomorrow.
+---
+[EN]
+Congratulations to the team on shipping the release! Retro is on Friday at 4pm.
+---
+[SR]
+Poštovani, vaša pošiljka je zadržana. Izvršite uplatu do petka kako bi bila isporučena.
+---
+[SR]
+Zdravo, šaljem ti izveštaj koji smo pominjali. Pogledaj kada stigneš i javi mi ako nešto nije jasno.
+---
+[SR]
+Sastanak je prebačen na 10 časova u ponedeljak. Poslaću novi poziv u kalendaru.
+---
+[SR]
+Hvala na informaciji — primio sam dokumente. Javljam se sutra sa komentarima.
+---
+[SR]
+Zaradite 12% dnevno uz naš automatski sistem. Bez iskustva. Uplatite već danas na http://kriptozarada.biz
+---
+[SR]
+Vaš račun 8841 je dospeo. Izvršite plaćanje što pre kako biste izbegli pravne posledice. http://sigurno-placanje.net
+---
+[SR]
+Sredstva od poreza čekaju isplatu. Ostavite podatke računa na http://povracaj-poreza.info
+---
+[SR]
+Videla sam tvoj profil i mislim da treba da se čujemo. Piši mi na http://upoznajme.biz večeras.
+---
+[SR]
+Smršajte brzo bez vežbanja. Formula koju preporučuju lekari. Poručite na http://mrsavibriz.biz
+---
+[SR]
+Radite od kuće uz mesečnu isplatu. Bez razgovora. Pošaljite podatke računa i počnite danas.
+---
+[SR]
+Da ručamo u četvrtak? Mogu da rezervišem mesto blizu kancelarije.
+---
+[SR]
+Objavljivanje je prošlo bez problema i nadzor izgleda normalno. Pratiću stanje večeras.
+---
+[SR]
+Mali podsetnik: dokumentacija za projekat treba da bude spremna do petka.
+---
+[SR]
+Vaša pretplata se gasi za 24 časa. Ažurirajte način plaćanja na http://obnovi-stream.biz
+---
+[SR]
+Pošiljka sa vašim imenom čeka u magacinu. Odobrite troškove dostave da bi bila otpremljena.
+---
+[SR]
+Vaš broj 4471 je izvučen. Za isplatu je potrebna mala naknada za obradu.
+---
+[SR]
+Možeš li da pogledaš moj zahtev kada budeš imao vremena? Mala je izmena u parseru.
+---
+[SR]
+Izvinjavam se na kasnom odgovoru — bio sam na putu. Da pomerimo poziv na ponedeljak?
+---
+[SR]
+Privatna emisija otvorena za nekoliko ulagača. Naši članovi beleže dobre rezultate. Odgovorite za detalje.
+---
+[SR]
+Poslao sam ti novu verziju teksta. Reci mi da li stil odgovara pre nego što je objavimo.
+---
+[SR]
+Obaveštenje o promeni uslova korišćenja. Detalje možete pogledati na sajtu.

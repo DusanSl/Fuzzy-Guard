@@ -51,7 +51,18 @@
                 <button class="dugme-analiziraj" data-i18n="pokreniAnalizu" onclick="pokreniAnalizu()">
                     Run analysis
                 </button>
+                <button class="dugme-sporedni" id="dugme-zasto" data-i18n="zasto" onclick="toggleObjasnjenje()" disabled>
+                    Why?
+                </button>
+                <button class="dugme-sporedni" id="dugme-ocisti" data-i18n="ocisti" onclick="novaProvera()">
+                    Clear
+                </button>
+                <button class="dugme-sporedni" id="dugme-kopiraj" data-i18n="kopiraj" onclick="kopirajRezultat()" disabled>
+                    Copy result
+                </button>
             </div>
+
+            <div class="objasnjenje-panel" id="objasnjenje-panel" hidden></div>
 
             <div class="rezultati-grid" id="rezultati-grid">
                 <div class="rezultat-kartica rezultat-score" id="kartica-score">

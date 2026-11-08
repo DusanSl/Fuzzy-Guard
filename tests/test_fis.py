@@ -125,8 +125,8 @@ def test_nauceni_recnik_se_ucitava():
 
 def test_kombinovani_recnik_ne_broji_isti_termin_dvaput():
     # "free" postoji u rucnom recniku, pa se naucena verzija preskace
-    assert _izracunaj_kljucne_reci("free", "rucni") == 1.0
-    assert _izracunaj_kljucne_reci("free", "kombinovano") == 1.0
+    assert _izracunaj_kljucne_reci("free", "rucni")[0] == 1.0
+    assert _izracunaj_kljucne_reci("free", "kombinovano")[0] == 1.0
 
 
 def test_nauceni_recnik_dodaje_nove_termine():
@@ -134,12 +134,48 @@ def test_nauceni_recnik_dodaje_nove_termine():
     rucni = set(SPAM_RECNIK_RECI)
     novi = next((termin for termin in recnik if termin not in rucni and " " not in termin), None)
     assert novi is not None, "nauceni recnik ne sadrzi nijedan nov termin"
-    assert _izracunaj_kljucne_reci(novi, "nauceni") > 0
+    assert _izracunaj_kljucne_reci(novi, "nauceni")[0] > 0
 
 
 def test_rucni_recnik_radi_bez_naucenog(monkeypatch):
     """Ako nema naucenog recnika, sistem mora da radi kao pre neuronske mreze."""
     monkeypatch.setattr(analizator, "_NAUCENI_RECNIK", {})
-    assert _izracunaj_kljucne_reci("free", "kombinovano") == 1.0
-    assert _izracunaj_kljucne_reci("free prize", "kombinovano") == 3.0
+    assert _izracunaj_kljucne_reci("free", "kombinovano")[0] == 1.0
+    assert _izracunaj_kljucne_reci("free prize", "kombinovano")[0] == 3.0
+
+
+def test_html_se_uklanja_pre_analize():
+    obican = analiziraj_email("WIN a FREE prize now")
+    html = analiziraj_email("<html><body><p>WIN a <b>FREE</b> prize now</p></body></html>")
+    assert obican["kljucne_reci"] == html["kljucne_reci"]
+    assert obican["caps_procenat"] == html["caps_procenat"]
+
+
+def test_leet_speak_se_prepoznaje():
+    assert analiziraj_email("FR33 pr1ze")["kljucne_reci"] >= 2
+
+
+def test_homoglifi_se_prepoznaju():
+    assert analiziraj_email("Fr\u0435\u0435 prize")["kljucne_reci"] >= 2
+
+
+def test_www_i_hxxp_linkovi_se_broje():
+    assert analiziraj_email("visit www.example.com and hxxp://evil.net")["broj_linkova"] == 2
+
+
+def test_link_iz_href_atributa():
+    assert analiziraj_email('<a href="http://x.com">click</a>')["broj_linkova"] == 1
+
+
+def test_api_vraca_objasnjenje():
+    from main import app
+    klijent = app.test_client()
+    odgovor = klijent.post(
+        "/analiziraj", json={"tekst": "You WON a FREE prize, click here now"}
+    ).get_json()
+    assert "objasnjenje" in odgovor
+    assert odgovor["objasnjenje"]["pokrivene_reci"]
+    assert "aktivna_pravila" in odgovor["objasnjenje"]
+
+
 
