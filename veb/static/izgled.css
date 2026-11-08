@@ -505,3 +505,57 @@ textarea::placeholder {
         padding: 0.3rem 0.5rem;
     }
 }
+
+.obj-pregled {
+    max-height: 220px;
+    overflow-y: auto;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: #334155;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.obj-mark {
+    background: #fde68a;
+    color: #1a1f2e;
+    border-radius: 3px;
+    padding: 0 2px;
+}
+
+.obj-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.obj-tabela th {
+    text-align: left;
+    color: #94a3b8;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    padding: 0.2rem 0.4rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.obj-tabela td {
+    padding: 0.35rem 0.4rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    vertical-align: top;
+}
+
+.obj-uslov {
+    color: #64748b;
+    font-size: 0.76rem;
+    flex: 1;
+}
+
+.obj-pravila li {
+    flex-wrap: wrap;
+}

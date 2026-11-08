@@ -279,3 +279,48 @@ Poslao sam ti novu verziju teksta. Reci mi da li stil odgovara pre nego što je 
 ---
 [SR]
 Obaveštenje o promeni uslova korišćenja. Detalje možete pogledati na sajtu.
+---
+[SR][teski]
+Vaš paket je vraćen u skladište. Potrebna je doplata za ponovnu dostavu. Detalji na http://dostava-provera.net
+---
+[SR][teski]
+Obaveštavamo vas da je vaš profil blokiran zbog neobične prijave. Prijavite se preko http://profil-provera.info
+---
+[SR][teski]
+Dragi korisniče, tvoj uređaj je zaražen. Instaliraj zaštitu sa http://sigurnost-sada.biz
+---
+[SR][teski]
+Vaša kartica je istekla. Unesite nove podatke na http://kartica-centar.info
+---
+[SR][teski]
+Dobili ste poziv za razgovor. Odaberite termin na http://posao-termin.biz
+---
+[SR][teski]
+Nasledstvo vredno 4.2 mil evra čeka na vas. Kontaktirajte advokata na http://nasledstvo-pravno.info
+---
+[SR][teski]
+Tvoja fotografija je objavljena bez dozvole. Pogledaj na http://foto-zalba.info
+---
+[SR][teski]
+Vaš glas je potreban za anketu. Popunite obrazac na http://anketa-glas.info
+---
+[SR][teski]
+Banka vas obaveštava o sumnjivoj transakciji. Proverite detalje na http://banka-provera.info
+---
+[SR][teski]
+Srećan rođendan! Tvoj poklon čeka u radnji na http://poklon-centar.biz
+---
+[EN][teski]
+Kindly remit the outstanding balance to prevent interruption of your service.
+---
+[EN][teski]
+Your credentials were detected in a recent breach. Rotate them at http://id-guard.example
+---
+[EN][teski]
+Settlement of your inheritance is pending. Contact the executor to proceed.
+---
+[EN][teski]
+We noticed an unfamiliar device on your profile. Review sessions at http://session-check.example
+---
+[EN][teski]
+Your shipment is delayed at customs. Settle the handling charge to continue.

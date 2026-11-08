@@ -4,6 +4,7 @@ from fazi.pravila import (
     fuzzifikuj,
     kontroler_spam_score,
     sastavi_pravila,
+    OPISI_PRAVILA,
 )
 from fazi.defazifikacija import defazifikuj
 from fazi.skupovi import x_spam_score, izlazni_skupovi, KATEGORIJA_PO_SKUPU
@@ -18,6 +19,25 @@ def pokreni_fis(
 
     mu = fuzzifikuj(val_kljucne, val_linkova, val_caps, val_interpunkcija)
 
+    ulazi_objasnjenje = {
+        "kljucne_reci": {
+            "vrednost": round(float(val_kljucne), 2),
+            "pripadnosti": {ime: round(w, 3) for ime, w in mu["kljucne_reci"].items()},
+        },
+        "broj_linkova": {
+            "vrednost": round(float(val_linkova), 2),
+            "pripadnosti": {ime: round(w, 3) for ime, w in mu["broj_linkova"].items()},
+        },
+        "caps_procenat": {
+            "vrednost": round(float(val_caps), 2),
+            "pripadnosti": {ime: round(w, 3) for ime, w in mu["caps_procenat"].items()},
+        },
+        "interpunkcija": {
+            "vrednost": round(float(val_interpunkcija), 2),
+            "pripadnosti": {ime: round(w, 3) for ime, w in mu["interpunkcija"].items()},
+        },
+    }
+
     agregirani_skup, alfe = kontroler_spam_score(mu)
 
     spam_score = defazifikuj(agregirani_skup)
@@ -26,7 +46,12 @@ def pokreni_fis(
         # Nijedno pravilo nije aktivirano. Pravila bi trebalo da pokrivaju ceo
         # univerzum (testira se), pa je ovo samo zastita. Odsustvo dokaza nije
         # dokaz odsustva: takav email ide na proveru, nikako u LEGITIMAN.
-        return {"spam_score": 47.0, "kategorija": "SUMNJIVO", "aktivna_pravila": []}
+        return {
+            "spam_score": 47.0,
+            "kategorija": "SUMNJIVO",
+            "aktivna_pravila": [],
+            "ulazi": ulazi_objasnjenje,
+        }
 
     # Kategoriju izvodimo iz istog broja koji se prikazuje korisniku: gledamo
     # kojoj izlaznoj skupini defazifikovana vrednost najvise pripada. Time su
@@ -39,7 +64,13 @@ def pokreni_fis(
 
     # Najjaca aktivna pravila, za prikaz "zasto" u interfejsu i odbranu.
     aktivna_pravila = [
-        {"pravilo": naziv, "jacina": round(float(jacina), 3), "kategorija": kategorija}
+        {
+            "pravilo": naziv,
+            "jacina": round(float(jacina), 3),
+            "kategorija": kategorija,
+            "uslov_sr": OPISI_PRAVILA.get(naziv, {}).get("sr", ""),
+            "uslov_en": OPISI_PRAVILA.get(naziv, {}).get("en", ""),
+        }
         for naziv, jacina, _, kategorija in sastavi_pravila(mu)
         if float(jacina) > 0.05
     ]
@@ -49,4 +80,5 @@ def pokreni_fis(
         "spam_score": spam_score,
         "kategorija": KATEGORIJA_PO_SKUPU[najjaci_skup],
         "aktivna_pravila": aktivna_pravila[:6],
+        "ulazi": ulazi_objasnjenje,
     }

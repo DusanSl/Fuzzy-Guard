@@ -173,3 +173,84 @@ def kontroler_spam_score(mu: dict):
         alfe[kategorija] = max(alfe[kategorija], float(jacina))
 
     return agregirani_skup, alfe
+
+
+# Kratki, citljivi uslovi za svako pravilo (za panel "Zasto" u interfejsu).
+OPISI_PRAVILA = {
+    "p01": {
+        "sr": "zanemarljive reči + minimalni linkovi + uobičajena velika slova + retka interpunkcija",
+        "en": "negligible keywords + minimal links + normal caps + sparse punctuation",
+    },
+    "p02": {
+        "sr": "blago povišena velika slova + zanemarljive reči + minimalni linkovi",
+        "en": "mildly elevated caps + negligible keywords + minimal links",
+    },
+    "p03": {
+        "sr": "blaga interpunkcija + zanemarljive reči + minimalni linkovi",
+        "en": "mild punctuation + negligible keywords + minimal links",
+    },
+    "p03a": {
+        "sr": "umerena interpunkcija + zanemarljive reči + minimalni linkovi",
+        "en": "moderate punctuation + negligible keywords + minimal links",
+    },
+    "p04": {
+        "sr": "zanemarljive reči + umereni linkovi + uobičajena velika slova + retka interpunkcija",
+        "en": "negligible keywords + moderate links + normal caps + sparse punctuation",
+    },
+    "p05": {
+        "sr": "zastupljene reči + minimalni linkovi",
+        "en": "present keywords + minimal links",
+    },
+    "p06": {
+        "sr": "zastupljene reči + umereni linkovi + uobičajena velika slova + retka interpunkcija",
+        "en": "present keywords + moderate links + normal caps + sparse punctuation",
+    },
+    "p06a": {
+        "sr": "zastupljene reči + umereni linkovi",
+        "en": "present keywords + moderate links",
+    },
+    "p07": {
+        "sr": "umereni/brojni linkovi + povišena/blaga/agresivna velika slova + zanemarljive reči",
+        "en": "moderate/numerous links + elevated/mild/aggressive caps + negligible keywords",
+    },
+    "p08": {
+        "sr": "umereni/brojni linkovi + umerena/blaga/agresivna interpunkcija + zanemarljive reči",
+        "en": "moderate/numerous links + moderate/mild/aggressive punctuation + negligible keywords",
+    },
+    "p09": {
+        "sr": "zastupljene reči + umereni linkovi + povišena velika slova + umerena interpunkcija",
+        "en": "present keywords + moderate links + elevated caps + moderate punctuation",
+    },
+    "p10": {
+        "sr": "dominantne reči + umereni linkovi + uobičajena velika slova + retka interpunkcija",
+        "en": "dominant keywords + moderate links + normal caps + sparse punctuation",
+    },
+    "p11": {
+        "sr": "dominantne reči + uobičajena velika slova",
+        "en": "dominant keywords + normal caps",
+    },
+    "p12": {
+        "sr": "agresivna velika slova + zanemarljive reči + minimalni linkovi",
+        "en": "aggressive caps + negligible keywords + minimal links",
+    },
+    "p13": {
+        "sr": "agresivna interpunkcija + zanemarljive reči + minimalni linkovi",
+        "en": "aggressive punctuation + negligible keywords + minimal links",
+    },
+    "p14": {
+        "sr": "dominantne reči ILI brojni linkovi",
+        "en": "dominant keywords OR numerous links",
+    },
+    "p15": {
+        "sr": "zastupljene reči + (agresivna velika slova ILI agresivna interpunkcija)",
+        "en": "present keywords + (aggressive caps OR aggressive punctuation)",
+    },
+    "p16": {
+        "sr": "umereni linkovi + (agresivna velika slova ILI agresivna interpunkcija)",
+        "en": "moderate links + (aggressive caps OR aggressive punctuation)",
+    },
+    "p17": {
+        "sr": "(zastupljene ili dominantne) reči + (umereni ili brojni) linkovi + (povišena, blaga ili agresivna) velika slova",
+        "en": "(present or dominant) keywords + (moderate or numerous) links + (elevated, mild or aggressive) caps",
+    },
+}

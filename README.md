@@ -14,6 +14,7 @@ The application features a responsive web interface with full bilingual support 
 - **Bilingual Interface:** Real-time translation toggle between English and Serbian.
 - **History Tracking:** View and recall previous checks performed during the active session.
 - **Sample Loader:** Instantly load random pre-defined test emails to see the system in action.
+- **Hard-sample Loader:** Loads spam that deliberately avoids the hand-written dictionary, to show the limit of keyword matching (especially in Serbian).
 - **Modern UI:** Sleek dark-mode dashboard styled with CSS.
 
 ---

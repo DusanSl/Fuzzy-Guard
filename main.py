@@ -1,5 +1,9 @@
 from flask import Flask, request, jsonify, render_template
-from obrada_teksta.analizator import analiziraj_email, ucitaj_sve_primere
+from obrada_teksta.analizator import (
+    analiziraj_email,
+    ucitaj_sve_primere,
+    ucitaj_teske_primere,
+)
 from fazi.zakljucivanje import pokreni_fis
 import os
 
@@ -28,6 +32,13 @@ def index():
 def primeri_svi():
     jezik = request.args.get("jezik", "en")
     lista = ucitaj_sve_primere(jezik)
+    return jsonify({"primeri": lista})
+
+
+@app.route("/primeri-teski")
+def primeri_teski():
+    jezik = request.args.get("jezik", "en")
+    lista = ucitaj_teske_primere(jezik)
     return jsonify({"primeri": lista})
 
 
@@ -60,8 +71,10 @@ def analiziraj():
         "spam_score":    round(rezultat_fis["spam_score"], 2),
         "kategorija":    rezultat_fis["kategorija"],
         "objasnjenje": {
+            "tekst":           ulazi.get("vidljivi_tekst", ""),
             "pokrivene_reci":  ulazi.get("pokrivene_reci", []),
             "aktivna_pravila": rezultat_fis.get("aktivna_pravila", []),
+            "ulazi":           rezultat_fis.get("ulazi", {}),
         },
     }
 

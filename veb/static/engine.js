@@ -6,6 +6,7 @@ const prevodi = {
     sr: {
         novaProvera: 'Nova provera',
         primerProvera: 'Primer provera',
+        teskiPrimer: 'Težak primer',
         prethodneProvere: 'PRETHODNE PROVERE',
         od: 'Od:',
         odVrednost: 'testiranje@spam-filter',
@@ -28,12 +29,24 @@ const prevodi = {
         izvorRucni: 'ručni',
         izvorNauceni: 'naučeni',
         jacina: 'jačina',
+        gdeJePokrenuto: 'Gde je pokrenuto',
+        ulaziNaslov: 'Ulazi i pripadnosti',
+        ulaz: 'ulaz',
+        vrednost: 'vrednost',
+        pripadnosti: 'pripadnosti',
+        ulaziNazivi: {
+            kljucne_reci: 'ključne reči',
+            broj_linkova: 'linkovi',
+            caps_procenat: 'velika slova',
+            interpunkcija: 'interpunkcija'
+        },
         kategorije: { SPAM: 'SPAM', SUMNJIVO: 'SUMNJIVO', LEGITIMAN: 'LEGITIMAN' },
         dugmeJezik: 'English'
     },
     en: {
         novaProvera: 'New check',
         primerProvera: 'Sample check',
+        teskiPrimer: 'Hard sample',
         prethodneProvere: 'PREVIOUS CHECKS',
         od: 'From:',
         odVrednost: 'testing@spam-filter',
@@ -56,6 +69,17 @@ const prevodi = {
         izvorRucni: 'hand dictionary',
         izvorNauceni: 'learned lexicon',
         jacina: 'strength',
+        gdeJePokrenuto: 'Where it was triggered',
+        ulaziNaslov: 'Inputs and memberships',
+        ulaz: 'input',
+        vrednost: 'value',
+        pripadnosti: 'memberships',
+        ulaziNazivi: {
+            kljucne_reci: 'keywords',
+            broj_linkova: 'links',
+            caps_procenat: 'caps',
+            interpunkcija: 'punctuation'
+        },
         kategorije: { SPAM: 'SPAM', SUMNJIVO: 'SUSPICIOUS', LEGITIMAN: 'LEGITIMATE' },
         dugmeJezik: 'Srpski'
     }
@@ -105,6 +129,8 @@ function toggleMeni() {
 
 let primeriKes = { en: [], sr: [] };
 let preostaliIndeksi = { en: [], sr: [] };
+let teskiKes = { en: [], sr: [] };
+let preostaliTeski = { en: [], sr: [] };
 
 function promesaj(niz) {
     const kopija = [...niz];
@@ -115,24 +141,37 @@ function promesaj(niz) {
     return kopija;
 }
 
-async function ucitajRandom() {
+async function ucitajPrimer(teski) {
     const jezik = trenutniJezik;
+    const kes = teski ? teskiKes : primeriKes;
+    const preostali = teski ? preostaliTeski : preostaliIndeksi;
+    const putanja = teski ? '/primeri-teski' : '/primeri-svi';
 
-    if (primeriKes[jezik].length === 0) {
-        const odgovor = await fetch('/primeri-svi?jezik=' + jezik);
+    if (kes[jezik].length === 0) {
+        const odgovor = await fetch(putanja + '?jezik=' + jezik);
         const podaci = await odgovor.json();
-        primeriKes[jezik] = podaci.primeri;
+        kes[jezik] = podaci.primeri;
     }
 
-    if (preostaliIndeksi[jezik].length === 0) {
-        preostaliIndeksi[jezik] = promesaj(
-            [...Array(primeriKes[jezik].length).keys()]
+    if (kes[jezik].length === 0) return;
+
+    if (preostali[jezik].length === 0) {
+        preostali[jezik] = promesaj(
+            [...Array(kes[jezik].length).keys()]
         );
     }
 
-    const indeks = preostaliIndeksi[jezik].pop();
-    document.getElementById('tekst').value = primeriKes[jezik][indeks];
+    const indeks = preostali[jezik].pop();
+    document.getElementById('tekst').value = kes[jezik][indeks];
     resetujRezultate();
+}
+
+function ucitajRandom() {
+    return ucitajPrimer(false);
+}
+
+function ucitajTeski() {
+    return ucitajPrimer(true);
 }
 
 function resetujRezultate() {
@@ -198,18 +237,54 @@ function toggleObjasnjenje() {
     }
 }
 
+function escapeHtml(tekst) {
+    return String(tekst)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function napraviPregled(tekst, reci) {
+    const ogranicen = tekst.length > 1500 ? tekst.slice(0, 1500) : tekst;
+    const pozicije = [];
+    (reci || []).forEach(stavka => {
+        (stavka.pozicije || []).forEach(pozicija => pozicije.push(pozicija));
+    });
+    pozicije.sort((a, b) => a[0] - b[0]);
+
+    let html = '';
+    let poz = 0;
+    for (const [pocetak, kraj] of pozicije) {
+        if (pocetak < poz || pocetak > ogranicen.length) continue;
+        html += escapeHtml(ogranicen.slice(poz, pocetak));
+        html += '<mark class="obj-mark">' + escapeHtml(ogranicen.slice(pocetak, kraj)) + '</mark>';
+        poz = kraj;
+    }
+    html += escapeHtml(ogranicen.slice(poz));
+    if (tekst.length > ogranicen.length) html += '…';
+    return html;
+}
+
 function napraviObjasnjenje(podaci) {
     const t = prevodi[trenutniJezik];
     const objasnjenje = podaci.objasnjenje || {};
     const reci = objasnjenje.pokrivene_reci || [];
     const pravila = objasnjenje.aktivna_pravila || [];
+    const ulazi = objasnjenje.ulazi || {};
+    const tekst = objasnjenje.tekst || '';
 
-    if (!reci.length && !pravila.length) {
+    if (!tekst && !reci.length && !pravila.length) {
         return `<div class="obj-naslov">${t.naslovObjasnjenja}</div>` +
                `<div class="obj-prazno">${t.nemaObjasnjenja}</div>`;
     }
 
     let html = `<div class="obj-naslov">${t.naslovObjasnjenja}</div>`;
+
+    if (tekst) {
+        html += `<div class="obj-podnaslov">${t.gdeJePokrenuto}</div>`;
+        html += `<div class="obj-pregled">${napraviPregled(tekst, reci)}</div>`;
+    }
 
     if (reci.length) {
         html += `<div class="obj-podnaslov">${t.pokriveneReci}</div><div class="obj-cipovi">`;
@@ -217,9 +292,28 @@ function napraviObjasnjenje(podaci) {
             const izvor = stavka.izvor === 'nauceni' ? t.izvorNauceni : t.izvorRucni;
             const tezina = Number(stavka.tezina).toFixed(2);
             const puta = stavka.broj > 1 ? ` ×${stavka.broj}` : '';
-            html += `<span class="obj-cip" title="${izvor} · ${tezina}">${stavka.rec}${puta}</span>`;
+            html += `<span class="obj-cip" title="${izvor} · ${tezina}">${escapeHtml(stavka.rec)}${puta}</span>`;
         });
         html += '</div>';
+    }
+
+    const imena = Object.keys(ulazi);
+    if (imena.length) {
+        html += `<div class="obj-podnaslov">${t.ulaziNaslov}</div>`;
+        html += '<table class="obj-tabela"><thead><tr>' +
+                `<th>${t.ulaz}</th><th>${t.vrednost}</th><th>${t.pripadnosti}</th>` +
+                '</tr></thead><tbody>';
+        imena.forEach(ime => {
+            const podatak = ulazi[ime] || {};
+            const naziv = (t.ulaziNazivi && t.ulaziNazivi[ime]) || ime;
+            const pripadnosti = Object.entries(podatak.pripadnosti || {})
+                .filter(([, w]) => Number(w) > 0.05)
+                .map(([k, w]) => `${k} ${Number(w).toFixed(2)}`)
+                .join(', ');
+            html += `<tr><td>${naziv}</td><td>${podatak.vrednost}</td>` +
+                    `<td>${pripadnosti || '—'}</td></tr>`;
+        });
+        html += '</tbody></table>';
     }
 
     if (pravila.length) {
@@ -229,7 +323,9 @@ function napraviObjasnjenje(podaci) {
                         : stavka.kategorija === 'SUMNJIVO' ? 'je-sumnjivo'
                         : 'je-legitiman';
             const naziv = t.kategorije[stavka.kategorija] || stavka.kategorija;
+            const uslov = trenutniJezik === 'sr' ? stavka.uslov_sr : stavka.uslov_en;
             html += `<li><span class="obj-pravilo">${stavka.pravilo}</span>` +
+                    `<span class="obj-uslov">${escapeHtml(uslov || '')}</span>` +
                     `<span class="obj-jacina">${t.jacina} ${Number(stavka.jacina).toFixed(2)}</span>` +
                     `<span class="obj-kat ${klasa}">${naziv}</span></li>`;
         });

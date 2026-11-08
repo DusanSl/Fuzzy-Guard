@@ -204,25 +204,29 @@ def _izracunaj_kljucne_reci(tekst_za_mecovanje: str, nacin_recnik: str):
     evidencija = 0.0
     pogodjene = []
 
+    def dodaj_pogotke(uzorak, termin, tezina, izvor):
+        nonlocal evidencija
+        pozicije = [list(poklapanje.span()) for poklapanje in uzorak.finditer(tekst_za_mecovanje)]
+        if not pozicije:
+            return
+        evidencija += len(pozicije) * tezina
+        pogodjene.append({
+            "rec": termin,
+            "broj": len(pozicije),
+            "tezina": tezina,
+            "izvor": izvor,
+            "pozicije": pozicije[:10],
+        })
+
     if nacin_recnik in ("rucni", "kombinovano"):
         for uzorak, termin, tezina in _RUCNI_UZORCI:
-            broj = len(uzorak.findall(tekst_za_mecovanje))
-            if broj:
-                evidencija += broj * tezina
-                pogodjene.append(
-                    {"rec": termin, "broj": broj, "tezina": tezina, "izvor": "rucni"}
-                )
+            dodaj_pogotke(uzorak, termin, tezina, "rucni")
 
     if nacin_recnik in ("nauceni", "kombinovano"):
         for uzorak, termin, tezina in _nauceni_uzorci():
             if nacin_recnik == "kombinovano" and termin in _RUCNI_TERMINI:
                 continue  # ne broji dvaput isti termin
-            broj = len(uzorak.findall(tekst_za_mecovanje))
-            if broj:
-                evidencija += broj * tezina
-                pogodjene.append(
-                    {"rec": termin, "broj": broj, "tezina": tezina, "izvor": "nauceni"}
-                )
+            dodaj_pogotke(uzorak, termin, tezina, "nauceni")
 
     pogodjene.sort(key=lambda stavka: stavka["broj"] * stavka["tezina"], reverse=True)
     return min(evidencija, 10.0), pogodjene[:8]
@@ -262,10 +266,11 @@ def analiziraj_email(tekst: str, nacin_recnik: Optional[str] = None) -> dict:
         "caps_procenat": round(caps_procenat, 2),
         "interpunkcija": float(interpunkcija),
         "pokrivene_reci": pogodjene_reci,
+        "vidljivi_tekst": vidljivi_tekst,
     }
 
 
-def ucitaj_sve_primere(jezik: str = "en") -> list:
+def _ucitaj_primere(jezik: str = "en", teski: bool = False) -> list:
     if not PUTANJA_PRIMERI.exists():
         return []
 
@@ -283,11 +288,21 @@ def ucitaj_sve_primere(jezik: str = "en") -> list:
             tag = linije[0].strip().lower()
             tekst = linije[1].strip()
 
-            if tag == "[en]":
+            if ("teski" in tag) != teski:
+                continue
+            if tag.startswith("[en]"):
                 primeri_en.append(tekst)
-            elif tag == "[sr]":
+            elif tag.startswith("[sr]"):
                 primeri_sr.append(tekst)
 
         return primeri_sr if jezik == "sr" else primeri_en
     except Exception:
         return []
+
+
+def ucitaj_sve_primere(jezik: str = "en") -> list:
+    return _ucitaj_primere(jezik, teski=False)
+
+
+def ucitaj_teske_primere(jezik: str = "en") -> list:
+    return _ucitaj_primere(jezik, teski=True)

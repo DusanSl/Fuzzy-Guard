@@ -15,6 +15,7 @@ from obrada_teksta.analizator import (
     SPAM_RECNIK_RECI,
     _izracunaj_kljucne_reci,
     ucitaj_nauceni_recnik,
+    ucitaj_teske_primere,
 )
 from fazi.pravila import fuzzifikuj, sastavi_pravila
 from fazi.zakljucivanje import pokreni_fis
@@ -176,6 +177,60 @@ def test_api_vraca_objasnjenje():
     assert "objasnjenje" in odgovor
     assert odgovor["objasnjenje"]["pokrivene_reci"]
     assert "aktivna_pravila" in odgovor["objasnjenje"]
+
+
+def test_teski_primeri_postoje():
+    assert len(ucitaj_teske_primere("sr")) >= 5
+    assert len(ucitaj_teske_primere("en")) >= 3
+
+
+def test_teski_srpski_primeri_nemaju_rucne_kljucne_reci():
+    """Teski primeri su namerno bez ijedne reci iz rucnog recnika."""
+    for tekst in ucitaj_teske_primere("sr"):
+        ulazi = analiziraj_email(tekst, nacin_recnik="rucni")
+        assert ulazi["kljucne_reci"] == 0.0, tekst
+
+
+def test_obican_ucitavac_ne_vraca_teske_primere():
+    from obrada_teksta.analizator import ucitaj_sve_primere
+    normalni = set(ucitaj_sve_primere("en")) | set(ucitaj_sve_primere("sr"))
+    teski = set(ucitaj_teske_primere("en")) | set(ucitaj_teske_primere("sr"))
+    assert teski
+    assert normalni.isdisjoint(teski)
+
+
+def test_objasnjenje_sadrzi_ulaze_pozicije_i_uslove():
+    from main import app
+    klijent = app.test_client()
+    odgovor = klijent.post(
+        "/analiziraj", json={"tekst": "You WON a FREE prize, click here now"}
+    ).get_json()
+    objasnjenje = odgovor["objasnjenje"]
+
+    assert objasnjenje["tekst"]
+    assert set(objasnjenje["ulazi"]) == {
+        "kljucne_reci", "broj_linkova", "caps_procenat", "interpunkcija"
+    }
+    assert objasnjenje["pokrivene_reci"]
+    prvo = objasnjenje["pokrivene_reci"][0]
+    assert prvo["pozicije"]
+    pocetak, kraj = prvo["pozicije"][0]
+    assert objasnjenje["tekst"][pocetak:kraj].lower() == prvo["rec"]
+
+    assert objasnjenje["aktivna_pravila"]
+    assert objasnjenje["aktivna_pravila"][0]["uslov_sr"]
+    assert objasnjenje["aktivna_pravila"][0]["uslov_en"]
+
+
+def test_svako_pravilo_ima_opis():
+    from fazi.pravila import OPISI_PRAVILA, sastavi_pravila
+    mu = fuzzifikuj(5, 1, 20, 10)
+    for naziv, _, _, _ in sastavi_pravila(mu):
+        assert naziv in OPISI_PRAVILA
+        assert OPISI_PRAVILA[naziv]["sr"]
+        assert OPISI_PRAVILA[naziv]["en"]
+
+
 
 
 
