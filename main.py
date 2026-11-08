@@ -91,6 +91,7 @@ def analiziraj():
         "objasnjenje": {
             "tekst":           ulazi.get("vidljivi_tekst", ""),
             "pokrivene_reci":  ulazi.get("pokrivene_reci", []),
+            "oznake":          ulazi.get("oznake", []),
             "aktivna_pravila": rezultat_fis.get("aktivna_pravila", []),
             "ulazi":           rezultat_fis.get("ulazi", {}),
         },

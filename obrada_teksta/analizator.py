@@ -107,6 +107,8 @@ _UZORAK_LINKA = re.compile(r"(?i)\b(?:https?://|hxxps?://|www\.)[^\s<>\"']+")
 _UZORAK_HREF = re.compile(r"(?i)href\s*=\s*[\"']([^\"']+)[\"']")
 _UZORAK_SKRIPT = re.compile(r"(?is)<(script|style)\b.*?</\1>")
 _UZORAK_TAG = re.compile(r"(?s)<[^>]+>")
+_UZORAK_CAPS = re.compile(r"\b[A-Z\u010c\u0106\u0160\u017d\u0110]{3,}\b")
+_UZORAK_INTERPUNKCIJA = re.compile(r"[!?]+")
 
 
 def _ocisti_html(tekst: str) -> str:
@@ -260,12 +262,37 @@ def analiziraj_email(tekst: str, nacin_recnik: Optional[str] = None) -> dict:
     else:
         interpunkcija = 0.0
 
+    oznake = [
+        {
+            "tip": "link",
+            "pozicije": [
+                list(poklapanje.span())
+                for poklapanje in _UZORAK_LINKA.finditer(vidljivi_tekst)
+            ][:50],
+        },
+        {
+            "tip": "caps",
+            "pozicije": [
+                list(poklapanje.span())
+                for poklapanje in _UZORAK_CAPS.finditer(vidljivi_tekst)
+            ][:50],
+        },
+        {
+            "tip": "interpunkcija",
+            "pozicije": [
+                list(poklapanje.span())
+                for poklapanje in _UZORAK_INTERPUNKCIJA.finditer(vidljivi_tekst)
+            ][:50],
+        },
+    ]
+
     return {
         "kljucne_reci":  float(broj_kljucnih_reci),
         "broj_linkova":  float(broj_linkova),
         "caps_procenat": round(caps_procenat, 2),
         "interpunkcija": float(interpunkcija),
         "pokrivene_reci": pogodjene_reci,
+        "oznake": oznake,
         "vidljivi_tekst": vidljivi_tekst,
     }
 

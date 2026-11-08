@@ -19,6 +19,11 @@
     --spam: #E2685C;
     --focus: #86A9CC;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 36px rgba(0, 0, 0, 0.28);
+    --mark-keyword: #D7A445;
+    --mark-link: #6FA8DC;
+    --mark-caps: #E2685C;
+    --mark-interpunkcija: #B69CE8;
+    --mark-text: #12161A;
 }
 
 [data-theme="light"] {
@@ -33,6 +38,11 @@
     --spam: #B93F35;
     --focus: #3D6C9E;
     --shadow: 0 1px 2px rgba(23, 33, 43, 0.06), 0 12px 30px rgba(23, 33, 43, 0.08);
+    --mark-keyword: #E9C46A;
+    --mark-link: #8DBBE8;
+    --mark-caps: #E88B80;
+    --mark-interpunkcija: #C5AEEB;
+    --mark-text: #17212B;
 }
 
 *, *::before, *::after {
@@ -589,10 +599,39 @@ textarea::placeholder {
 }
 
 .obj-mark {
-    background-color: var(--suspicious);
-    color: #12161A;
+    background-color: var(--mark-keyword);
+    color: var(--mark-text);
     border-radius: 3px;
     padding: 0 2px;
+}
+
+.obj-mark--keyword { background-color: var(--mark-keyword); }
+.obj-mark--link { background-color: var(--mark-link); }
+.obj-mark--caps { background-color: var(--mark-caps); }
+.obj-mark--interpunkcija { background-color: var(--mark-interpunkcija); }
+
+.obj-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.75rem;
+    margin-top: 0.4rem;
+}
+
+.obj-legenda span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+}
+
+.obj-legenda i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--boja);
+    display: inline-block;
 }
 
 .obj-cipovi {

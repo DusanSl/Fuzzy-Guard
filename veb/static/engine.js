@@ -38,6 +38,10 @@ const prevodi = {
         temaSvetla: 'Prebaci na svetlu temu',
         temaTamna: 'Prebaci na tamnu temu',
         sada: 'sada',
+        legendaRec: 'reči',
+        legendaLink: 'linkovi',
+        legendaCaps: 'velika slova',
+        legendaInter: 'interpunkcija',
         kategorije: { SPAM: 'SPAM', SUMNJIVO: 'SUMNJIVO', LEGITIMAN: 'LEGITIMAN' },
         ulaziNazivi: {
             kljucne_reci: 'ključne reči',
@@ -86,6 +90,10 @@ const prevodi = {
         temaSvetla: 'Switch to light theme',
         temaTamna: 'Switch to dark theme',
         sada: 'now',
+        legendaRec: 'keywords',
+        legendaLink: 'links',
+        legendaCaps: 'CAPS',
+        legendaInter: 'punctuation',
         kategorije: { SPAM: 'SPAM', SUMNJIVO: 'SUSPICIOUS', LEGITIMAN: 'LEGITIMATE' },
         ulaziNazivi: {
             kljucne_reci: 'keywords',
@@ -458,31 +466,74 @@ function renderTab() {
     }
 }
 
-function napraviPregled(tekst, reci) {
+function napraviPregled(tekst, reci, oznake) {
     const ogranicen = tekst.length > 1200 ? tekst.slice(0, 1200) : tekst;
-    const pozicije = [];
+    const prioritet = { link: 4, caps: 3, keyword: 2, interpunkcija: 1 };
+    const spanovi = [];
+
     (reci || []).forEach(stavka => {
-        (stavka.pozicije || []).forEach(pozicija => pozicije.push(pozicija));
+        (stavka.pozicije || []).forEach(([a, b]) => spanovi.push({ a, b, tip: 'keyword' }));
     });
-    pozicije.sort((a, b) => a[0] - b[0]);
+    (oznake || []).forEach(grupa => {
+        (grupa.pozicije || []).forEach(([a, b]) => spanovi.push({ a, b, tip: grupa.tip }));
+    });
+
+    spanovi.sort((x, y) =>
+        (prioritet[y.tip] - prioritet[x.tip]) ||
+        ((y.b - y.a) - (x.b - x.a)) ||
+        (x.a - y.a)
+    );
+
+    const prihvaceni = [];
+    for (const span of spanovi) {
+        if (span.a >= span.b) continue;
+        const preklapa = prihvaceni.some(p => span.a < p.b && span.b > p.a);
+        if (!preklapa) prihvaceni.push(span);
+    }
+    prihvaceni.sort((x, y) => x.a - y.a);
 
     let html = '';
     let poz = 0;
-    for (const [pocetak, kraj] of pozicije) {
-        if (pocetak < poz || pocetak > ogranicen.length) continue;
-        html += escapeHtml(ogranicen.slice(poz, pocetak));
-        html += '<mark class="obj-mark">' + escapeHtml(ogranicen.slice(pocetak, kraj)) + '</mark>';
-        poz = kraj;
+    for (const span of prihvaceni) {
+        if (span.a < poz || span.a > ogranicen.length) continue;
+        html += escapeHtml(ogranicen.slice(poz, span.a));
+        html += `<mark class="obj-mark obj-mark--${span.tip}">` +
+                escapeHtml(ogranicen.slice(span.a, span.b)) + '</mark>';
+        poz = span.b;
     }
     html += escapeHtml(ogranicen.slice(poz));
-    if (tekst.length > ogranicen.length) html += '…';
+    if (tekst.length > ogranicen.length) html += '...';
     return html;
+}
+
+function napraviLegend(reci, oznake) {
+    const t = prevodi[trenutniJezik];
+    const prisutni = new Set();
+
+    if ((reci || []).length) prisutni.add('keyword');
+    (oznake || []).forEach(grupa => {
+        if ((grupa.pozicije || []).length) prisutni.add(grupa.tip);
+    });
+
+    if (!prisutni.size) return '';
+
+    const stavke = [
+        ['keyword', t.legendaRec],
+        ['link', t.legendaLink],
+        ['caps', t.legendaCaps],
+        ['interpunkcija', t.legendaInter]
+    ].filter(([tip]) => prisutni.has(tip));
+
+    return '<div class="obj-legenda">' + stavke.map(([tip, naziv]) =>
+        `<span style="--boja:var(--mark-${tip})"><i></i>${naziv}</span>`
+    ).join('') + '</div>';
 }
 
 function napraviZasto(podaci) {
     const t = prevodi[trenutniJezik];
     const objasnjenje = podaci.objasnjenje || {};
     const reci = objasnjenje.pokrivene_reci || [];
+    const oznake = objasnjenje.oznake || [];
 
     if (!objasnjenje.tekst && !reci.length) {
         return `<div class="obj-prazno">${t.nemaObjasnjenja}</div>`;
@@ -492,7 +543,8 @@ function napraviZasto(podaci) {
 
     if (objasnjenje.tekst) {
         html += `<div class="obj-podnaslov">${t.gdeJePokrenuto}</div>`;
-        html += `<div class="obj-pregled">${napraviPregled(objasnjenje.tekst, reci)}</div>`;
+        html += `<div class="obj-pregled">${napraviPregled(objasnjenje.tekst, reci, oznake)}</div>`;
+        html += napraviLegend(reci, oznake);
     }
 
     if (reci.length) {

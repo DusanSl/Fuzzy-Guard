@@ -222,6 +222,30 @@ def test_objasnjenje_sadrzi_ulaze_pozicije_i_uslove():
     assert objasnjenje["aktivna_pravila"][0]["uslov_en"]
 
 
+def test_oznake_za_link_caps_i_interpunkciju():
+    from main import app
+    tekst = "CONGRATULATIONS!!! Visit http://example.com NOW!"
+    objasnjenje = app.test_client().post(
+        "/analiziraj", json={"tekst": tekst}
+    ).get_json()["objasnjenje"]
+
+    grupe = {grupa["tip"]: grupa["pozicije"] for grupa in objasnjenje["oznake"]}
+    assert grupe["link"] and grupe["caps"] and grupe["interpunkcija"]
+
+    for pozicije in grupe.values():
+        for pocetak, kraj in pozicije:
+            assert objasnjenje["tekst"][pocetak:kraj]
+
+    pocetak, kraj = grupe["link"][0]
+    assert "http://example.com" in objasnjenje["tekst"][pocetak:kraj]
+
+    pocetak, kraj = grupe["caps"][0]
+    assert objasnjenje["tekst"][pocetak:kraj].isupper()
+
+    pocetak, kraj = grupe["interpunkcija"][0]
+    assert set(objasnjenje["tekst"][pocetak:kraj]) <= set("!?")
+
+
 def test_svako_pravilo_ima_opis():
     from fazi.pravila import OPISI_PRAVILA, sastavi_pravila
     mu = fuzzifikuj(5, 1, 20, 10)
