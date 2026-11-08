@@ -31,7 +31,7 @@ const prevodi = {
         pravilaNaslov: 'Rules that fired',
         prethodne: 'Recent checks', ocistiSve: 'Clear all', nemaIstorije: 'Nothing checked yet.',
         podnozjeMetod: 'Mamdani inference · min/max · centroid defuzzification',
-        kakoRadi: 'How it works', prototip: 'Design prototype',
+        kakoRadi: 'How it works', prototip: 'Design prototype', zatvori: 'Close',
         metodNatpis: 'Method', metodNaslov: 'A score you can take apart.',
         metodUvod: 'No machine learning decides the verdict. Four extracted signals are fuzzified, evaluated against nineteen rules, aggregated and defuzzified into one number.',
         korak1Naslov: 'Extract', korak1Opis: 'Keywords, links, capitals and punctuation are counted from the body.',
@@ -91,7 +91,7 @@ const prevodi = {
         pravilaNaslov: 'Pravila koja su se aktivirala',
         prethodne: 'Prethodne provere', ocistiSve: 'Očisti sve', nemaIstorije: 'Još nema provera.',
         podnozjeMetod: 'Mamdani · min/max · centroid defazifikacija',
-        kakoRadi: 'Kako radi', prototip: 'Dizajn prototip',
+        kakoRadi: 'Kako radi', prototip: 'Dizajn prototip', zatvori: 'Zatvori',
         metodNatpis: 'Metod', metodNaslov: 'Ocena koju možete da rastavite.',
         metodUvod: 'Odluku ne donosi neuronska mreža. Četiri izdvojena signala se fuzifikuju, proveravaju kroz devetnaest pravila, agregiraju i defazifikuju u jedan broj.',
         korak1Naslov: 'Izdvajanje', korak1Opis: 'Ključne reči, linkovi, velika slova i interpunkcija broje se iz tela poruke.',
@@ -1046,23 +1046,26 @@ function pokreniAnalizu() {
     }, smanjenoKretanje ? 140 : 360);
 }
 
-const INDEKS_UZORKA = { legitiman: 0, sumnjiv: 0, prevara: 0 };
-async function izaberiUzorak(kljuc, nasumicno) {
-    const grupa = UZORCI[kljuc];
-    if (!grupa || !grupa.length) return;
+let primeriKes = { en: null, sr: null };
 
-    let indeks;
-    if (nasumicno) {
-        indeks = Math.floor(Math.random() * grupa.length);
-    } else {
-        indeks = INDEKS_UZORKA[kljuc] % grupa.length;
-        INDEKS_UZORKA[kljuc] = (indeks + 1) % grupa.length;
+async function ucitajPrimere(jezikPrimera) {
+    if (!primeriKes[jezikPrimera]) {
+        const odgovor = await fetch('/primeri-svi?jezik=' + jezikPrimera);
+        const podaci = await odgovor.json();
+        primeriKes[jezikPrimera] = podaci.primeri || [];
     }
+    return primeriKes[jezikPrimera];
+}
 
-    const uzorak = grupa[indeks];
-    popuniPolja(uzorak);
-
+async function izaberiUzorak(kljuc) {
     try {
+        const lista = await ucitajPrimere(jezik);
+        const grupa = lista.filter(primer => primer.kategorija === kljuc);
+        if (!grupa.length) return;
+
+        const uzorak = grupa[Math.floor(Math.random() * grupa.length)];
+        popuniPolja(uzorak);
+
         const rezultat = await izracunajRezultat(uzorak.tekst, nacinRecnika);
         prikaziRezultat(rezultat, { animiraj: true });
         dodajUIstoriju(uzorak.tekst, uzorak.posaljilac, uzorak.tema, rezultat);
@@ -1071,23 +1074,12 @@ async function izaberiUzorak(kljuc, nasumicno) {
     }
 }
 
-let primeriKes = { en: null, sr: null };
-
 async function izaberiRandom() {
-    const jezikUzorka = jezik;
-
     try {
-        if (!primeriKes[jezikUzorka]) {
-            const odgovor = await fetch('/primeri-svi?jezik=' + jezikUzorka);
-            const podaci = await odgovor.json();
-            primeriKes[jezikUzorka] = podaci.primeri || [];
-        }
-
-        const lista = primeriKes[jezikUzorka];
+        const lista = await ucitajPrimere(jezik);
         if (!lista.length) return;
 
         const uzorak = lista[Math.floor(Math.random() * lista.length)];
-
         popuniPolja(uzorak);
 
         const rezultat = await izracunajRezultat(uzorak.tekst, nacinRecnika);
@@ -1211,6 +1203,11 @@ function primeniJezik() {
     document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
         const kljuc = element.getAttribute('data-i18n-placeholder');
         if (recnik[kljuc] !== undefined) element.placeholder = recnik[kljuc];
+    });
+
+    document.querySelectorAll('[data-i18n-aria]').forEach(element => {
+        const kljuc = element.getAttribute('data-i18n-aria');
+        if (recnik[kljuc] !== undefined) element.setAttribute('aria-label', recnik[kljuc]);
     });
 
     const jezikDugme = document.getElementById('jezik-dugme');

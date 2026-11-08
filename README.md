@@ -13,7 +13,7 @@ The application features a responsive web interface with full bilingual support 
 - **Fuzzy Inference System (FIS):** Employs Mamdani fuzzy inference to evaluate multiple email attributes simultaneously.
 - **Bilingual Interface:** Real-time translation toggle between English and Serbian.
 - **History Tracking:** View and recall previous checks performed during the active session.
-- **Sample Loader:** Load a legitimate, suspicious or spam example (English or Serbian) with one click, or pick a random category with a visible indicator.
+- **Sample Loader:** Load a legitimate, suspicious or spam example (English or Serbian) at random, or pick a random example across all categories.
 - **Explainable verdict:** a fuzzy spectrum drawn from the actual output sets, plus **Why / Inputs / Rules** tabs showing matched words in context, membership degrees and the rules that fired. Matches are colour-coded (keywords, links, capitals, punctuation).
 - **Modern UI:** clean, Apple-inspired layout with a sticky top bar. Dark by default with a light theme; bilingual, responsive and keyboard-friendly.
 - **Method dialog:** a short walkthrough of the pipeline (extract → fuzzify → infer → defuzzify) with the output spectrum.
@@ -386,9 +386,9 @@ Dataset sources:
   emails (`primeri.txt`). All reported model metrics come from held-out test
   data, never from the tuning set.
 - `primeri.txt` carries `From:`, `Subject:` and `Category:` metadata. Categories
-  were assigned **automatically by the filter** (score thresholds), so they drive
-  the Random indicator but are not independent ground truth. The `[teski]` hard
-  examples are excluded from the Random pool.
+  were auto-assigned by the filter and then **manually corrected for obvious
+  misclassifications**; they are not a benchmark. The `[teski]` hard examples are
+  excluded from the Random pool.
 - Different emails can still produce the same `spam_score`. That is inherent to
   Mamdani inference: if two inputs have the same membership in every set and
   activate the same rules with the same strength, the defuzzified output is

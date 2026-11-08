@@ -1,564 +1,564 @@
 [EN]
-From: Account Security
-Subject: Action required: your account will be closed
+From: Prize Department
+Subject: CONGRATULATIONS
 Category: prevara
 CONGRATULATIONS!!! You WON a FREE prize! Click here: http://fakesite.com to CLAIM NOW!!! Click http://bonus.com and http://reward.net NOW!!!
 ---
 [EN]
 From: Mina Petrović
-Subject: Re: sync tomorrow
+Subject: Hi, just wanted to confirm our meeting tomorrow at 3pm
 Category: legitiman
 Hi, just wanted to confirm our meeting tomorrow at 3pm. Let me know if that works for you.
 ---
 [EN]
-From: Prize Department
-Subject: You have won
+From: Account Security
+Subject: URGENT: Your account will be CLOSED unless you ACT NOW
 Category: prevara
 URGENT: Your account will be CLOSED unless you ACT NOW! Click http://scam-alert.net to prevent ur account from being CLOSED
 ---
 [EN]
-From: Marko Jovanović
-Subject: Meeting notes
+From: Office
+Subject: Hey, I finished the report you asked for
 Category: legitiman
 Hey, I finished the report you asked for. I'll send it over by end of day. Let me know if you need anything else before the deadline.
 ---
 [EN]
-From: Support
-Subject: Unusual activity
-Category: sumnjiv
+From: Account Security
+Subject: You have been selected to receive a million dollars
+Category: prevara
 You have been selected to receive a million dollars! Go to http://getrichfast.biz to sign up
 ---
 [EN]
-From: HR Team
-Subject: Benefits update
+From: Team
+Subject: Just a reminder that the team lunch is on Friday at 1pm
 Category: legitiman
 Just a reminder that the team lunch is on Friday at 1pm. We're going to the Italian place on the corner. Hope to see everyone there!
 ---
 [EN]
-From: Billing
-Subject: Final notice
+From: Account Security
+Subject: Win a free gift card
 Category: prevara
 Win a free gift card! Click http://gifts.com to claim your offer today.
 ---
 [EN]
-From: Finance
-Subject: Invoice approved
+From: Mina Petrović
+Subject: Can you review the attached document and share your fee...
 Category: legitiman
 Can you review the attached document and share your feedback by Thursday? No rush, just want to finalize before the meeting.
 ---
 [EN]
-From: Offers
-Subject: Limited opportunity
+From: Account Security
+Subject: Exclusive deal just for you — discount prices, limited...
 Category: prevara
 Exclusive deal just for you — discount prices, limited offer! Visit http://deals.net for cheap prices and big savings guaranteed!
 ---
 [EN]
-From: Anna Smith
-Subject: Project update
+From: Delivery
+Subject: The package you ordered has been shipped
 Category: legitiman
 The package you ordered has been shipped. Expected delivery is in 3-5 business days. Contact support if you have any questions.
 ---
 [EN]
-From: Mina Petrović
-Subject: Re: sync tomorrow
+From: Finance
+Subject: Attached is the invoice for last month's services
 Category: legitiman
 Attached is the invoice for last month's services. Please process payment within 30 days as per our agreement. Let me know if you have any questions.
 ---
 [EN]
-From: Marko Jovanović
-Subject: Meeting notes
+From: Mina Petrović
+Subject: Reminder: the quarterly review is scheduled for next Mo...
 Category: legitiman
 Reminder: the quarterly review is scheduled for next Monday at 10am in Conference Room B. Please bring your updated slides.
 ---
 [EN]
-From: HR Team
-Subject: Benefits update
+From: Mina Petrović
+Subject: Thanks for your help moving this weekend
 Category: legitiman
 Thanks for your help moving this weekend! I really appreciate it. Let's grab coffee sometime next week to catch up.
 ---
 [EN]
-From: Finance
-Subject: Invoice approved
+From: Home Services
+Subject: The plumber is coming Tuesday between 9 and noon to fix...
 Category: legitiman
 The plumber is coming Tuesday between 9 and noon to fix the kitchen sink. I'll be working from home that day.
 ---
 [EN]
-From: Billing
-Subject: Payment pending
+From: Account Security
+Subject: Hi, we noticed unusual activity on your account
 Category: sumnjiv
 Hi, we noticed unusual activity on your account. Please verify your details at http://secure-check.com to avoid any interruption.
 ---
 [EN]
-From: Delivery
-Subject: Parcel update
+From: Support
+Subject: Special offer for our valued customers: get 20% off you...
 Category: sumnjiv
 Special offer for our valued customers: get 20% off your next purchase. Visit http://shop-savings.com for details.
 ---
 [EN]
-From: Notifications
-Subject: Action needed
+From: Finance
+Subject: You may be eligible for a refund
 Category: sumnjiv
 You may be eligible for a refund. Please confirm your information here: http://refund-portal.net within 5 days.
 ---
 [EN]
 From: Account Security
-Subject: Action required: your account will be closed
+Subject: Don't miss out on this limited time offer
 Category: prevara
 Don't miss out on this limited time offer! Save big on your subscription renewal. Click http://renew-now.com to continue.
 ---
 [EN]
-From: Support
-Subject: Unusual activity
+From: Finance
+Subject: Your invoice is ready for review
 Category: sumnjiv
 Your invoice is ready for review. Please click http://billing-view.com to see the full amount due.
 ---
 [EN]
-From: Billing
-Subject: Payment pending
+From: Account Security
+Subject: We have a new update available for your account settings
 Category: sumnjiv
 We have a new update available for your account settings. Please log in at http://account-update.com to review changes.
 ---
 [EN]
 From: Prize Department
-Subject: You have won
+Subject: WINNER
 Category: prevara
 WINNER!!! You have been chosen to receive a FREE iPhone! Click http://claimnow.biz and http://freegift.net NOW to CLAIM your PRIZE!!!
 ---
 [EN]
-From: Delivery
-Subject: Parcel update
+From: Finance
+Subject: ACT NOW
 Category: sumnjiv
 ACT NOW!!! Your loan has been APPROVED for $50,000 CASH!!! Visit http://instantcash.biz and http://loanfast.net to GET PAID today!!!
 ---
 [EN]
-From: Billing
-Subject: Final notice
+From: Prize Department
+Subject: CONGRATULATIONS
 Category: prevara
 CONGRATULATIONS!!! You are our LUCKY WINNER of the MEGA JACKPOT!!! Claim your MILLION DOLLAR prize at http://megawin.biz NOW!!!
 ---
 [EN]
-From: Offers
-Subject: Limited opportunity
+From: Account Security
+Subject: FREE FREE FREE
 Category: prevara
 FREE FREE FREE!!! Get UNLIMITED cash rewards GUARANTEED!!! Click http://easymoney.net and http://fastcash.biz to CLAIM NOW!!!
 ---
 [EN]
 From: Account Security
-Subject: Action required: your account will be closed
+Subject: URGENT NOTICE
 Category: prevara
 URGENT NOTICE!!! Your subscription EXPIRES today!!! RENEW NOW at http://renewfast.biz or LOSE ACCESS FOREVER!!!
 ---
 [SR]
 From: Nagradna igra
-Subject: Čestitamo!
+Subject: BESPLATAN keš bonus te čeka
 Category: prevara
 BESPLATAN keš bonus te čeka! Preuzmi na http://osvojidanas.net i http://bonus-cash.net
 ---
 [SR]
 From: Mina Petrović
-Subject: Re: sastanak
+Subject: Ćao, samo da potvrdimo sastanak sutra u 15h
 Category: legitiman
 Ćao, samo da potvrdimo sastanak sutra u 15h. Javi mi da li ti to odgovara.
 ---
 [SR]
 From: Korisnička podrška
-Subject: Hitno obaveštenje
+Subject: HITNO: Vaš nalog će biti ZATVOREN
 Category: prevara
 HITNO: Vaš nalog će biti ZATVOREN! Kliknite http://prevara.net da verifikujete ODMAH i preuzmete BESPLATAN bonus!
 ---
 [SR]
-From: Marko Jovanović
-Subject: Beleške sa sastanka
+From: Kancelarija
+Subject: Hej, završio sam izveštaj koji si tražio
 Category: legitiman
 Hej, završio sam izveštaj koji si tražio. Poslaću ga do kraja dana. Javi ako treba još nešto pre roka.
 ---
 [SR]
-From: Finansije
-Subject: Poslednje upozorenje
+From: Nagradna igra
+Subject: Ekskluzivna ponuda — osvoji milion
 Category: prevara
 Ekskluzivna ponuda — osvoji milion! Klikni http://zarada.biz za besplatnu priliku danas.
 ---
 [SR]
-From: HR tim
-Subject: Obaveštenje
+From: Tim
+Subject: Podsetnik za timski ručak u petak u 13h
 Category: legitiman
 Podsetnik za timski ručak u petak u 13h. Idemo u onaj italijanski restoran na ćošku. Vidimo se!
 ---
 [SR]
 From: Podrška
-Subject: Obaveštenje o nalogu
+Subject: Posebna ponuda za tebe
 Category: sumnjiv
 Posebna ponuda za tebe! Popust na sve proizvode, ograničena ponuda. Poseti http://jeftino.rs za detalje.
 ---
 [SR]
-From: Finansije
-Subject: Račun odobren
+From: Mina Petrović
+Subject: Možeš li da mi pošalješ beleške sa sastanka
 Category: legitiman
 Možeš li da mi pošalješ beleške sa sastanka? Nisam bio tu na kraju. Hvala!
 ---
 [SR]
-From: Ponude
-Subject: Ograničena prilika
+From: Nagradna igra
+Subject: OSVOJI VELIKO
 Category: prevara
 OSVOJI VELIKO!!! BESPLATAN keš bonus te čeka! DOBITNIK si danas! Preuzmi na http://osvojidanas.net i http://besplatno.rs i http://bonus-cash.net — OGRANIČENA ponuda, REAGUJ ODMAH!!!
 ---
 [SR]
-From: Jelena Marković
-Subject: Ažuriranje projekta
+From: Mina Petrović
+Subject: Rok za projekat je pomeren za sledeći četvrtak
 Category: legitiman
 Rok za projekat je pomeren za sledeći četvrtak. Molim vas da sve materijale pošaljete do srede uveče.
 ---
 [SR]
-From: Mina Petrović
-Subject: Re: sastanak
+From: Finansije
+Subject: U prilogu šaljem fakturu za prošli mesec
 Category: legitiman
 U prilogu šaljem fakturu za prošli mesec. Molim vas da izvršite uplatu u roku od 30 dana. Javite se ako imate pitanja.
 ---
 [SR]
-From: Marko Jovanović
-Subject: Beleške sa sastanka
+From: Mina Petrović
+Subject: Podsetnik: kvartalni sastanak je zakazan za ponedeljak...
 Category: legitiman
 Podsetnik: kvartalni sastanak je zakazan za ponedeljak u 10h u sali B. Ponesite ažurirane prezentacije.
 ---
 [SR]
-From: HR tim
-Subject: Obaveštenje
+From: Mina Petrović
+Subject: Hvala ti što si mi pomogao oko selidbe ovog vikenda
 Category: legitiman
 Hvala ti što si mi pomogao oko selidbe ovog vikenda! Stvarno cenim to. Nađimo se na kafi sledeće nedelje.
 ---
 [SR]
-From: Finansije
-Subject: Račun odobren
+From: Servis
+Subject: Vodoinstalater dolazi u utorak između 9 i 12 da popravi...
 Category: legitiman
 Vodoinstalater dolazi u utorak između 9 i 12 da popravi sudoperu. Tog dana radim od kuće.
 ---
 [SR]
-From: Dostava
-Subject: Vaš paket čeka
+From: Korisnička podrška
+Subject: Poštovani, primetili smo neobičnu aktivnost na vašem na...
 Category: sumnjiv
 Poštovani, primetili smo neobičnu aktivnost na vašem nalogu. Molimo verifikujte podatke na http://sigurna-provera.net kako biste izbegli prekid.
 ---
 [SR]
-From: Sistem
-Subject: Provera aktivnosti
+From: Podrška
+Subject: Posebna ponuda za naše cenjene korisnike: 20% popusta n...
 Category: sumnjiv
 Posebna ponuda za naše cenjene korisnike: 20% popusta na sledeću kupovinu. Posetite http://ustedazakupovinu.rs za detalje.
 ---
 [SR]
-From: Obaveštenja
-Subject: Potrebna akcija
+From: Finansije
+Subject: Možda imate pravo na povraćaj novca
 Category: sumnjiv
 Možda imate pravo na povraćaj novca. Potvrdite podatke ovde: http://povracaj-portal.net u roku od 5 dana.
 ---
 [SR]
 From: Podrška
-Subject: Obaveštenje o nalogu
+Subject: Ne propustite ovu ograničenu ponudu
 Category: sumnjiv
 Ne propustite ovu ograničenu ponudu! Uštedite na obnovi pretplate. Kliknite http://obnovi-sada.rs da nastavite.
 ---
 [SR]
-From: Dostava
-Subject: Vaš paket čeka
+From: Finansije
+Subject: Vaša faktura je spremna za pregled
 Category: sumnjiv
 Vaša faktura je spremna za pregled. Kliknite http://pregled-racuna.net da vidite ukupan iznos.
 ---
 [SR]
-From: Sistem
-Subject: Provera aktivnosti
+From: Korisnička podrška
+Subject: Dostupno je novo ažuriranje za podešavanja vašeg naloga
 Category: sumnjiv
 Dostupno je novo ažuriranje za podešavanja vašeg naloga. Prijavite se na http://azuriranje-naloga.net da pregledate izmene.
 ---
 [SR]
 From: Nagradna igra
-Subject: Čestitamo!
+Subject: POBEDNIK
 Category: prevara
 POBEDNIK!!! Izabrani ste da dobijete BESPLATAN iPhone! Kliknite http://preuzmiodmah.biz i http://poklon.net ODMAH da PREUZMETE NAGRADU!!!
 ---
 [SR]
-From: Obaveštenja
-Subject: Potrebna akcija
+From: Finansije
+Subject: REAGUJ ODMAH
 Category: sumnjiv
 REAGUJ ODMAH!!! Vaš kredit je ODOBREN za 50.000 evra KEŠ!!! Posetite http://brzikes.biz i http://kreditodmah.net da NAPLATITE danas!!!
 ---
 [SR]
-From: Korisnička podrška
-Subject: Hitno obaveštenje
+From: Nagradna igra
+Subject: ČESTITAMO
 Category: prevara
 ČESTITAMO!!! Vi ste naš SREĆNI DOBITNIK MEGA DŽEKPOTA!!! Preuzmite nagradu od MILION DINARA na http://megadobitak.biz ODMAH!!!
 ---
 [SR]
-From: Finansije
-Subject: Poslednje upozorenje
+From: Nagradna igra
+Subject: BESPLATNO BESPLATNO BESPLATNO
 Category: prevara
 BESPLATNO BESPLATNO BESPLATNO!!! Osvojite NEOGRANIČENE keš nagrade GARANTOVANO!!! Kliknite http://lakpare.net i http://brzkes.biz da PREUZMETE ODMAH!!!
 ---
 [SR]
-From: Ponude
-Subject: Ograničena prilika
+From: Nagradna igra
+Subject: HITNO OBAVEŠTENJE
 Category: prevara
 HITNO OBAVEŠTENJE!!! Vaša pretplata ISTIČE danas!!! OBNOVITE ODMAH na http://obnovibrzo.biz ili IZGUBITE PRISTUP ZAUVEK!!!
 ---
 [EN]
-From: Notifications
-Subject: Action needed
+From: Delivery
+Subject: Dear customer, kindly validate your profile to avoid su...
 Category: sumnjiv
 Dear customer, kindly validate your profile to avoid suspension of your parcel delivery within 48 hours.
 ---
 [EN]
-From: Anna Smith
-Subject: Project update
+From: Finance
+Subject: Thanks for sending the updated invoice
 Category: legitiman
 Thanks for sending the updated invoice. Finance will process it on Friday and I'll confirm once it clears.
 ---
 [EN]
 From: Mina Petrović
-Subject: Re: sync tomorrow
+Subject: Reminder: the team stand-up moved to 9:30 tomorrow
 Category: legitiman
 Reminder: the team stand-up moved to 9:30 tomorrow. The calendar invite has been updated.
 ---
 [EN]
-From: Marko Jovanović
-Subject: Meeting notes
+From: Office
+Subject: I've attached the signed contract and the revised timeline
 Category: legitiman
 I've attached the signed contract and the revised timeline. Let me know if anything needs changing.
 ---
 [EN]
 From: Support
-Subject: Unusual activity
+Subject: Earn 12% daily with our automated trading desk
 Category: sumnjiv
 Earn 12% daily with our automated trading desk. No experience needed. Deposit today at http://cryptopump.biz
 ---
 [EN]
-From: Billing
-Subject: Payment pending
+From: Finance
+Subject: Your invoice INV-8841 is overdue
 Category: sumnjiv
 Your invoice INV-8841 is overdue. Immediate settlement is required to avoid legal action. Pay at http://secure-pay-portal.net
 ---
 [EN]
-From: Delivery
-Subject: Parcel update
+From: Support
+Subject: I saw your profile and felt we should talk
 Category: sumnjiv
 I saw your profile and felt we should talk. Message me on http://findlove-now.biz before tonight.
 ---
 [EN]
-From: HR Team
-Subject: Benefits update
-Category: legitiman
+From: Account Security
+Subject: Rank #1 in search results in 7 days
+Category: prevara
 Rank #1 in search results in 7 days. Limited slots available. Reply to this message for pricing.
 ---
 [EN]
-From: Notifications
-Subject: Action needed
+From: Support
+Subject: Lose weight fast without exercise
 Category: sumnjiv
 Lose weight fast without exercise. Doctor-approved formula. Order now at http://slimlab.biz
 ---
 [EN]
-From: Support
-Subject: Unusual activity
+From: Finance
+Subject: Final notice: your tax refund of 842 EUR is pending
 Category: sumnjiv
 Final notice: your tax refund of 842 EUR is pending. Confirm your bank details at http://refund-tax-eu.info
 ---
 [EN]
-From: Finance
-Subject: Invoice approved
+From: Team
+Subject: Lunch on Thursday
 Category: legitiman
 Lunch on Thursday? I'll book the place near the office if you're free.
 ---
 [EN]
-From: Anna Smith
-Subject: Project update
+From: Mina Petrović
+Subject: The deployment finished successfully and monitoring loo...
 Category: legitiman
 The deployment finished successfully and monitoring looks normal. I'll keep an eye on it tonight.
 ---
 [EN]
 From: Mina Petrović
-Subject: Re: sync tomorrow
+Subject: This week in review: three new features, one deprecatio...
 Category: legitiman
 This week in review: three new features, one deprecation, and a short note about upcoming maintenance.
 ---
 [EN]
-From: Billing
-Subject: Payment pending
+From: Careers
+Subject: Work from home and earn 3000 monthly
 Category: sumnjiv
 Work from home and earn 3000 monthly. No interview needed. Send your bank details to start today.
 ---
 [EN]
-From: Delivery
-Subject: Parcel update
+From: Finance
+Subject: Your streaming subscription will be suspended in 24 hours
 Category: sumnjiv
 Your streaming subscription will be suspended in 24 hours. Update payment information at http://stream-renew.biz
 ---
 [EN]
-From: Marko Jovanović
-Subject: Meeting notes
-Category: legitiman
+From: Finance
+Subject: You are the lucky holder of ticket 4471
+Category: prevara
 You are the lucky holder of ticket 4471. Settlement of your winnings requires a small processing payment.
 ---
 [EN]
-From: HR Team
-Subject: Benefits update
+From: Mina Petrović
+Subject: Can you review my pull request when you get a chance
 Category: legitiman
 Can you review my pull request when you get a chance? It's a small change in the parser.
 ---
 [EN]
-From: Finance
-Subject: Invoice approved
-Category: legitiman
+From: Delivery
+Subject: A parcel addressed to you is being held at our depot
+Category: prevara
 A parcel addressed to you is being held at our depot. Settle the delivery fee to release it.
 ---
 [EN]
-From: Anna Smith
-Subject: Project update
+From: Mina Petrović
+Subject: Sorry for the late reply — I was travelling
 Category: legitiman
 Sorry for the late reply — I was travelling. Let's reschedule the call for Monday.
 ---
 [EN]
-From: Mina Petrović
-Subject: Re: sync tomorrow
-Category: legitiman
+From: Finance
+Subject: Private placement open for a few investors
+Category: sumnjiv
 Private placement open for a few investors. Our members report strong results. Reply for details.
 ---
 [EN]
-From: Marko Jovanović
-Subject: Meeting notes
-Category: legitiman
+From: Account Security
+Subject: Your October account statement is ready
+Category: sumnjiv
 Your October account statement is ready. Log in to review recent activity.
 ---
 [EN]
-From: HR Team
-Subject: Benefits update
+From: Home Services
+Subject: The printer on the second floor is out of toner again
 Category: legitiman
 The printer on the second floor is out of toner again. Facilities said they'll replace it tomorrow.
 ---
 [EN]
-From: Notifications
-Subject: Action needed
-Category: sumnjiv
+From: Mina Petrović
+Subject: Congratulations to the team on shipping the release
+Category: legitiman
 Congratulations to the team on shipping the release! Retro is on Friday at 4pm.
 ---
 [SR]
-From: Jelena Marković
-Subject: Ažuriranje projekta
-Category: legitiman
+From: Finansije
+Subject: Poštovani, vaša pošiljka je zadržana
+Category: prevara
 Poštovani, vaša pošiljka je zadržana. Izvršite uplatu do petka kako bi bila isporučena.
 ---
 [SR]
-From: Mina Petrović
-Subject: Re: sastanak
+From: Kancelarija
+Subject: Zdravo, šaljem ti izveštaj koji smo pominjali
 Category: legitiman
 Zdravo, šaljem ti izveštaj koji smo pominjali. Pogledaj kada stigneš i javi mi ako nešto nije jasno.
 ---
 [SR]
-From: Marko Jovanović
-Subject: Beleške sa sastanka
+From: Mina Petrović
+Subject: Sastanak je prebačen na 10 časova u ponedeljak
 Category: legitiman
 Sastanak je prebačen na 10 časova u ponedeljak. Poslaću novi poziv u kalendaru.
 ---
 [SR]
-From: HR tim
-Subject: Obaveštenje
+From: Kancelarija
+Subject: Hvala na informaciji — primio sam dokumente
 Category: legitiman
 Hvala na informaciji — primio sam dokumente. Javljam se sutra sa komentarima.
 ---
 [SR]
 From: Podrška
-Subject: Obaveštenje o nalogu
+Subject: Zaradite 12% dnevno uz naš automatski sistem
 Category: sumnjiv
 Zaradite 12% dnevno uz naš automatski sistem. Bez iskustva. Uplatite već danas na http://kriptozarada.biz
 ---
 [SR]
-From: Dostava
-Subject: Vaš paket čeka
+From: Finansije
+Subject: Vaš račun 8841 je dospeo
 Category: sumnjiv
 Vaš račun 8841 je dospeo. Izvršite plaćanje što pre kako biste izbegli pravne posledice. http://sigurno-placanje.net
 ---
 [SR]
-From: Sistem
-Subject: Provera aktivnosti
-Category: sumnjiv
+From: Finansije
+Subject: Sredstva od poreza čekaju isplatu
+Category: prevara
 Sredstva od poreza čekaju isplatu. Ostavite podatke računa na http://povracaj-poreza.info
 ---
 [SR]
-From: Obaveštenja
-Subject: Potrebna akcija
+From: Podrška
+Subject: Videla sam tvoj profil i mislim da treba da se čujemo
 Category: sumnjiv
 Videla sam tvoj profil i mislim da treba da se čujemo. Piši mi na http://upoznajme.biz večeras.
 ---
 [SR]
 From: Podrška
-Subject: Obaveštenje o nalogu
+Subject: Smršajte brzo bez vežbanja
 Category: sumnjiv
 Smršajte brzo bez vežbanja. Formula koju preporučuju lekari. Poručite na http://mrsavibriz.biz
 ---
 [SR]
 From: Finansije
-Subject: Račun odobren
-Category: legitiman
+Subject: Radite od kuće uz mesečnu isplatu
+Category: prevara
 Radite od kuće uz mesečnu isplatu. Bez razgovora. Pošaljite podatke računa i počnite danas.
 ---
 [SR]
-From: Jelena Marković
-Subject: Ažuriranje projekta
+From: Tim
+Subject: Da ručamo u četvrtak
 Category: legitiman
 Da ručamo u četvrtak? Mogu da rezervišem mesto blizu kancelarije.
 ---
 [SR]
 From: Mina Petrović
-Subject: Re: sastanak
+Subject: Objavljivanje je prošlo bez problema i nadzor izgleda n...
 Category: legitiman
 Objavljivanje je prošlo bez problema i nadzor izgleda normalno. Pratiću stanje večeras.
 ---
 [SR]
-From: Marko Jovanović
-Subject: Beleške sa sastanka
+From: Kancelarija
+Subject: Mali podsetnik: dokumentacija za projekat treba da bude...
 Category: legitiman
 Mali podsetnik: dokumentacija za projekat treba da bude spremna do petka.
 ---
 [SR]
-From: Dostava
-Subject: Vaš paket čeka
+From: Podrška
+Subject: Vaša pretplata se gasi za 24 časa
 Category: sumnjiv
 Vaša pretplata se gasi za 24 časa. Ažurirajte način plaćanja na http://obnovi-stream.biz
 ---
 [SR]
-From: HR tim
-Subject: Obaveštenje
-Category: legitiman
+From: Dostava
+Subject: Pošiljka sa vašim imenom čeka u magacinu
+Category: prevara
 Pošiljka sa vašim imenom čeka u magacinu. Odobrite troškove dostave da bi bila otpremljena.
 ---
 [SR]
-From: Finansije
-Subject: Račun odobren
-Category: legitiman
+From: Nagradna igra
+Subject: Vaš broj 4471 je izvučen
+Category: prevara
 Vaš broj 4471 je izvučen. Za isplatu je potrebna mala naknada za obradu.
 ---
 [SR]
-From: Jelena Marković
-Subject: Ažuriranje projekta
+From: Mina Petrović
+Subject: Možeš li da pogledaš moj zahtev kada budeš imao vremena
 Category: legitiman
 Možeš li da pogledaš moj zahtev kada budeš imao vremena? Mala je izmena u parseru.
 ---
 [SR]
 From: Mina Petrović
-Subject: Re: sastanak
+Subject: Izvinjavam se na kasnom odgovoru — bio sam na putu
 Category: legitiman
 Izvinjavam se na kasnom odgovoru — bio sam na putu. Da pomerimo poziv na ponedeljak?
 ---
 [SR]
-From: Marko Jovanović
-Subject: Beleške sa sastanka
-Category: legitiman
+From: Podrška
+Subject: Privatna emisija otvorena za nekoliko ulagača
+Category: sumnjiv
 Privatna emisija otvorena za nekoliko ulagača. Naši članovi beleže dobre rezultate. Odgovorite za detalje.
 ---
 [SR]
-From: HR tim
-Subject: Obaveštenje
+From: Mina Petrović
+Subject: Poslao sam ti novu verziju teksta
 Category: legitiman
 Poslao sam ti novu verziju teksta. Reci mi da li stil odgovara pre nego što je objavimo.
 ---
 [SR]
-From: Finansije
-Subject: Račun odobren
+From: Mina Petrović
+Subject: Obaveštenje o promeni uslova korišćenja
 Category: legitiman
 Obaveštenje o promeni uslova korišćenja. Detalje možete pogledati na sajtu.
 ---

@@ -287,6 +287,24 @@ def test_srpski_primeri_imaju_dijakritike():
     assert "?" not in primer["tekst"]
 
 
+def test_svaka_kategorija_ima_primere():
+    from obrada_teksta.analizator import ucitaj_sve_primere
+    for jezik in ("en", "sr"):
+        lista = ucitaj_sve_primere(jezik)
+        for kategorija in ("legitiman", "sumnjiv", "prevara"):
+            assert any(p["kategorija"] == kategorija for p in lista)
+
+
+def test_ocigledan_spam_nije_u_legitiman_grupi():
+    from obrada_teksta.analizator import ucitaj_sve_primere
+    sve = ucitaj_sve_primere("en") + ucitaj_sve_primere("sr")
+    legit = " ".join(p["tekst"] for p in sve if p["kategorija"] == "legitiman").lower()
+    assert "ticket 4471" not in legit
+    assert "lucky holder" not in legit
+    assert "uplatu do petka" not in legit
+    assert "magacinu" not in legit
+
+
 def test_analiziraj_prihvata_recnik():
     from main import app
     klijent = app.test_client()

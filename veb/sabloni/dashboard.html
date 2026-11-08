@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fuzzy Guard</title>
     <link rel="icon" href="{{ url_for('static', filename='ikona.svg') }}" type="image/svg+xml">
-    <link rel="stylesheet" href="{{ url_for('static', filename='izgled.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='izgled.css') }}?v={{ verzija_fajla('izgled.css') }}">
 </head>
 <body>
 
@@ -177,7 +177,7 @@ A traceable score.</h1>
                 <p class="dijalog-natpis" data-i18n="metodNatpis">Method</p>
                 <h2 id="metod-naslov" data-i18n="metodNaslov">A score you can take apart.</h2>
             </div>
-            <button class="ikona-dugme" type="button" data-zatvori-metod aria-label="Close">
+            <button class="ikona-dugme" type="button" data-zatvori-metod data-i18n-aria="zatvori" aria-label="Close">
                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
             </button>
         </div>
@@ -211,7 +211,7 @@ A traceable score.</h1>
     <span id="obavestenje-tekst">Copied</span>
 </div>
 
-    <script src="{{ url_for('static', filename='engine.js') }}"></script>
+    <script src="{{ url_for('static', filename='engine.js') }}?v={{ verzija_fajla('engine.js') }}"></script>
 
 </body>
 </html>
