@@ -12,4 +12,6 @@ neuronska_mreza/model.joblib
 *.log
 ODBRANA.md
 Odbrana na casu.md
+objasnjenje.md
+podaci/sr_prevedeno_keš.jsonl
 run.bat

@@ -17,7 +17,11 @@ Thumbs.db
 # istrenirani model neuronske mreze (generise se ponovo)
 neuronska_mreza/model.joblib
 
+# keš mašinskog prevođenja (finalni TSV se commit-uje)
+podaci/sr_prevedeno_keš.jsonl
+
 # licne beleske i uputstva za agente (ne idu u repo)
+objasnjenje.md
 ODBRANA.md
 Odbrana na casu.md
 AGENTS.md

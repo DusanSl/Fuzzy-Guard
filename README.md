@@ -11,6 +11,7 @@ The application features a responsive web interface with full bilingual support 
 ## Features
 
 - **Fuzzy Inference System (FIS):** Employs Mamdani fuzzy inference to evaluate multiple email attributes simultaneously.
+- **Learned lexicons:** an English and a Serbian keyword lexicon are learned by a one-neuron TF-IDF classifier; the network never computes the score itself.
 - **Bilingual Interface:** Real-time translation toggle between English and Serbian.
 - **History Tracking:** View and recall previous checks performed during the active session.
 - **Sample Loader:** Load a legitimate, suspicious or spam example (English or Serbian) at random, or pick a random example across all categories.
@@ -41,10 +42,12 @@ The system extracts and analyzes four input features from the email text:
 
 | Input | Description | Range |
 |---|---|---|
-| `kljucne_reci` (Keywords) | Count of identified spam keywords/phrases | 0-10 |
+| `kljucne_reci` (Keywords) | Weighted matches from the learned English/Serbian lexicons, capped at 10 | 0-10 |
 | `broj_linkova` (Links) | Total URL links found in the body | 0-10 |
 | `caps_procenat` (Caps %) | Percentage of uppercase letters in the text | 0-100% |
 | `interpunkcija` (Punctuation) | Density of exclamation marks and question marks | 0-100% |
+
+Keyword matches are **non-overlapping**: the longest phrase wins, so `"free prize"` counts once with its phrase weight instead of also counting `free` and `prize` separately. Match positions are tracked on the original text, so the highlighted preview is exact even for characters whose lowercase form changes length.
 
 The defuzzified `spam_score` (0-100%) is then interpreted linguistically: each of the six output sets is evaluated at that score, and the set with the highest membership decides the category — **LEGITIMATE** (LEGITIMAN), **SUSPICIOUS** (SUMNJIVO), or **SPAM** (SPAM). Because the category is derived from the very number that is displayed, the score and the label can never contradict each other.
 
@@ -52,7 +55,7 @@ The defuzzified `spam_score` (0-100%) is then interpreted linguistically: each o
 
 ## Technology Stack
 
-- **Backend:** Python 3 (Flask, `scikit-fuzzy`, `numpy`, `scipy`)
+- **Backend:** Python 3 (Flask, `scikit-fuzzy`, `numpy`, `scipy`, `waitress`)
 - **Frontend:** HTML5, CSS3, Vanilla JavaScript (bilingual localization, interactive state management)
 
 ---
@@ -67,11 +70,15 @@ Fuzzy-Guard/
 │   ├── zakljucivanje.py    # Main fuzzy inference controller
 │   └── defazifikacija.py   # Centroid defuzzification
 ├── neuronska_mreza/
-│   ├── nauci_recnik.py     # learns the spam lexicon and exports JSON
+│   ├── nauci_recnik.py     # learns the EN/SR spam lexicon and exports JSON
+│   ├── izgradi_sr_korpus.py# builds the Serbian corpus by machine translation
+│   ├── legacy_recnik.py    # old hand dictionary, evaluation only
 │   └── treniraj.py         # MLP comparison + lexicon ablation
 ├── podaci/
-│   ├── recnik_naucen.json  # learned spam words with weights
-│   ├── spamassassin.tsv    # 3,000 labelled emails (500 spam)
+│   ├── recnik_naucen_en.json  # learned English spam words with weights
+│   ├── recnik_naucen_sr.json  # learned Serbian spam words with weights
+│   ├── spamassassin.tsv       # 3,000 labelled emails (500 spam)
+│   ├── sr_spamassassin.tsv    # Serbian corpus (MT + synthetic spam fallback)
 │   └── SMSSpamCollection.tsv
 ├── veb/
 │   ├── static/
@@ -83,9 +90,10 @@ Fuzzy-Guard/
 │   └── sabloni/
 │       └── dashboard.html  # Main GUI markup (forms, history panel, results grid)
 ├── obrada_teksta/
-│   └── analizator.py       # Email text analyzer (feature extraction and sample parsing)
+│   ├── analizator.py       # Email text analyzer (features, lexicon loading, samples)
+│   └── podudaranje.py      # Tokenizer, offset map and non-overlapping matcher
 ├── screenshots/
-│   ├── Legit-example.webp  # Legitimate email example screenshot
+│   ├── Legit-example.png  # Legitimate email example screenshot
 │   └── Spam-example.png    # Spam email example screenshot
 ├── tests/
 │   └── test_fis.py         # Regression tests for the fuzzy system
@@ -94,7 +102,7 @@ Fuzzy-Guard/
 ├── primeri.txt             # Pre-configured test emails (separated by '---')
 ├── run.bat                 # One-click Windows launcher
 ├── AGENTS.md               # Project conventions (naming, academic constraints)
-├── Procfile                # Deployment configuration (web: python main.py)
+├── Procfile                # Deployment configuration (web: waitress-serve ... main:app)
 └── .gitignore
 ```
 
@@ -110,8 +118,8 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
 
 * **Link Count** `[0-10]`
   - `minimalni` (Minimal): `trapmf [0, 0, 0, 1]`
-  - `umereni` (Moderate): `trimf [0, 1, 3]`
-  - `brojni` (Numerous): `trapmf [2, 8, 10, 10]`
+  - `umereni` (Moderate): `trapmf [0, 1, 3, 5]`
+  - `brojni` (Numerous): `trapmf [3, 8, 10, 10]`
 
 * **Caps Percentage** `[0-100%]`
   - `uobicajen` (Normal): `trapmf [0, 0, 1, 12]`
@@ -128,7 +136,7 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
 * **Spam Score (Output)** `[0-100]`
   - `score_legitiman` (Legitimate): `trapmf [0, 0, 8, 20]`
   - `score_legitiman_energicno` (Energetically Legitimate): `trimf [10, 13, 22]`
-  - `score_blago_sumnjiv` (Mildly Suspicious): `trimf [24, 30, 42]`
+  - `score_blago_sumnjiv` (Mildly Suspicious): `trimf [22, 30, 42]`
   - `score_sumnjiv` (Suspicious): `trimf [38, 44, 58]`
   - `score_visoko_sumnjiv` (Highly Suspicious): `trimf [54, 60, 74]`
   - `score_spam` (Spam): `trapmf [72, 88, 100, 100]`
@@ -142,6 +150,10 @@ to stay informative:
 2. **No perfectly symmetric output triangles.** For a symmetric triangle the
    centroid is identical at every activation strength, so the firing strength is
    lost and every email that triggers the same rule gets exactly the same score.
+3. **Continuous output coverage.** Adjacent output sets overlap so scores from
+   0 to 100 have a non-zero membership. `blago_sumnjiv` starts at 22, so the old
+   dead band 22–24 is covered; exactly 22 is the shared boundary and the
+   controller falls back to `SUMNJIVO` there.
 
 ---
 
@@ -218,25 +230,26 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
 **Request Body (JSON):**
 ```json
 {
-  "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!",
-  "recnik": "kombinovano"   // optional: rucni | nauceni | kombinovano
+  "tekst": "DEAR SIR, YOUR MORTGAGE SETTLEMENT IS GUARANTEED! CLICK LINK http://a.com http://b.com http://c.com NOW!!!",
+  "recnik": "kombinovano"   // optional: en | sr | kombinovano
 }
 ```
 
 **Response (JSON):**
 ```json
 {
-  "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!",
-  "kljucne_reci": 7,       // Keywords
-  "broj_linkova": 1,       // Link count
-  "caps_procenat": 69.23,  // Caps percentage
-  "interpunkcija": 7.14,   // Punctuation
-  "spam_score": 88.46,     // Spam score
+  "tekst": "DEAR SIR, YOUR MORTGAGE SETTLEMENT IS GUARANTEED! ...",
+  "skraceno": false,       // true if the body exceeded the analysis cap
+  "kljucne_reci": 6.61,    // Weighted lexicon matches
+  "broj_linkova": 3,       // Link count
+  "caps_procenat": 100.0,  // Caps percentage
+  "interpunkcija": 6.9,    // Punctuation
+  "spam_score": 86.0,      // Spam score
   "kategorija": "SPAM",    // Category
   "objasnjenje": {
     "tekst": "...",        // cleaned visible text
     "pokrivene_reci": [    // matched keywords + positions
-      { "rec": "won", "broj": 1, "tezina": 1.0, "izvor": "rucni", "pozicije": [[21, 24]] }
+      { "rec": "dear sir", "broj": 1, "tezina": 1.5267, "izvor": "en", "pozicije": [[0, 8]] }
     ],
     "oznake": [            // links / CAPS / punctuation positions
       { "tip": "link", "pozicije": [[45, 66]] }
@@ -257,15 +270,23 @@ Returns the sample emails for the given language, including `From`, `Subject` an
 
 ### `GET /skupovi`
 
-Returns the six output membership functions used by the UI spectrum.
+Returns all input and output membership functions. The UI builds its spectrum
+from this endpoint, so the curves can never drift from the backend.
 
 ```json
 {
   "univerzum": { "min": 0, "max": 100, "korak": 1 },
-  "skupovi": [
+  "ulazi": {
+    "kljucne_reci": [
+      { "ime": "kljucne_zanemarljive", "naziv": "zanemarljive", "tip": "trapmf",
+        "params": [0, 0, 1, 3], "kategorija": "LEGITIMAN" }
+    ]
+  },
+  "izlazi": [
     { "ime": "legitiman", "naziv": "legitiman", "tip": "trapmf",
       "params": [0, 0, 8, 20], "kategorija": "LEGITIMAN" }
-  ]
+  ],
+  "skupovi": [ /* same as izlazi, kept for old clients */ ]
 }
 ```
 
@@ -273,70 +294,64 @@ Returns the six output membership functions used by the UI spectrum.
 
 ## Neural Network Component
 
-The course also covers neural networks, so the project includes a neural part in
+The course covers neural networks, so the project includes a neural part in
 `neuronska_mreza/`. The network does **not** compute `spam_score` — the fuzzy
 system stays the only decision maker. Instead the network **learns the spam
-lexicon**: it discovers which words and phrases are characteristic of spam and
+lexicons**: it discovers which words and phrases are characteristic of spam and
 exports them with weights.
 
 ```text
-labelled emails → TF-IDF (1–2 grams) → single-neuron classifier
-                → coefficients → podaci/recnik_naucen.json
+labelled emails → TF-IDF (1-2 grams) → single-neuron classifier
+                → coefficients → podaci/recnik_naucen_en.json
+                               → podaci/recnik_naucen_sr.json
 ```
 
 At runtime those weights feed the first fuzzy input, `kljucne_reci`, exactly as
-the hand-written list does:
+any other evidence would:
 
 ```text
-kljucne_reci = hand-dictionary hits (weight 1.0)
-             + learned-lexicon hits (learned weight)
-             → normalised to 0–10 → Mamdani FIS (unchanged)
+kljucne_reci = non-overlapping lexicon hits (learned weight per term)
+             → normalised to 0-10 → Mamdani FIS (unchanged)
 ```
 
 Terms are only kept if they appear in at least 10 spam emails and are **at least
-3× more frequent in spam than in ham**, which filters out generic words like
-"information" and "contact". HTML/MIME artifacts ("font", "href", "nbsp") are
-rejected explicitly.
+2x more frequent in spam than in ham**, which filters out generic words. HTML
+and MIME artifacts ("font", "href", "nbsp") are rejected explicitly.
 
 ```
-python -m neuronska_mreza.nauci_recnik      # learn + export the lexicon
-python -m neuronska_mreza.treniraj          # compare models
+python -m neuronska_mreza.izgradi_sr_korpus   # MT corpus (resumable, cached)
+python -m neuronska_mreza.nauci_recnik --jezik en
+python -m neuronska_mreza.nauci_recnik --jezik sr
+python -m neuronska_mreza.treniraj            # compare models
 ```
 
-### The Serbian dictionary is the "without NN" baseline
+### The two learned lexicons
 
-The hand-written dictionary in `obrada_teksta/analizator.py` — including the full
-Serbian list — is **never removed**. The training corpora are English-only, so
-the network cannot learn a single Serbian word; the hand dictionary is the only
-Serbian coverage and the baseline that shows how the project behaves **without**
-a neural network.
+The old hand-written dictionary has been removed from the runtime. It survives
+only in `neuronska_mreza/legacy_recnik.py` so the "pre / post network" ablation
+can be reproduced; the application never imports it.
 
-Three modes are therefore kept runnable at all times:
-
-| Mode | Meaning | Serbian coverage |
+| Mode | Meaning | Coverage |
 |---|---|---|
-| `rucni` | hand dictionary only — **no neural network** | full |
-| `nauceni` | learned lexicon only | none (English corpus) |
-| `kombinovano` | both (default) | full |
+| `en` | learned English lexicon only | English |
+| `sr` | learned Serbian lexicon only | Serbian |
+| `kombinovano` | both (default) | both |
+| `legacy` | old hand dictionary — **evaluation only** | legacy baseline |
 
-Use `FUZZY_GUARD_RECNIK=rucni python main.py` to run the app with the NN-free
-baseline. The ablation below is produced with
-`python -m neuronska_mreza.treniraj --recnik svi`.
+The Serbian lexicon is trained on `podaci/sr_spamassassin.tsv`. The free
+translation endpoint rate-limited the run, so the committed corpus is a hybrid:
+**1,491 real ham + 13 real spam** emails machine-translated to Serbian and
+transliterated to Latin script, plus **600 synthetic Serbian spam templates**
+(`--sinteticki-spam`) to keep the positive class usable. Labels are inherited
+from the source email; the split is done on the source index, so a translated
+email cannot leak between train and test.
 
-### Language coverage
-
-The learned lexicon is **English-only** — 271 terms, none of them Serbian — because
-it is trained on SpamAssassin. Serbian therefore relies entirely on the hand-written
-dictionary. This is deliberate: it shows both failure modes side by side.
-
-| Example | Manual | Learned | Combined |
-|---|---|---|---|
-| EN learned-only ("mortgage / settlement") | 8% LEGITIMATE | 80% SPAM | 80% SPAM |
-| SR hand-only ("čestitamo / nagrada") | 47% SUSPICIOUS | 11% LEGITIMATE | 47% SUSPICIOUS |
-
-Translating the learned lexicon into Serbian would make the UI symmetric, but it
-would no longer be *learned* from Serbian data. A Serbian corpus is future work;
-the hand dictionary remains the Serbian baseline.
+This is **not a real Serbian benchmark**. The synthetic spam makes the Serbian
+metrics look optimistic; they show that the pipeline learns Serbian vocabulary,
+not production accuracy. Re-run `izgradi_sr_korpus.py` with a translation API
+key (or after the free limit resets) to replace the synthetic part with real
+translations. Serbian evaluation on the hand-labelled examples in `primeri.txt`
+is reported separately and is small.
 
 ### Results (held-out test set)
 
@@ -344,30 +359,52 @@ Corpus: **SpamAssassin** (3,000 emails, 500 spam), 750 test emails, 125 spam.
 
 | Model | Lexicon | Accuracy | Precision | Recall | F1 |
 |---|---|---|---|---|---|
-| Neural network (MLP) | `rucni` | 0.908 | 0.868 | 0.528 | 0.657 |
-| Fuzzy system (Mamdani) | `rucni` | 0.777 | 0.382 | 0.544 | 0.449 |
-| Neural network (MLP) | `nauceni` | 0.931 | 0.910 | 0.648 | 0.757 |
-| Fuzzy system (Mamdani) | `nauceni` | 0.788 | 0.408 | 0.600 | 0.485 |
-| Neural network (MLP) | `kombinovano` | 0.947 | 0.890 | 0.776 | 0.829 |
-| Fuzzy system (Mamdani) | `kombinovano` | 0.803 | 0.445 | 0.744 | **0.557** |
+| Neural network (MLP) | `legacy` | 0.897 | 0.853 | 0.464 | 0.601 |
+| Fuzzy system (Mamdani) | `legacy` | 0.868 | 0.655 | 0.440 | 0.526 |
+| Neural network (MLP) | `en` | 0.935 | 0.932 | 0.656 | 0.770 |
+| Fuzzy system (Mamdani) | `en` | 0.903 | 0.724 | 0.672 | 0.697 |
+| Neural network (MLP) | `sr` | 0.892 | 0.824 | 0.448 | 0.580 |
+| Fuzzy system (Mamdani) | `sr` | 0.849 | 0.607 | 0.272 | 0.376 |
+| Neural network (MLP) | `kombinovano` | 0.929 | 0.974 | 0.592 | 0.736 |
+| Fuzzy system (Mamdani) | `kombinovano` | 0.900 | 0.695 | 0.712 | 0.704 |
 
-The learned lexicon raises the fuzzy system's F1 from **0.449 to 0.557** and its
-recall from **0.544 to 0.744**, without changing the rule base or the fuzzy
-inference. The network therefore has a measurable job: it supplies better
-evidence, while the fuzzy rules still make the decision.
+The learned English lexicon raises the fuzzy system's F1 from **0.526 to 0.704**
+and its recall from **0.440 to 0.712**, without changing the rule base or the
+fuzzy inference. The Serbian lexicon is weaker on English text (as expected) and
+exists to cover Serbian input.
 
 The fuzzy system trades precision for interpretability: every score can be
 traced back to a membership function and a rule. On the **SMS Spam Collection**
-(5,574 messages) the fuzzy system collapses to 3% spam recall with the hand
-dictionary, because its features are calibrated for email — SMS messages have
-almost no capitalisation or links.
+(5,574 messages) the fuzzy system effectively collapses with the learned
+lexicons, because its four features are calibrated for email — SMS messages have
+almost no capitalisation or links:
 
-The learned lexicon does **not** transfer across domains: on SMS the fuzzy F1 is
-0.072 with the hand dictionary, **0.000** with the learned lexicon, and 0.072
-with both. The network learned email-specific vocabulary ("mortgage", "dear sir",
-"click link"), not universal spam patterns. That is exactly why the hand-written
-Serbian dictionary stays as the baseline, and why the lexicon should be retrained
-per domain. It is a documented limitation, not a bug.
+| Model | Lexicon | Accuracy | Precision | Recall | F1 |
+|---|---|---|---|---|---|
+| Fuzzy system (Mamdani) | `legacy` | 0.867 | 1.000 | 0.011 | 0.021 |
+| Fuzzy system (Mamdani) | `en` | 0.866 | 0.000 | 0.000 | 0.000 |
+| Fuzzy system (Mamdani) | `sr` | 0.866 | 0.000 | 0.000 | 0.000 |
+| Neural network (MLP) | `en` | 0.905 | 0.814 | 0.374 | 0.513 |
+
+This is a documented limitation, not a bug: the lexicon is domain-specific and
+the fuzzy inputs are email-shaped. A real Serbian SMS corpus and SMS-specific
+features would be needed.
+
+### Serbian corpus (held-out, hybrid)
+
+Corpus: `sr_spamassassin.tsv`, 2,104 rows (613 spam, 600 of them synthetic), 526
+test rows, 153 spam. These numbers are optimistic because of the synthetic
+component:
+
+| Model | Lexicon | Accuracy | Precision | Recall | F1 |
+|---|---|---|---|---|---|
+| Neural network (MLP) | `sr` | 0.994 | 1.000 | 0.980 | 0.990 |
+| Fuzzy system (Mamdani) | `sr` | 0.975 | 0.927 | 0.993 | 0.959 |
+| Fuzzy system (Mamdani) | `kombinovano` | 0.975 | 0.927 | 0.993 | 0.959 |
+
+On the real hand-labelled `primeri.txt` spam examples (4 Serbian, 4 English) the
+fuzzy system catches all of them, but the sample is far too small to be a
+benchmark.
 
 Dataset sources:
 
@@ -388,8 +425,16 @@ Dataset sources:
   Mamdani inference: if two inputs have the same membership in every set and
   activate the same rules with the same strength, the defuzzified output is
   identical by definition.
-- Serbian is covered by the rule base / keyword dictionary only; the trained
-  network is English-only.
+- Serbian coverage comes from a **hybrid machine-translated + synthetic** corpus,
+  not a real Serbian benchmark. Translation preserves labels but not formatting,
+  and the synthetic spam inflates the Serbian metrics.
+- SMS recall is near zero because the four features are email-shaped. This is
+  documented rather than hidden; a real SMS model would need SMS features.
+- The manual dictionary was removed because generic words ("account", "update",
+  "confirm") caused false positives. The old list remains only as the `legacy`
+  evaluation baseline.
+- Bodies are capped at 50,000 characters and requests at 256 KB. The response
+  sets `skraceno: true` when truncation happened.
 
 ---
 
@@ -400,8 +445,18 @@ python -m pytest
 ```
 
 The test suite checks rule-base completeness (no input may leave every rule at
-zero), score/category agreement, the 35–45% caps regression, and that obvious
-spam and legitimate emails land in the expected categories.
+zero), output-universe coverage, score/category agreement, non-overlapping
+keyword matches, Unicode offsets, the caps regression, and that obvious spam and
+legitimate emails land in the expected categories.
+
+A browser smoke test is available separately (it needs a running server):
+
+```bash
+pip install -r requirements-dev.txt
+playwright install chromium
+python main.py            # in another terminal
+python tests/smoke_ui.py
+```
 
 ### Continuous integration
 
@@ -424,8 +479,9 @@ docker build -t fuzzy-guard .
 docker run -p 5000:5000 fuzzy-guard
 ```
 
-The learned lexicon (`podaci/recnik_naucen.json`) is copied into the image, so
-the container runs with the full `kombinovano` setup.
+The two learned lexicons (`podaci/recnik_naucen_en.json` and
+`podaci/recnik_naucen_sr.json`) are copied into the image, so the container runs
+with the full `kombinovano` setup.
 
 Project conventions for AI agents are kept locally in `AGENTS.md` (not published).
 

@@ -12,7 +12,7 @@ const prevodi = {
         placeholder: 'Paste the email text here…',
         znakova: 'characters',
         uzorakLegitiman: 'Legitimate', uzorakSumnjiv: 'Suspicious', uzorakPrevara: 'Spam', uzorakRandom: 'Random',
-        recnik: 'Keyword lexicon', rucni: 'Manual', nauceni: 'Learned', kombinovano: 'Combined',
+        recnik: 'Keyword lexicon', en: 'English', sr: 'Serbian', kombinovano: 'Both',
         pokreni: 'Run analysis', analiziram: 'Analyzing…',
         sitno: 'Only the body is scored · nothing leaves this page.',
         greskaPrazno: 'Add some text first.',
@@ -26,7 +26,7 @@ const prevodi = {
         pronasli: 'Matched in the text', prepoznate: 'Matched words',
         nemaPogodaka: 'No dictionary hits. Here the score comes from links, capitals and punctuation alone.',
         legenda: { keyword: 'keyword', link: 'link', caps: 'capitals', interpunkcija: 'punctuation' },
-        izvorRucni: 'hand dictionary', izvorNauceni: 'learned lexicon',
+        izvorRucni: 'hand dictionary', izvorEn: 'English lexicon', izvorSr: 'Serbian lexicon',
         ulaziNaslov: 'Memberships above 0.05',
         pravilaNaslov: 'Rules that fired',
         prethodne: 'Recent checks', ocistiSve: 'Clear all', nemaIstorije: 'Nothing checked yet.',
@@ -72,7 +72,7 @@ const prevodi = {
         placeholder: 'Nalepite tekst emaila ovde…',
         znakova: 'znakova',
         uzorakLegitiman: 'Legitiman', uzorakSumnjiv: 'Sumnjiv', uzorakPrevara: 'Prevara', uzorakRandom: 'Nasumično',
-        recnik: 'Rečnik ključnih reči', rucni: 'Ručni', nauceni: 'Naučeni', kombinovano: 'Kombinovano',
+        recnik: 'Rečnik ključnih reči', en: 'Engleski', sr: 'Srpski', kombinovano: 'Oba',
         pokreni: 'Pokreni analizu', analiziram: 'Analiziram…',
         sitno: 'Ocenjuje se samo telo poruke · sve ostaje u pregledaču.',
         greskaPrazno: 'Dodajte tekst poruke.',
@@ -86,7 +86,7 @@ const prevodi = {
         pronasli: 'Pronađeno u tekstu', prepoznate: 'Prepoznate reči',
         nemaPogodaka: 'Nema pogodaka u rečniku. Ocena ovde dolazi samo iz linkova, velikih slova i interpunkcije.',
         legenda: { keyword: 'ključna reč', link: 'link', caps: 'velika slova', interpunkcija: 'interpunkcija' },
-        izvorRucni: 'ručni rečnik', izvorNauceni: 'naučeni rečnik',
+        izvorRucni: 'ručni rečnik', izvorEn: 'engleski rečnik', izvorSr: 'srpski rečnik',
         ulaziNaslov: 'Pripadnosti iznad 0,05',
         pravilaNaslov: 'Pravila koja su se aktivirala',
         prethodne: 'Prethodne provere', ocistiSve: 'Očisti sve', nemaIstorije: 'Još nema provera.',
@@ -162,127 +162,30 @@ function formatirajBroj(vrednost) {
     const zaokruzeno = Math.round(vrednost * 10) / 10;
     return Number.isInteger(zaokruzeno) ? String(zaokruzeno) : zaokruzeno.toFixed(1).replace('.', jezik === 'sr' ? ',' : '.');
 }
-/* ---------- fuzzy sets ------------------------------------------- */
+/* ---------- fuzzy sets (loaded from /skupovi) -------------------- */
 
-const SKUPOVI_ULAZA = {
-    kljucne_reci: [
-        { ime: 'kljucne_zanemarljive', tip: 'trapmf', params: [0, 0, 1, 3], kategorija: 'LEGITIMAN' },
-        { ime: 'kljucne_zastupljene', tip: 'trimf', params: [1, 3, 7], kategorija: 'SUMNJIVO' },
-        { ime: 'kljucne_dominantne', tip: 'trapmf', params: [5, 8, 10, 10], kategorija: 'SPAM' }
-    ],
-    broj_linkova: [
-        { ime: 'linkovi_minimalni', tip: 'trapmf', params: [0, 0, 0, 1], kategorija: 'LEGITIMAN' },
-        { ime: 'linkovi_umereni', tip: 'trimf', params: [0, 1, 3], kategorija: 'SUMNJIVO' },
-        { ime: 'linkovi_brojni', tip: 'trapmf', params: [2, 8, 10, 10], kategorija: 'SPAM' }
-    ],
-    caps_procenat: [
-        { ime: 'caps_uobicajen', tip: 'trapmf', params: [0, 0, 1, 12], kategorija: 'LEGITIMAN' },
-        { ime: 'caps_poviseni', tip: 'trimf', params: [7, 16, 32], kategorija: 'SUMNJIVO' },
-        { ime: 'caps_blago_povisen', tip: 'trimf', params: [10, 25, 65], kategorija: 'SUMNJIVO' },
-        { ime: 'caps_agresivan', tip: 'trapmf', params: [45, 85, 100, 100], kategorija: 'SPAM' }
-    ],
-    interpunkcija: [
-        { ime: 'interpunkcija_retka', tip: 'trapmf', params: [0, 0, 2, 5], kategorija: 'LEGITIMAN' },
-        { ime: 'interpunkcija_blago', tip: 'trimf', params: [2, 5, 10], kategorija: 'SUMNJIVO' },
-        { ime: 'interpunkcija_umerena', tip: 'trimf', params: [6, 12, 25], kategorija: 'SUMNJIVO' },
-        { ime: 'interpunkcija_agresivna', tip: 'trapmf', params: [14, 40, 100, 100], kategorija: 'SPAM' }
-    ]
-};
+let SKUPOVI_ULAZA = {};
+let SKUPOVI_IZLAZA = [];
+let skupoviUcitani = null;
 
-const SKUPOVI_IZLAZA = [
-    { ime: 'score_legitiman', tip: 'trapmf', params: [0, 0, 8, 20], kategorija: 'LEGITIMAN' },
-    { ime: 'score_legitiman_energicno', tip: 'trimf', params: [10, 13, 22], kategorija: 'LEGITIMAN' },
-    { ime: 'score_blago_sumnjiv', tip: 'trimf', params: [24, 30, 42], kategorija: 'SUMNJIVO' },
-    { ime: 'score_sumnjiv', tip: 'trimf', params: [38, 44, 58], kategorija: 'SUMNJIVO' },
-    { ime: 'score_visoko_sumnjiv', tip: 'trimf', params: [54, 60, 74], kategorija: 'SUMNJIVO' },
-    { ime: 'score_spam', tip: 'trapmf', params: [72, 88, 100, 100], kategorija: 'SPAM' }
-];
-
-const SKUP_PO_IMENU = {};
-SKUPOVI_IZLAZA.forEach(skup => { SKUP_PO_IMENU[skup.ime] = skup; });
-
-/* ---------- lexicons --------------------------------------------- */
-
-// Ručni rečnik je preuzet iz obrada_teksta/analizator.py. Ne skraćivati ga:
-// on je jedina srpska pokrivenost i osnova za poređenje bez mreže.
-const RECNIK_RUCNI = [
-    'win', 'winner', 'won', 'free', 'click', 'offer', 'prize',
-    'congratulations', 'claim', 'cash', 'bonus', 'reward', 'rewards',
-    'urgent', 'limited', 'exclusive', 'guarantee', 'guaranteed', 'deal',
-    'cheap', 'discount', 'income', 'profit', 'rich', 'million', 'dollar',
-    'dollars', 'money', 'selected', 'opportunity',
-    'account', 'verify', 'unusual', 'eligible', 'refund', 'confirm',
-    'update', 'settings', 'subscription', 'expire', 'expires', 'renew',
-    'approved', 'loan', 'jackpot', 'unlimited', 'access',
-    'pobedi', 'pobednik', 'pobedniku', 'pobednika',
-    'osvojio', 'osvojili', 'osvojite', 'osvoji',
-    'besplatno', 'besplatnu', 'besplatni', 'besplatna', 'besplatne', 'besplatan',
-    'klikni', 'kliknite', 'kliknete',
-    'ponuda', 'ponude', 'ponudu',
-    'nagrada', 'nagradu', 'nagrade', 'nagradi',
-    'čestitamo', 'čestitam',
-    'preuzmi', 'preuzmite', 'preuzmete', 'preuzimite',
-    'gotovina', 'gotovinu', 'gotovine',
-    'hitno', 'hitna', 'hitni', 'hitne',
-    'ograničeno', 'ograničena', 'ograničenu', 'ograničene', 'ograničeni',
-    'neograničeno', 'neograničena', 'neograničenu', 'neograničene', 'neograničeni',
-    'ekskluzivno', 'ekskluzivna', 'ekskluzivnu', 'ekskluzivne', 'ekskluzivni',
-    'garantovano', 'garantovana', 'garantujemo', 'garantovanu',
-    'jeftino', 'jeftina', 'jeftine', 'jeftini', 'jeftinu',
-    'popust', 'popusta', 'popustu', 'popustom',
-    'novac', 'novca', 'novcem', 'novcu',
-    'prihod', 'prihoda', 'prihode', 'prihodom',
-    'zarada', 'zaradu', 'zarade', 'zaradite', 'zaraditi',
-    'bogat', 'bogata', 'bogati', 'bogatstvo',
-    'milion', 'miliona', 'milione', 'milionima',
-    'dolar', 'dolara', 'dolare', 'dolarima',
-    'dinar', 'dinara', 'dinare', 'dinarima',
-    'izabran', 'izabrana', 'izabrani', 'izabrano', 'izabrane',
-    'prilika', 'prilike', 'priliku', 'prilikama',
-    'pogodba', 'pogodbe', 'pogodbu',
-    'nalog', 'naloga', 'nalogu',
-    'verifikuj', 'verifikujte', 'verifikuje',
-    'aktivnost', 'aktivnosti',
-    'potvrdite', 'potvrdi', 'potvrdite',
-    'povraćaj', 'povraćaja',
-    'ažuriranje', 'ažurirajte', 'ažurirate',
-    'podešavanja', 'podešavanje',
-    'pretplata', 'pretplatu', 'pretplate',
-    'ističe', 'ističu',
-    'obnovite', 'obnovi', 'obnova',
-    'pristup', 'pristupa',
-    'kredit', 'kredita',
-    'odobren', 'odobrena', 'odobreno',
-    'keš',
-    'naplatite', 'naplati',
-    'dobitnik', 'dobitnica', 'dobitnika',
-    'džekpot', 'džekpota'
-];
-
-const RECNIK_FRAZE = [
-    'buy now', 'act now', 'order now', 'click here', 'limited time',
-    'limited offer', 'free prize', 'you won', 'you have won',
-    'claim now', 'claim your', 'get rich', 'make money',
-    'gift card', 'get paid', 'lose access',
-    'kupi sad', 'deluj odmah', 'naruči odmah', 'klikni ovde',
-    'ograničena ponuda', 'besplatna nagrada', 'osvojio si', 'preuzmi nagradu',
-    'reaguj odmah'
-];
-
-// Skraćen izvoz neuronske mreže (podaci/recnik_naucen.json, top termini).
-// U pravom sistemu stiže svih 271 termina; ovde je dovoljan za prototip.
-const RECNIK_NAUCENI = {
-    'guaranteed': 2.0, 'dear': 1.9435, 'sir': 1.6935, 'removal': 1.6795,
-    'face': 1.672, 'obligation': 1.5865, 'mortgage': 1.545,
-    'assistance': 1.541, 'click link': 1.5409, 'dear sir': 1.5267,
-    'sincerely': 1.4421, 'subject line': 1.43, 'emails': 1.3867,
-    'earn': 1.3753, 'sir madam': 1.3435, 'prices': 1.3295, 'title': 1.3263,
-    'subscriber': 1.323, 'nigeria': 1.3188, 'mailings': 1.3165,
-    'madam': 1.3131, 'opt': 1.3067, 'lenders': 1.2825, 'bonus': 1.2615,
-    'tobacco': 1.2422, 'security company': 1.2413, 'lowest': 1.2074,
-    'shipping': 1.2042, 'deposit': 1.1958, 'assist': 1.1921,
-    'qualified': 1.1804, 'email address': 1.1656, 'mail address': 1.1407
-};
+async function ucitajSkupove() {
+    if (skupoviUcitani) return skupoviUcitani;
+    skupoviUcitani = fetch('/skupovi')
+        .then(odgovor => {
+            if (!odgovor.ok) throw new Error('skupovi');
+            return odgovor.json();
+        })
+        .then(podaci => {
+            SKUPOVI_ULAZA = podaci.ulazi || {};
+            SKUPOVI_IZLAZA = podaci.izlazi || podaci.skupovi || [];
+            return podaci;
+        })
+        .catch(greska => {
+            skupoviUcitani = null;
+            throw greska;
+        });
+    return skupoviUcitani;
+}
 
 /* ---------- sample messages -------------------------------------- */
 
@@ -325,30 +228,6 @@ const UZORCI = {
     ]
 };
 
-/* ---------- rule descriptions ------------------------------------ */
-
-const OPISI_PRAVILA = {
-    p01: { en: 'negligible keywords + minimal links + normal caps + sparse punctuation', sr: 'zanemarljive reči + minimalni linkovi + uobičajena velika slova + retka interpunkcija' },
-    p02: { en: 'mildly elevated caps + negligible keywords + minimal links', sr: 'blago povišena velika slova + zanemarljive reči + minimalni linkovi' },
-    p03: { en: 'mild punctuation + negligible keywords + minimal links', sr: 'blaga interpunkcija + zanemarljive reči + minimalni linkovi' },
-    p03a: { en: 'moderate punctuation + negligible keywords + minimal links', sr: 'umerena interpunkcija + zanemarljive reči + minimalni linkovi' },
-    p04: { en: 'negligible keywords + moderate links + normal caps + sparse punctuation', sr: 'zanemarljive reči + umereni linkovi + uobičajena velika slova + retka interpunkcija' },
-    p05: { en: 'present keywords + minimal links', sr: 'zastupljene reči + minimalni linkovi' },
-    p06: { en: 'present keywords + moderate links + normal caps + sparse punctuation', sr: 'zastupljene reči + umereni linkovi + uobičajena velika slova + retka interpunkcija' },
-    p06a: { en: 'present keywords + moderate links', sr: 'zastupljene reči + umereni linkovi' },
-    p07: { en: 'moderate/numerous links + elevated/mild/aggressive caps + negligible keywords', sr: 'umereni/brojni linkovi + povišena/blaga/agresivna velika slova + zanemarljive reči' },
-    p08: { en: 'moderate/numerous links + moderate/mild/aggressive punctuation + negligible keywords', sr: 'umereni/brojni linkovi + umerena/blaga/agresivna interpunkcija + zanemarljive reči' },
-    p09: { en: 'present keywords + moderate links + elevated caps + moderate punctuation', sr: 'zastupljene reči + umereni linkovi + povišena velika slova + umerena interpunkcija' },
-    p10: { en: 'dominant keywords + moderate links + normal caps + sparse punctuation', sr: 'dominantne reči + umereni linkovi + uobičajena velika slova + retka interpunkcija' },
-    p11: { en: 'dominant keywords + normal caps', sr: 'dominantne reči + uobičajena velika slova' },
-    p12: { en: 'aggressive caps + negligible keywords + minimal links', sr: 'agresivna velika slova + zanemarljive reči + minimalni linkovi' },
-    p13: { en: 'aggressive punctuation + negligible keywords + minimal links', sr: 'agresivna interpunkcija + zanemarljive reči + minimalni linkovi' },
-    p14: { en: 'dominant keywords OR numerous links', sr: 'dominantne reči ILI brojni linkovi' },
-    p15: { en: 'present keywords + (aggressive caps OR aggressive punctuation)', sr: 'zastupljene reči + (agresivna velika slova ILI agresivna interpunkcija)' },
-    p16: { en: 'moderate links + (aggressive caps OR aggressive punctuation)', sr: 'umereni linkovi + (agresivna velika slova ILI agresivna interpunkcija)' },
-    p17: { en: '(present or dominant) keywords + (moderate or numerous) links + (elevated, mild or aggressive) caps', sr: '(zastupljene ili dominantne) reči + (umereni ili brojni) linkovi + (povišena, blaga ili agresivna) velika slova' }
-};
-
 /* ---------- fuzzy math ------------------------------------------- */
 
 function trimf(x, a, b, c) {
@@ -368,173 +247,14 @@ function pripadnost(tip, params, x) {
     return tip === 'trimf' ? trimf(x, ...params) : trapmf(x, ...params);
 }
 
-function fuzzifikuj(vrednosti) {
-    const mu = {};
-    Object.keys(SKUPOVI_ULAZA).forEach(imeUlaza => {
-        mu[imeUlaza] = {};
-        SKUPOVI_ULAZA[imeUlaza].forEach(skup => {
-            mu[imeUlaza][skup.ime] = pripadnost(skup.tip, skup.params, vrednosti[imeUlaza]);
-        });
-    });
-    return mu;
-}
-
-function sastaviPravila(mu) {
-    const kljucne_reci = mu.kljucne_reci;
-    const broj_linkova = mu.broj_linkova;
-    const caps_procenat = mu.caps_procenat;
-    const interpunkcija = mu.interpunkcija;
-
-    return [
-        { naziv: 'p01', jacina: Math.min(kljucne_reci.kljucne_zanemarljive, broj_linkova.linkovi_minimalni, caps_procenat.caps_uobicajen, interpunkcija.interpunkcija_retka), skup: 'score_legitiman', kategorija: 'LEGITIMAN' },
-        { naziv: 'p02', jacina: Math.min(caps_procenat.caps_blago_povisen, kljucne_reci.kljucne_zanemarljive, broj_linkova.linkovi_minimalni), skup: 'score_legitiman_energicno', kategorija: 'LEGITIMAN' },
-        { naziv: 'p03', jacina: Math.min(interpunkcija.interpunkcija_blago, kljucne_reci.kljucne_zanemarljive, broj_linkova.linkovi_minimalni), skup: 'score_legitiman_energicno', kategorija: 'LEGITIMAN' },
-        { naziv: 'p03a', jacina: Math.min(interpunkcija.interpunkcija_umerena, kljucne_reci.kljucne_zanemarljive, broj_linkova.linkovi_minimalni), skup: 'score_legitiman_energicno', kategorija: 'LEGITIMAN' },
-        { naziv: 'p04', jacina: Math.min(kljucne_reci.kljucne_zanemarljive, broj_linkova.linkovi_umereni, caps_procenat.caps_uobicajen, interpunkcija.interpunkcija_retka), skup: 'score_blago_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p05', jacina: Math.min(kljucne_reci.kljucne_zastupljene, broj_linkova.linkovi_minimalni), skup: 'score_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p06', jacina: Math.min(kljucne_reci.kljucne_zastupljene, broj_linkova.linkovi_umereni, caps_procenat.caps_uobicajen, interpunkcija.interpunkcija_retka), skup: 'score_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p06a', jacina: Math.min(kljucne_reci.kljucne_zastupljene, broj_linkova.linkovi_umereni), skup: 'score_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p07', jacina: Math.min(Math.max(broj_linkova.linkovi_umereni, broj_linkova.linkovi_brojni), Math.max(caps_procenat.caps_poviseni, caps_procenat.caps_blago_povisen, caps_procenat.caps_agresivan), kljucne_reci.kljucne_zanemarljive), skup: 'score_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p08', jacina: Math.min(Math.max(broj_linkova.linkovi_umereni, broj_linkova.linkovi_brojni), Math.max(interpunkcija.interpunkcija_umerena, interpunkcija.interpunkcija_blago, interpunkcija.interpunkcija_agresivna), kljucne_reci.kljucne_zanemarljive), skup: 'score_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p09', jacina: Math.min(kljucne_reci.kljucne_zastupljene, broj_linkova.linkovi_umereni, caps_procenat.caps_poviseni, interpunkcija.interpunkcija_umerena), skup: 'score_visoko_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p10', jacina: Math.min(kljucne_reci.kljucne_dominantne, broj_linkova.linkovi_umereni, caps_procenat.caps_uobicajen, interpunkcija.interpunkcija_retka), skup: 'score_visoko_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p11', jacina: Math.min(kljucne_reci.kljucne_dominantne, caps_procenat.caps_uobicajen), skup: 'score_visoko_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p12', jacina: Math.min(caps_procenat.caps_agresivan, kljucne_reci.kljucne_zanemarljive, broj_linkova.linkovi_minimalni), skup: 'score_visoko_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p13', jacina: Math.min(interpunkcija.interpunkcija_agresivna, kljucne_reci.kljucne_zanemarljive, broj_linkova.linkovi_minimalni), skup: 'score_visoko_sumnjiv', kategorija: 'SUMNJIVO' },
-        { naziv: 'p14', jacina: Math.max(kljucne_reci.kljucne_dominantne, broj_linkova.linkovi_brojni), skup: 'score_spam', kategorija: 'SPAM' },
-        { naziv: 'p15', jacina: Math.min(kljucne_reci.kljucne_zastupljene, Math.max(caps_procenat.caps_agresivan, interpunkcija.interpunkcija_agresivna)), skup: 'score_spam', kategorija: 'SPAM' },
-        { naziv: 'p16', jacina: Math.min(broj_linkova.linkovi_umereni, Math.max(caps_procenat.caps_agresivan, interpunkcija.interpunkcija_agresivna)), skup: 'score_spam', kategorija: 'SPAM' },
-        { naziv: 'p17', jacina: Math.min(Math.max(kljucne_reci.kljucne_zastupljene, kljucne_reci.kljucne_dominantne), Math.max(broj_linkova.linkovi_umereni, broj_linkova.linkovi_brojni), Math.max(caps_procenat.caps_poviseni, caps_procenat.caps_blago_povisen, caps_procenat.caps_agresivan)), skup: 'score_spam', kategorija: 'SPAM' }
-    ];
-}
-
-function defazifikuj(pravila) {
-    let imenilac = 0;
-    let brojilac = 0;
-
-    for (let x = 0; x <= 100; x += 1) {
-        let agregat = 0;
-        pravila.forEach(pravilo => {
-            const skup = SKUP_PO_IMENU[pravilo.skup];
-            const pripadnostIzlaza = pripadnost(skup.tip, skup.params, x);
-            agregat = Math.max(agregat, Math.min(pravilo.jacina, pripadnostIzlaza));
-        });
-        brojilac += x * agregat;
-        imenilac += agregat;
-    }
-
-    return imenilac > 0 ? brojilac / imenilac : 0;
-}
-
-function kategorijaZaSkor(skor) {
-    let najjaci = SKUPOVI_IZLAZA[0];
-    let najveca = -1;
-
-    SKUPOVI_IZLAZA.forEach(skup => {
-        const mu = pripadnost(skup.tip, skup.params, skor);
-        if (mu > najveca) {
-            najveca = mu;
-            najjaci = skup;
-        }
-    });
-
-    return najjaci.kategorija;
-}
-
 /* ---------- text analysis ---------------------------------------- */
 
 const UZORAK_LINKA = /\b(?:https?:\/\/|hxxps?:\/\/|www\.)[^\s<>"']+/gi;
 const UZORAK_CAPS = /\b[A-ZČĆŠŽĐ]{3,}\b/g;
 const UZORAK_INTERPUNKCIJA = /[!?]+/g;
-const ESCAPE_UZORAK = /[.*+?^${}()|[\]\\]/g;
-
-function ocistiHtml(tekst) {
-    return String(tekst)
-        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-        .replace(/<br\s*\/?>|<\/p>|<\/div>|<\/li>|<\/tr>|<\/h[1-6]>/gi, ' ')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function napraviUzorak(termin) {
-    const imaRazmak = /\s/.test(termin);
-    const osnova = termin.replace(ESCAPE_UZORAK, '\\$&');
-    try {
-        return new RegExp(imaRazmak ? osnova : `(?<![\\p{L}\\p{N}])${osnova}(?![\\p{L}\\p{N}])`, 'giu');
-    } catch (greska) {
-        return new RegExp(imaRazmak ? osnova : `\\b${osnova}\\b`, 'gi');
-    }
-}
-
-const RUCNI_TERMINI = new Set([...RECNIK_RUCNI, ...RECNIK_FRAZE]);
-
-const UZORCI_RUCNI = RECNIK_RUCNI.concat(RECNIK_FRAZE).map(termin => ({
-    termin, tezina: 1.0, izvor: 'rucni', uzorak: napraviUzorak(termin)
-}));
-
-const UZORCI_NAUCENI = Object.keys(RECNIK_NAUCENI).map(termin => ({
-    termin, tezina: RECNIK_NAUCENI[termin], izvor: 'nauceni', uzorak: napraviUzorak(termin)
-}));
-
-function izracunajKljucneReci(tekst, nacin) {
-    let evidencija = 0;
-    const pogodjene = [];
-
-    function dodajPogotke(uzorak, termin, tezina, izvor) {
-        const poklapanja = Array.from(tekst.matchAll(uzorak));
-        if (!poklapanja.length) return;
-
-        evidencija += poklapanja.length * tezina;
-        pogodjene.push({
-            rec: termin,
-            broj: poklapanja.length,
-            tezina,
-            izvor,
-            pozicije: poklapanja.slice(0, 10).map(poklapanje => [poklapanje.index, poklapanje.index + poklapanje[0].length])
-        });
-    }
-
-    if (nacin === 'rucni' || nacin === 'kombinovano') {
-        UZORCI_RUCNI.forEach(uzorak => dodajPogotke(uzorak.uzorak, uzorak.termin, uzorak.tezina, uzorak.izvor));
-    }
-
-    if (nacin === 'nauceni' || nacin === 'kombinovano') {
-        UZORCI_NAUCENI.forEach(uzorak => {
-            if (nacin === 'kombinovano' && RUCNI_TERMINI.has(uzorak.termin)) return;
-            dodajPogotke(uzorak.uzorak, uzorak.termin, uzorak.tezina, uzorak.izvor);
-        });
-    }
-
-    pogodjene.sort((prva, druga) => (druga.broj * druga.tezina) - (prva.broj * prva.tezina));
-
-    return { vrednost: Math.min(evidencija, 10), pogodjene: pogodjene.slice(0, 8) };
-}
-
-function izvuciLinkove(tekst) {
-    const kandidati = Array.from(tekst.matchAll(UZORAK_LINKA)).map(poklapanje => poklapanje[0]);
-    const ocisceni = kandidati.map(link =>
-        link.replace(/[.,;:!?)\]}>"']+$/, '').toLowerCase()
-    ).filter(Boolean);
-    return Array.from(new Set(ocisceni));
-}
-
-function izracunajCapsProcenat(tekstBezLinkova) {
-    const slova = Array.from(tekstBezLinkova).filter(znak => /\p{L}/u.test(znak));
-    if (!slova.length) return 0;
-    const velika = slova.filter(znak => znak === znak.toUpperCase() && znak !== znak.toLowerCase()).length;
-    return Math.round((velika / slova.length) * 10000) / 100;
-}
-
-function izracunajInterpunkciju(tekstBezLinkova) {
-    const uzvici = (tekstBezLinkova.match(/!/g) || []).length;
-    const upitnici = (tekstBezLinkova.match(/\?/g) || []).length;
-    const znakovi = tekstBezLinkova.replace(/\s/g, '').length;
-    return znakovi ? Math.round(((uzvici + upitnici) / znakovi) * 10000) / 100 : 0;
-}
-
 async function izracunajRezultat(tekst, nacin) {
+    await ucitajSkupove();
+
     const odgovor = await fetch('/analiziraj', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -606,6 +326,7 @@ async function izracunajRezultat(tekst, nacin) {
         vidljivi: objasnjenje.tekst || tekst,
         vrednosti,
         pogodjene: objasnjenje.pokrivene_reci || [],
+        oznake: objasnjenje.oznake || [],
         linkovi,
         mu,
         pravila: aktivnaPravila,
@@ -742,18 +463,18 @@ function renderSignali(rezultat) {
 
     document.getElementById('signali').innerHTML = redosled.map(kljuc => {
         const vrednost = rezultat.vrednosti[kljuc];
-        const skupovi = SKUPOVI_ULAZA[kljuc].slice().sort((prvi, drugi) =>
-            pripadnost(drugi.tip, drugi.params, vrednost) - pripadnost(prvi.tip, prvi.params, vrednost)
-        );
-        const dominantan = skupovi[0];
-        const dominantaMu = pripadnost(dominantan.tip, dominantan.params, vrednost);
+        const pripadnosti = Object.entries(rezultat.mu[kljuc] || {})
+            .sort((prva, druga) => druga[1] - prva[1]);
+        const [imeSkupa, dominantaMu] = pripadnosti[0] || [null, 0];
+        const definicije = SKUPOVI_ULAZA[kljuc] || [];
+        const dominantan = definicije.find(skup => skup.ime === imeSkupa) || { ime: imeSkupa || '—', kategorija: 'SUMNJIVO' };
         const maksimum = (kljuc === 'kljucne_reci' || kljuc === 'broj_linkova') ? 10 : 100;
         const sirina = Math.max(vrednost > 0 ? 2 : 0, Math.min(100, (vrednost / maksimum) * 100));
 
         return `<div class="signal">
             <div class="signal-vrh">
                 <span class="signal-naziv">${pobjegni(t().signali[kljuc])}</span>
-                <span class="signal-skup">${pobjegni(t().skupovi[dominantan.ime])} <b>${dominantaMu.toFixed(2)}</b></span>
+                <span class="signal-skup">${pobjegni(t().skupovi[dominantan.ime] || dominantan.ime)} <b>${Number(dominantaMu).toFixed(2)}</b></span>
             </div>
             <div class="signal-vrednost"><b>${pobjegni(formatirajBroj(vrednost))}</b><span>${pobjegni(t().jedinice[kljuc])}</span></div>
             <div class="signal-traka" style="--boja: ${bojaKategorije(dominantan.kategorija)}"><i style="width:${sirina}%"></i></div>
@@ -804,7 +525,8 @@ function napraviZasto(rezultat) {
 
     if (rezultat.pogodjene.length) {
         elementi.push('<div class="cipovi">' + rezultat.pogodjene.map(stavka => {
-            const izvor = stavka.izvor === 'nauceni' ? t().izvorNauceni : t().izvorRucni;
+            const izvor = stavka.izvor === 'en' ? t().izvorEn
+                : stavka.izvor === 'sr' ? t().izvorSr : t().izvorRucni;
             return `<span class="cip" title="${pobjegni(izvor)} · ${formatirajBroj(stavka.tezina)}">` +
                    `${pobjegni(stavka.rec)}${stavka.broj > 1 ? ` <b>×${stavka.broj}</b>` : ''}</span>`;
         }).join('') + '</div>');
@@ -888,8 +610,7 @@ function napraviPravila(rezultat) {
     }
 
     const stavke = aktivna.map(pravilo => {
-        const opis = (jezik === 'sr' ? pravilo.uslov_sr : pravilo.uslov_en)
-            || (OPISI_PRAVILA[pravilo.naziv] ? OPISI_PRAVILA[pravilo.naziv][jezik] : '');
+        const opis = (jezik === 'sr' ? pravilo.uslov_sr : pravilo.uslov_en) || '';
         const boja = bojaKategorije(pravilo.kategorija);
         return `<li class="pravilo" style="--boja: ${boja}">
             <div class="pravilo-vrh">
@@ -1237,8 +958,9 @@ function promeniJezik() {
 
 /* ---------- method sheet ------------------------------------------ */
 
-function otvoriMetod() {
+async function otvoriMetod() {
     const dijalog = document.getElementById('metod');
+    try { await ucitajSkupove(); } catch (greska) { /* spektar ostaje prazan */ }
     nacrtajSpektar(document.getElementById('spektar-metod'), null);
     if (!dijalog.open) dijalog.showModal();
 }
@@ -1301,10 +1023,11 @@ function poveziDogadjaje() {
 }
 
 async function inicijalizuj() {
-    if (!['rucni', 'nauceni', 'kombinovano'].includes(nacinRecnika)) nacinRecnika = 'kombinovano';
+    if (!['en', 'sr', 'kombinovano'].includes(nacinRecnika)) nacinRecnika = 'kombinovano';
     if (!['en', 'sr'].includes(jezik)) jezik = 'en';
     if (!['dark', 'light'].includes(tema)) tema = 'dark';
 
+    try { await ucitajSkupove(); } catch (greska) { /* spektar ostaje prazan */ }
     nacrtajSpektar(document.getElementById('spektar-prazno'), null, { priguseno: true });
 
     document.querySelectorAll('[data-recnik]').forEach(dugme => {

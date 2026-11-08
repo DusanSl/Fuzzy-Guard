@@ -14,4 +14,4 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["python", "main.py"]
+CMD ["waitress-serve", "--listen=0.0.0.0:5000", "main:app"]

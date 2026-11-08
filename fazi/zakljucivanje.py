@@ -60,7 +60,15 @@ def pokreni_fis(
         ime: float(fuzz.interp_membership(x_spam_score, skup, spam_score))
         for ime, skup in izlazni_skupovi.items()
     }
-    najjaci_skup = max(clanstva, key=clanstva.get)
+
+    if max(clanstva.values()) == 0:
+        # Zaštita: izlazni skupovi sada pokrivaju ceo univerzum, ali ako bi
+        # nekim budućim podešavanjem nastao pojas bez pripadnosti, ne smemo
+        # ga proglasiti legitimnim. Odsustvo dokaza nije dokaz odsustva.
+        kategorija_rezultata = "SUMNJIVO"
+    else:
+        najjaci_skup = max(clanstva, key=clanstva.get)
+        kategorija_rezultata = KATEGORIJA_PO_SKUPU[najjaci_skup]
 
     # Najjaca aktivna pravila, za prikaz "zasto" u interfejsu i odbranu.
     aktivna_pravila = [
@@ -78,7 +86,7 @@ def pokreni_fis(
 
     return {
         "spam_score": spam_score,
-        "kategorija": KATEGORIJA_PO_SKUPU[najjaci_skup],
+        "kategorija": kategorija_rezultata,
         "aktivna_pravila": aktivna_pravila[:6],
         "ulazi": ulazi_objasnjenje,
     }

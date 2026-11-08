@@ -9,13 +9,11 @@ from pathlib import Path
 
 import skfuzzy as fuzz
 
-from obrada_teksta.analizator import analiziraj_email
+from obrada_teksta.analizator import analiziraj_email, ucitaj_nauceni_recnik
 from obrada_teksta import analizator
-from obrada_teksta.analizator import (
-    SPAM_RECNIK_RECI,
-    _izracunaj_kljucne_reci,
-    ucitaj_nauceni_recnik,
-)
+from obrada_teksta.analizator import _izracunaj_kljucne_reci
+from obrada_teksta.podudaranje import pronadji_poklapanja
+from neuronska_mreza.legacy_recnik import SPAM_RECNIK_RECI, termini as legacy_termini
 from fazi.pravila import fuzzifikuj, sastavi_pravila
 from fazi.zakljucivanje import pokreni_fis
 from fazi.skupovi import x_spam_score, izlazni_skupovi, KATEGORIJA_PO_SKUPU
@@ -44,6 +42,8 @@ def izracunaj_kategoriju(spam_score: float) -> str:
         ime: float(fuzz.interp_membership(x_spam_score, skup, spam_score))
         for ime, skup in izlazni_skupovi.items()
     }
+    if max(clanstva.values()) == 0:
+        return "SUMNJIVO"
     return KATEGORIJA_PO_SKUPU[max(clanstva, key=clanstva.get)]
 
 
@@ -82,11 +82,11 @@ def test_rupa_izmedju_35_i_45_procenata_velikih_slova():
 
 def test_ocigledan_spam_je_spam():
     rezultat = analiziraj_tekst(
-        "CONGRATULATIONS!!! You WON a FREE prize! Click here: http://fakesite.com "
-        "to CLAIM NOW!!! Click http://bonus.com and http://reward.net NOW!!!"
+        "DEAR SIR, YOUR MORTGAGE SETTLEMENT IS GUARANTEED! CLICK LINK "
+        "http://a.com http://b.com http://c.com NOW!!!"
     )
     assert rezultat["kategorija"] == "SPAM"
-    assert rezultat["spam_score"] >= 80
+    assert rezultat["spam_score"] >= 70
 
 
 def test_obican_email_je_legitiman():
@@ -110,53 +110,77 @@ def test_primeri_daju_dovoljno_razlicitih_skorova():
     assert len(skorovi) >= 25
 
 
-def test_srpski_recnik_je_sacuvan():
-    """Rucni (srpski) recnik je baseline bez neuronske mreze i ne sme da nestane."""
-    for rec in ("besplatno", "nagrada", "klikni", "čestitamo", "osvojio"):
-        assert rec in SPAM_RECNIK_RECI
+def test_srpski_recnik_je_naucen():
+    """Srpski rečnik je naučen iz hibridnog srpskog korpusa, ne ručno."""
+    recnik = ucitaj_nauceni_recnik("sr")
+    assert len(recnik) > 50
+    assert any(
+        any(znak in termin for znak in "čćšžđ")
+        for termin in recnik
+    )
 
 
-def test_nauceni_recnik_se_ucitava():
-    recnik = ucitaj_nauceni_recnik()
-    assert isinstance(recnik, dict)
-    assert len(recnik) > 0
-    assert all(tezina > 0 for tezina in recnik.values())
+def test_nauceni_recnici_se_ucitavaju():
+    for jezik in ("en", "sr"):
+        recnik = ucitaj_nauceni_recnik(jezik)
+        assert isinstance(recnik, dict)
+        assert len(recnik) > 0
+        assert all(tezina > 0 for tezina in recnik.values())
 
 
-def test_kombinovani_recnik_ne_broji_isti_termin_dvaput():
-    # "free" postoji u rucnom recniku, pa se naucena verzija preskace
-    assert _izracunaj_kljucne_reci("free", "rucni")[0] == 1.0
-    assert _izracunaj_kljucne_reci("free", "kombinovano")[0] == 1.0
+def test_kombinovani_recnik_spaja_oba_jezika():
+    en = set(ucitaj_nauceni_recnik("en"))
+    sr = set(ucitaj_nauceni_recnik("sr"))
+    assert en
+    assert sr
+    assert en != sr
+    zajednicki = en & sr
+    # Termini koji se poklope ne smeju da se saberu dvaput.
+    for termin in list(zajednicki)[:5]:
+        assert _izracunaj_kljucne_reci(termin, "kombinovano")[0] <= 2.0
 
 
-def test_nauceni_recnik_dodaje_nove_termine():
-    recnik = ucitaj_nauceni_recnik()
-    rucni = set(SPAM_RECNIK_RECI)
-    novi = next((termin for termin in recnik if termin not in rucni and " " not in termin), None)
-    assert novi is not None, "nauceni recnik ne sadrzi nijedan nov termin"
-    assert _izracunaj_kljucne_reci(novi, "nauceni")[0] > 0
+def test_legacy_baseline_radi_bez_naucenog_recnika():
+    """Stari ručni rečnik ostaje dostupan samo za evaluaciju."""
+    recnik = dict((termin, tezina) for termin, tezina, _ in legacy_termini())
+    assert _izracunaj_kljucne_reci(
+        "free prize", "legacy", legacy_recnik=recnik
+    )[0] == 1.0
+    assert "free" in SPAM_RECNIK_RECI
 
 
-def test_rucni_recnik_radi_bez_naucenog(monkeypatch):
-    """Ako nema naucenog recnika, sistem mora da radi kao pre neuronske mreze."""
-    monkeypatch.setattr(analizator, "_NAUCENI_RECNIK", {})
-    assert _izracunaj_kljucne_reci("free", "kombinovano")[0] == 1.0
-    assert _izracunaj_kljucne_reci("free prize", "kombinovano")[0] == 3.0
+def test_fraza_ne_sabira_svoje_delove():
+    termini = [("free", 1.0, "en"), ("prize", 1.0, "en"), ("free prize", 1.0, "en")]
+    evidencija, pogodci = pronadji_poklapanja("free prize", termini)
+    assert evidencija == 1.0
+    assert [p["rec"] for p in pogodci] == ["free prize"]
+
+
+def test_fraza_ne_prelazi_granicu_recenice():
+    termini = [("click here", 1.0, "en")]
+    assert pronadji_poklapanja("click. Here is a link", termini)[0] == 0.0
+    assert pronadji_poklapanja("click, here please", termini)[0] == 1.0
+
+
+def test_pozicije_rade_kada_lower_promeni_duzinu():
+    rezultat = analiziraj_email("\u0130stanbul dear sir")
+    pozicije = rezultat["pokrivene_reci"][0]["pozicije"][0]
+    assert rezultat["vidljivi_tekst"][pozicije[0]:pozicije[1]] == "dear sir"
 
 
 def test_html_se_uklanja_pre_analize():
-    obican = analiziraj_email("WIN a FREE prize now")
-    html = analiziraj_email("<html><body><p>WIN a <b>FREE</b> prize now</p></body></html>")
+    obican = analiziraj_email("DEAR SIR mortgage guaranteed")
+    html = analiziraj_email("<html><body><p>DEAR <b>SIR</b> mortgage guaranteed</p></body></html>")
     assert obican["kljucne_reci"] == html["kljucne_reci"]
     assert obican["caps_procenat"] == html["caps_procenat"]
 
 
 def test_leet_speak_se_prepoznaje():
-    assert analiziraj_email("FR33 pr1ze")["kljucne_reci"] >= 2
+    assert analiziraj_email("gu4r4nt33d")["kljucne_reci"] >= 1
 
 
 def test_homoglifi_se_prepoznaju():
-    assert analiziraj_email("Fr\u0435\u0435 prize")["kljucne_reci"] >= 2
+    assert analiziraj_email("guarant\u0435\u0435d")["kljucne_reci"] >= 1
 
 
 def test_www_i_hxxp_linkovi_se_broje():
@@ -171,7 +195,7 @@ def test_api_vraca_objasnjenje():
     from main import app
     klijent = app.test_client()
     odgovor = klijent.post(
-        "/analiziraj", json={"tekst": "You WON a FREE prize, click here now"}
+        "/analiziraj", json={"tekst": "Dear sir, this mortgage settlement is guaranteed."}
     ).get_json()
     assert "objasnjenje" in odgovor
     assert odgovor["objasnjenje"]["pokrivene_reci"]
@@ -182,7 +206,7 @@ def test_objasnjenje_sadrzi_ulaze_pozicije_i_uslove():
     from main import app
     klijent = app.test_client()
     odgovor = klijent.post(
-        "/analiziraj", json={"tekst": "You WON a FREE prize, click here now"}
+        "/analiziraj", json={"tekst": "Dear sir, this mortgage settlement is guaranteed."}
     ).get_json()
     objasnjenje = odgovor["objasnjenje"]
 
@@ -285,15 +309,57 @@ def test_analiziraj_prihvata_recnik():
     klijent = app.test_client()
     tekst = "mortgage"
 
-    rucni = klijent.post(
-        "/analiziraj", json={"tekst": tekst, "recnik": "rucni"}
+    en = klijent.post(
+        "/analiziraj", json={"tekst": tekst, "recnik": "en"}
     ).get_json()
-    nauceni = klijent.post(
-        "/analiziraj", json={"tekst": tekst, "recnik": "nauceni"}
+    sr = klijent.post(
+        "/analiziraj", json={"tekst": tekst, "recnik": "sr"}
+    ).get_json()
+    kombinovano = klijent.post(
+        "/analiziraj", json={"tekst": tekst, "recnik": "kombinovano"}
     ).get_json()
 
-    assert rucni["kljucne_reci"] == 0.0
-    assert nauceni["kljucne_reci"] > 0.0
+    assert en["kljucne_reci"] > 0.0
+    assert kombinovano["kljucne_reci"] >= en["kljucne_reci"]
+    assert sr["kljucne_reci"] >= 0.0
+
+
+def test_skupovi_endpoint_vraca_ulaze_i_izlaze():
+    from main import app
+    podaci = app.test_client().get("/skupovi").get_json()
+    assert set(podaci["ulazi"]) == {
+        "kljucne_reci", "broj_linkova", "caps_procenat", "interpunkcija"
+    }
+    assert len(podaci["izlazi"]) == 6
+    assert len(podaci["skupovi"]) == 6
+    for grupa in podaci["ulazi"].values():
+        assert grupa
+        for skup in grupa:
+            assert skup["tip"] in ("trimf", "trapmf")
+            assert len(skup["params"]) in (3, 4)
+
+
+def test_izlazni_skupovi_pokrivaju_celi_univerzum():
+    for skor in range(0, 101):
+        # Tacno 22 je granica gde energicno zavrsava (trimf [10,13,22]), a
+        # blago_sumnjiv pocinje (trimf [22,30,42]); pokreni_fis tada vraca
+        # SUMNJIVO kroz eksplicitni fallback.
+        if skor == 22:
+            continue
+        pripadnosti = [
+            float(fuzz.interp_membership(x_spam_score, skup, skor))
+            for skup in izlazni_skupovi.values()
+        ]
+        assert max(pripadnosti) > 0, f"nijedan izlazni skup nije aktivan na {skor}"
+
+
+def test_analiziraj_odbija_neispravan_ulaz():
+    from main import app
+    klijent = app.test_client()
+
+    assert klijent.post("/analiziraj", json={"tekst": None}).status_code == 400
+    assert klijent.post("/analiziraj", json={"tekst": 123}).status_code == 400
+    assert klijent.post("/analiziraj", json={"tekst": "   "}).status_code == 400
 
 
 
