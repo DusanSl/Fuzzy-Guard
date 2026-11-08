@@ -15,7 +15,8 @@ The application features a responsive web interface with full bilingual support 
 - **History Tracking:** View and recall previous checks performed during the active session.
 - **Sample Loader:** Instantly load random pre-defined test emails to see the system in action.
 - **Hard-sample Loader:** Loads spam that deliberately avoids the hand-written dictionary, to show the limit of keyword matching (especially in Serbian).
-- **Modern UI:** Sleek dark-mode dashboard styled with CSS.
+- **Explainable verdict:** a fuzzy spectrum drawn from the actual output sets, plus **Why / Inputs / Rules** tabs showing matched words in context, membership degrees and the rules that fired.
+- **Modern UI:** dark by default, with a light "lab notebook" theme. Bilingual, responsive, keyboard-friendly.
 
 ---
 
@@ -23,7 +24,7 @@ The application features a responsive web interface with full bilingual support 
 
 **Legitimate email, low suspicion score:**
 
-![Legitimate email example](screenshots/Legit-example.webp)
+![Legitimate email example](screenshots/Legit-example.png)
 
 **Spam email, high suspicion score, flagged across all signals:**
 

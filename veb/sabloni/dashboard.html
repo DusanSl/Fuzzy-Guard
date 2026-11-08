@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,85 +11,91 @@
 
     <aside class="sidebar">
         <div class="sidebar-zaglavlje">
-            <div class="logo">Fuzzy Guard</div>
-            <div class="zaglavlje-dugmad">
-                <button class="jezik-dugme" id="jezik-dugme" onclick="promeniJezik()">Srpski</button>
-                <button class="meni-dugme" id="meni-dugme" onclick="toggleMeni()" aria-label="Menu" aria-expanded="false">☰</button>
+            <div class="logo">
+                <span class="logo-znak">FG</span>
+                <span class="logo-tekst">Fuzzy Guard</span>
             </div>
+            <button class="meni-dugme" id="meni-dugme" onclick="toggleMeni()" aria-label="Menu" aria-expanded="false">☰</button>
         </div>
 
         <div class="sidebar-sadrzaj" id="sidebar-sadrzaj">
-            <div class="sidebar-dugmad">
-                <button class="sb-dugme sb-dugme-primarno" data-i18n="novaProvera" onclick="novaProvera()">New check</button>
-                <button class="sb-dugme sb-dugme-sekundarno" data-i18n="primerProvera" onclick="ucitajRandom()">Sample check</button>
-                <button class="sb-dugme sb-dugme-sekundarno" data-i18n="teskiPrimer" onclick="ucitajTeski()">Hard sample</button>
+            <div class="prekidaci">
+                <button class="prekidac" id="jezik-dugme" onclick="promeniJezik()">Srpski</button>
+                <button class="prekidac" id="tema-dugme" onclick="promeniTemu()" aria-label="Theme">☀</button>
             </div>
 
-            <div class="sidebar-sekcija-naslov" data-i18n="prethodneProvere">PREVIOUS CHECKS</div>
-            <div class="istorija" id="istorija">
+            <div class="sidebar-akcije">
+                <button class="dugme dugme-primarno" data-i18n="novaProvera" onclick="novaProvera()">New check</button>
+                <button class="dugme dugme-sekundarno" data-i18n="primerProvera" onclick="ucitajRandom()">Sample</button>
+                <button class="dugme dugme-sekundarno" data-i18n="teskiPrimer" onclick="ucitajTeski()">Hard sample</button>
             </div>
+
+            <div class="sidebar-sekcija">
+                <span class="eyebrow" data-i18n="prethodneProvere">PREVIOUS CHECKS</span>
+                <button class="link-dugme" data-i18n="ocisti" onclick="ocistiIstoriju()">clear</button>
+            </div>
+            <div class="istorija" id="istorija"></div>
         </div>
     </aside>
 
     <main class="glavni">
 
-        <div class="email-panel">
+        <section class="email-panel">
+            <div class="panel-zaglavlje">
+                <span class="eyebrow" data-i18n="emailTekst">EMAIL TEXT</span>
+                <span class="broj-znakova"><span id="broj-znakova">0</span> <span data-i18n="znakova">chars</span></span>
+            </div>
 
-            <div class="email-kartica" id="email-kartica">
-                <div class="email-od">
-                    <span class="email-od-labela" data-i18n="od">From:</span>
-                    <span class="email-od-vrednost" data-i18n="odVrednost">testing@spam-filter</span>
-                </div>
+            <div class="email-kartica">
                 <textarea
                     id="tekst"
                     data-i18n-placeholder="placeholder"
+                    data-i18n-aria="emailTekst"
+                    aria-label="Email text"
                     placeholder="Write or paste the email text here..."
-                    oninput="resetujRezultate()"
+                    oninput="naUnos()"
                 ></textarea>
             </div>
 
             <div class="akcija-red">
-                <button class="dugme-analiziraj" data-i18n="pokreniAnalizu" onclick="pokreniAnalizu()">
+                <button class="dugme dugme-primarno dugme-analiziraj" data-i18n="pokreniAnalizu" onclick="pokreniAnalizu()">
                     Run analysis
                 </button>
-                <button class="dugme-sporedni" id="dugme-zasto" data-i18n="zasto" onclick="toggleObjasnjenje()" disabled>
-                    Why?
-                </button>
-                <button class="dugme-sporedni" id="dugme-ocisti" data-i18n="ocisti" onclick="novaProvera()">
-                    Clear
-                </button>
-                <button class="dugme-sporedni" id="dugme-kopiraj" data-i18n="kopiraj" onclick="kopirajRezultat()" disabled>
-                    Copy result
-                </button>
+                <button class="dugme dugme-ikona" id="dugme-ocisti" onclick="novaProvera()" data-i18n-title="ocisti" title="Clear" aria-label="Clear">⌫</button>
             </div>
 
-            <div class="objasnjenje-panel" id="objasnjenje-panel" hidden></div>
+            <div class="poruka" id="poruka" hidden></div>
+        </section>
 
-            <div class="rezultati-grid" id="rezultati-grid">
-                <div class="rezultat-kartica rezultat-score" id="kartica-score">
-                    <div class="rezultat-broj" id="vrednost-score">—</div>
-                    <div class="rezultat-labela" data-i18n="spamScore">SPAM SCORE</div>
-                    <div class="rezultat-indikator" id="indikator-score"></div>
-                </div>
-                <div class="rezultat-kartica" id="kartica-kljucne">
-                    <div class="rezultat-broj" id="vrednost-kljucne">—</div>
-                    <div class="rezultat-labela" data-i18n="kljucneReci">KEYWORDS</div>
-                </div>
-                <div class="rezultat-kartica" id="kartica-linkovi">
-                    <div class="rezultat-broj" id="vrednost-linkovi">—</div>
-                    <div class="rezultat-labela" data-i18n="brojLinkova">LINK COUNT</div>
-                </div>
-                <div class="rezultat-kartica" id="kartica-caps">
-                    <div class="rezultat-broj" id="vrednost-caps">—</div>
-                    <div class="rezultat-labela" data-i18n="caps">CAPS</div>
-                </div>
-                <div class="rezultat-kartica" id="kartica-interpunkcija">
-                    <div class="rezultat-broj" id="vrednost-interpunkcija">—</div>
-                    <div class="rezultat-labela" data-i18n="interpunkcija">PUNCTUATION</div>
-                </div>
+        <section class="verdict-panel" aria-live="polite">
+            <div class="verdict-prazno" id="verdict-prazno">
+                <span class="eyebrow" data-i18n="rezultat">VERDICT</span>
+                <p data-i18n="praznoStanje">Paste an email to see the verdict.</p>
             </div>
 
-        </div>
+            <div class="verdict-sadrzaj" id="verdict-sadrzaj" hidden>
+                <div class="verdict-zaglavlje">
+                    <div class="verdict-broj">
+                        <span class="eyebrow" data-i18n="rezultat">VERDICT</span>
+                        <div class="skor" id="vrednost-score">—</div>
+                        <div class="kategorija" id="indikator-score"></div>
+                    </div>
+                    <button class="dugme dugme-ikona" id="dugme-kopiraj" onclick="kopirajRezultat()" data-i18n-title="kopiraj" title="Copy" aria-label="Copy" disabled>⧉</button>
+                </div>
+
+                <div class="spektar">
+                    <svg id="spektar" viewBox="0 0 400 92" preserveAspectRatio="none" role="img" aria-label="Fuzzy spectrum"></svg>
+                    <div class="spektar-oznake" id="spektar-oznake"></div>
+                </div>
+
+                <div class="tabovi" role="tablist">
+                    <button class="tab aktivan" role="tab" aria-selected="true" aria-controls="tab-sadrzaj" data-tab="zasto" onclick="promeniTab('zasto')" data-i18n="tabZasto">Why</button>
+                    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-sadrzaj" data-tab="ulazi" onclick="promeniTab('ulazi')" data-i18n="tabUlazi">Inputs</button>
+                    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-sadrzaj" data-tab="pravila" onclick="promeniTab('pravila')" data-i18n="tabPravila">Rules</button>
+                </div>
+                <div class="tab-sadrzaj" id="tab-sadrzaj" role="tabpanel"></div>
+            </div>
+        </section>
 
     </main>
 

@@ -49,30 +49,55 @@ interpunkcija_agresivna = fuzz.trapmf(x_interpunkcija, [14, 40, 100, 100])
 # Sest stepenovanih izlaznih skupova. Trouglovi nisu idealno simetricni: kod
 # savrseno simetricnog trougla teziste ne zavisi od jacine aktivacije, pa bi
 # svako pravilo koje se aktivira dalo isti skor bez obzira na stepen.
-score_legitiman           = fuzz.trapmf(x_spam_score, [0, 0, 8, 20])
-score_legitiman_energicno = fuzz.trimf (x_spam_score, [10, 13, 22])
-score_blago_sumnjiv       = fuzz.trimf (x_spam_score, [24, 30, 42])
-score_sumnjiv             = fuzz.trimf (x_spam_score, [38, 44, 58])
-score_visoko_sumnjiv      = fuzz.trimf (x_spam_score, [54, 60, 74])
-score_spam                = fuzz.trapmf(x_spam_score, [72, 88, 100, 100])
+# Definicije izlaznih skupova. Jedan izvor istine — iz ovoga se grade i numpy
+# skupovi i /skupovi endpoint koji front-end koristi da nacrta spektar.
+IZLAZNI_SKUPOVI_DEFINICIJE = {
+    "legitiman": {
+        "tip": "trapmf", "params": (0, 0, 8, 20),
+        "kategorija": "LEGITIMAN", "naziv": "legitiman",
+    },
+    "energicno": {
+        "tip": "trimf", "params": (10, 13, 22),
+        "kategorija": "LEGITIMAN", "naziv": "legitiman energično",
+    },
+    "blago_sumnjiv": {
+        "tip": "trimf", "params": (24, 30, 42),
+        "kategorija": "SUMNJIVO", "naziv": "blago sumnjiv",
+    },
+    "sumnjiv": {
+        "tip": "trimf", "params": (38, 44, 58),
+        "kategorija": "SUMNJIVO", "naziv": "sumnjiv",
+    },
+    "visoko_sumnjiv": {
+        "tip": "trimf", "params": (54, 60, 74),
+        "kategorija": "SUMNJIVO", "naziv": "visoko sumnjiv",
+    },
+    "spam": {
+        "tip": "trapmf", "params": (72, 88, 100, 100),
+        "kategorija": "SPAM", "naziv": "spam",
+    },
+}
 
-# Imena izlaznih skupova -> lingvisticka kategorija koja se prikazuje korisniku.
+
+def _napravi_izlazni_skup(definicija):
+    return getattr(fuzz, definicija["tip"])(x_spam_score, list(definicija["params"]))
+
+
+score_legitiman           = _napravi_izlazni_skup(IZLAZNI_SKUPOVI_DEFINICIJE["legitiman"])
+score_legitiman_energicno = _napravi_izlazni_skup(IZLAZNI_SKUPOVI_DEFINICIJE["energicno"])
+score_blago_sumnjiv       = _napravi_izlazni_skup(IZLAZNI_SKUPOVI_DEFINICIJE["blago_sumnjiv"])
+score_sumnjiv             = _napravi_izlazni_skup(IZLAZNI_SKUPOVI_DEFINICIJE["sumnjiv"])
+score_visoko_sumnjiv      = _napravi_izlazni_skup(IZLAZNI_SKUPOVI_DEFINICIJE["visoko_sumnjiv"])
+score_spam                = _napravi_izlazni_skup(IZLAZNI_SKUPOVI_DEFINICIJE["spam"])
+
 izlazni_skupovi = {
-    "legitiman":      score_legitiman,
-    "energicno":      score_legitiman_energicno,
-    "blago_sumnjiv":  score_blago_sumnjiv,
-    "sumnjiv":        score_sumnjiv,
-    "visoko_sumnjiv": score_visoko_sumnjiv,
-    "spam":           score_spam,
+    ime: _napravi_izlazni_skup(definicija)
+    for ime, definicija in IZLAZNI_SKUPOVI_DEFINICIJE.items()
 }
 
 KATEGORIJA_PO_SKUPU = {
-    "legitiman":      "LEGITIMAN",
-    "energicno":      "LEGITIMAN",
-    "blago_sumnjiv":  "SUMNJIVO",
-    "sumnjiv":        "SUMNJIVO",
-    "visoko_sumnjiv": "SUMNJIVO",
-    "spam":           "SPAM",
+    ime: definicija["kategorija"]
+    for ime, definicija in IZLAZNI_SKUPOVI_DEFINICIJE.items()
 }
 
 

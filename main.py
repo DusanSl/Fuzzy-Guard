@@ -5,6 +5,7 @@ from obrada_teksta.analizator import (
     ucitaj_teske_primere,
 )
 from fazi.zakljucivanje import pokreni_fis
+from fazi.skupovi import IZLAZNI_SKUPOVI_DEFINICIJE
 import os
 
 app = Flask(
@@ -40,6 +41,23 @@ def primeri_teski():
     jezik = request.args.get("jezik", "en")
     lista = ucitaj_teske_primere(jezik)
     return jsonify({"primeri": lista})
+
+
+@app.route("/skupovi")
+def skupovi():
+    return jsonify({
+        "univerzum": {"min": 0, "max": 100, "korak": 1},
+        "skupovi": [
+            {
+                "ime": ime,
+                "naziv": definicija["naziv"],
+                "tip": definicija["tip"],
+                "params": list(definicija["params"]),
+                "kategorija": definicija["kategorija"],
+            }
+            for ime, definicija in IZLAZNI_SKUPOVI_DEFINICIJE.items()
+        ],
+    })
 
 
 @app.route("/analiziraj", methods=["POST"])

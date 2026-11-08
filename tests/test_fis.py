@@ -231,6 +231,25 @@ def test_svako_pravilo_ima_opis():
         assert OPISI_PRAVILA[naziv]["en"]
 
 
+def test_skupovi_endpoint_vraca_sest_skupova():
+    from main import app
+    podaci = app.test_client().get("/skupovi").get_json()
+    assert len(podaci["skupovi"]) == 6
+    for skup in podaci["skupovi"]:
+        assert skup["tip"] in ("trimf", "trapmf")
+        assert len(skup["params"]) in (3, 4)
+        assert skup["kategorija"] in ("LEGITIMAN", "SUMNJIVO", "SPAM")
+        assert skup["naziv"]
+
+
+def test_dashboard_ima_nove_elemente():
+    from main import app
+    html = app.test_client().get("/").get_data(as_text=True)
+    for element in ("spektar", "verdict-sadrzaj", "tab-sadrzaj", "tema-dugme", "istorija"):
+        assert element in html
+
+
+
 
 
 
