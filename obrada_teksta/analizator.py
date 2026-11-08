@@ -1,6 +1,9 @@
 import re
 import random
+import json
+import os
 from pathlib import Path
+from typing import Optional
 
 SPAM_RECNIK_RECI = [
     # Engleski
@@ -71,20 +74,63 @@ SPAM_RECNIK_FRAZE = [
 ]
 
 PUTANJA_PRIMERI = Path(__file__).parent.parent / "primeri.txt"
+PUTANJA_RECNIK = Path(__file__).parent.parent / "podaci" / "recnik_naucen.json"
+
+# rucni     - samo lista odrzavana rukom (ponasanje pre uvodjenja mreze)
+# nauceni   - samo recnik koji je naucila neuronska mreza
+# kombinovano - rucni + nauceni (podrazumevano)
+NACIN_RECNIKA = os.environ.get("FUZZY_GUARD_RECNIK", "kombinovano").strip().lower()
+
+_NAUCENI_RECNIK = None
 
 
-def analiziraj_email(tekst: str) -> dict:
+def ucitaj_nauceni_recnik() -> dict:
+    """Ucitava recnik koji je izvozila neuronska mreza. Vraca {} ako ga nema."""
+    global _NAUCENI_RECNIK
+    if _NAUCENI_RECNIK is not None:
+        return _NAUCENI_RECNIK
+    try:
+        podaci = json.loads(PUTANJA_RECNIK.read_text(encoding="utf-8"))
+        _NAUCENI_RECNIK = {
+            termin: float(tezina) for termin, tezina in podaci.get("tezine", {}).items()
+        }
+    except (OSError, ValueError):
+        _NAUCENI_RECNIK = {}
+    return _NAUCENI_RECNIK
+
+
+def _izracunaj_kljucne_reci(tekst_mali: str, nacin_recnik: str) -> float:
+    evidencija = 0.0
+
+    if nacin_recnik in ("rucni", "kombinovano"):
+        for rec in SPAM_RECNIK_RECI:
+            uzorak = r"\b" + re.escape(rec) + r"\b"
+            evidencija += len(re.findall(uzorak, tekst_mali))
+        for fraza in SPAM_RECNIK_FRAZE:
+            evidencija += len(re.findall(re.escape(fraza), tekst_mali))
+
+    if nacin_recnik in ("nauceni", "kombinovano"):
+        rucni_termini = set(SPAM_RECNIK_RECI) | set(SPAM_RECNIK_FRAZE)
+        for termin, tezina in ucitaj_nauceni_recnik().items():
+            if nacin_recnik == "kombinovano" and termin in rucni_termini:
+                continue  # ne broji dvaput isti termin
+            if " " in termin:
+                broj = len(re.findall(re.escape(termin), tekst_mali))
+            else:
+                broj = len(re.findall(r"\b" + re.escape(termin) + r"\b", tekst_mali))
+            evidencija += broj * tezina
+
+    return min(evidencija, 10.0)
+
+
+
+def analiziraj_email(tekst: str, nacin_recnik: Optional[str] = None) -> dict:
     tekst_bez_linkova = re.sub(r'https?://\S+', '', tekst)
     tekst_mali = tekst_bez_linkova.lower()
 
-    broj_kljucnih_reci = 0
-    for rec in SPAM_RECNIK_RECI:
-        uzorak = r'\b' + re.escape(rec) + r'\b'
-        broj_kljucnih_reci += len(re.findall(uzorak, tekst_mali))
-    for fraza in SPAM_RECNIK_FRAZE:
-        uzorak = re.escape(fraza)
-        broj_kljucnih_reci += len(re.findall(uzorak, tekst_mali))
-    broj_kljucnih_reci = min(broj_kljucnih_reci, 10)
+    broj_kljucnih_reci = _izracunaj_kljucne_reci(
+        tekst_mali, (nacin_recnik or NACIN_RECNIKA)
+    )
 
     pronadjeni_linkovi = re.findall(r'https?://\S+', tekst)
     broj_linkova = min(len(pronadjeni_linkovi), 10)

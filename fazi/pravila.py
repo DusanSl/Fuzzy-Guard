@@ -4,15 +4,16 @@ from fazi.skupovi import (
     x_broj_linkova,  linkovi_minimalni,    linkovi_umereni,     linkovi_brojni,
     x_caps_procenat, caps_uobicajen,       caps_poviseni,       caps_blago_povisen, caps_agresivan,
     x_interpunkcija, interpunkcija_retka,  interpunkcija_blago, interpunkcija_umerena, interpunkcija_agresivna,
-    score_legitiman, score_legitiman_energicno, score_sumnjiv, score_spam,
+    score_legitiman, score_legitiman_energicno, score_blago_sumnjiv,
+    score_sumnjiv, score_visoko_sumnjiv, score_spam,
     stepen_pripadnosti,
 )
 
 
 def fuzzifikuj(
-    val_kljucne:     float,
-    val_linkovi:     float,
-    val_caps:        float,
+    val_kljucne:       float,
+    val_linkovi:       float,
+    val_caps:          float,
     val_interpunkcija: float,
 ) -> dict:
     return {
@@ -27,10 +28,10 @@ def fuzzifikuj(
             "brojni":    stepen_pripadnosti(x_broj_linkova, linkovi_brojni,    val_linkovi),
         },
         "caps_procenat": {
-            "uobicajen": stepen_pripadnosti(x_caps_procenat, caps_uobicajen, val_caps),
-            "poviseni":  stepen_pripadnosti(x_caps_procenat, caps_poviseni,  val_caps),
-            "blago":     stepen_pripadnosti(x_caps_procenat, caps_blago_povisen, val_caps),
-            "agresivan": stepen_pripadnosti(x_caps_procenat, caps_agresivan, val_caps),
+            "uobicajen": stepen_pripadnosti(x_caps_procenat, caps_uobicajen,       val_caps),
+            "poviseni":  stepen_pripadnosti(x_caps_procenat, caps_poviseni,        val_caps),
+            "blago":     stepen_pripadnosti(x_caps_procenat, caps_blago_povisen,   val_caps),
+            "agresivan": stepen_pripadnosti(x_caps_procenat, caps_agresivan,       val_caps),
         },
         "interpunkcija": {
             "retka":     stepen_pripadnosti(x_interpunkcija, interpunkcija_retka,     val_interpunkcija),
@@ -41,94 +42,134 @@ def fuzzifikuj(
     }
 
 
+def sastavi_pravila(mu: dict) -> list:
+    """Vraca listu pravila kao (naziv, jacina, izlazni skup, kategorija).
+
+    Pravila su numerisana u jednom neprekinutom nizu p01, p02, ... p17.
+    Suffiks (p03a, p06a) sme da nosi samo pravilo koje je bliska varijanta
+    prethodnog; nikad ne sme da napravi prazninu u numeraciji.
+
+    Jacina je fazi AND (min) / OR (max) nad stepenima pripadnosti.
+    """
+    kljucne_reci  = mu["kljucne_reci"]
+    broj_linkova  = mu["broj_linkova"]
+    caps_procenat = mu["caps_procenat"]
+    interpunkcija = mu["interpunkcija"]
+
+    return [
+        # --- LEGITIMNO ---------------------------------------------------
+        # p01 — zanemarljive reci, minimalni linkovi, uobicajena slova, retka interpunkcija
+        ("p01", min(kljucne_reci["zanemarljive"], broj_linkova["minimalni"],
+                    caps_procenat["uobicajen"], interpunkcija["retka"]),
+         score_legitiman, "LEGITIMAN"),
+
+        # p02 — blago povisena slova, zanemarljive reci, minimalni linkovi
+        ("p02", min(caps_procenat["blago"], kljucne_reci["zanemarljive"],
+                    broj_linkova["minimalni"]),
+         score_legitiman_energicno, "LEGITIMAN"),
+
+        # p03 — blaga interpunkcija, zanemarljive reci, minimalni linkovi
+        ("p03", min(interpunkcija["blago"], kljucne_reci["zanemarljive"],
+                    broj_linkova["minimalni"]),
+         score_legitiman_energicno, "LEGITIMAN"),
+
+        # p03a — varijanta p03: umerena interpunkcija umesto blage
+        ("p03a", min(interpunkcija["umerena"], kljucne_reci["zanemarljive"],
+                     broj_linkova["minimalni"]),
+         score_legitiman_energicno, "LEGITIMAN"),
+
+        # --- BLAGO SUMNJIVO ----------------------------------------------
+        # p04 — zanemarljive reci, umereni linkovi, uobicajena slova, retka interpunkcija
+        ("p04", min(kljucne_reci["zanemarljive"], broj_linkova["umereni"],
+                    caps_procenat["uobicajen"], interpunkcija["retka"]),
+         score_blago_sumnjiv, "SUMNJIVO"),
+
+        # --- SUMNJIVO ----------------------------------------------------
+        # p05 — zastupljene reci, minimalni linkovi
+        ("p05", min(kljucne_reci["zastupljene"], broj_linkova["minimalni"]),
+         score_sumnjiv, "SUMNJIVO"),
+
+        # p06 — zastupljene reci, umereni linkovi, uobicajena slova, retka interpunkcija
+        ("p06", min(kljucne_reci["zastupljene"], broj_linkova["umereni"],
+                    caps_procenat["uobicajen"], interpunkcija["retka"]),
+         score_sumnjiv, "SUMNJIVO"),
+
+        # p06a — varijanta p06 bez uslova na velika slova i interpunkciju
+        ("p06a", min(kljucne_reci["zastupljene"], broj_linkova["umereni"]),
+         score_sumnjiv, "SUMNJIVO"),
+
+        # p07 — umereni/brojni linkovi, povisena/blaga/agresivna slova, zanemarljive reci
+        ("p07", min(max(broj_linkova["umereni"], broj_linkova["brojni"]),
+                    max(caps_procenat["poviseni"], caps_procenat["blago"],
+                        caps_procenat["agresivan"]),
+                    kljucne_reci["zanemarljive"]),
+         score_sumnjiv, "SUMNJIVO"),
+
+        # p08 — umereni/brojni linkovi, umerena/blaga/agresivna interpunkcija, zanemarljive reci
+        ("p08", min(max(broj_linkova["umereni"], broj_linkova["brojni"]),
+                    max(interpunkcija["umerena"], interpunkcija["blago"],
+                        interpunkcija["agresivna"]),
+                    kljucne_reci["zanemarljive"]),
+         score_sumnjiv, "SUMNJIVO"),
+
+        # --- VISOKO SUMNJIVO ---------------------------------------------
+        # p09 — zastupljene reci, umereni linkovi, povisena slova, umerena interpunkcija
+        ("p09", min(kljucne_reci["zastupljene"], broj_linkova["umereni"],
+                    caps_procenat["poviseni"], interpunkcija["umerena"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+
+        # p10 — dominantne reci, umereni linkovi, uobicajena slova, retka interpunkcija
+        ("p10", min(kljucne_reci["dominantne"], broj_linkova["umereni"],
+                    caps_procenat["uobicajen"], interpunkcija["retka"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+
+        # p11 — dominantne reci, uobicajena slova
+        ("p11", min(kljucne_reci["dominantne"], caps_procenat["uobicajen"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+
+        # p12 — agresivna slova, zanemarljive reci, minimalni linkovi
+        ("p12", min(caps_procenat["agresivan"], kljucne_reci["zanemarljive"],
+                    broj_linkova["minimalni"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+
+        # p13 — agresivna interpunkcija, zanemarljive reci, minimalni linkovi
+        ("p13", min(interpunkcija["agresivna"], kljucne_reci["zanemarljive"],
+                    broj_linkova["minimalni"]),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+
+        # --- SPAM --------------------------------------------------------
+        # p14 — dominantne reci ili brojni linkovi
+        ("p14", max(kljucne_reci["dominantne"], broj_linkova["brojni"]),
+         score_spam, "SPAM"),
+
+        # p15 — zastupljene reci i (agresivna slova ili agresivna interpunkcija)
+        ("p15", min(kljucne_reci["zastupljene"],
+                    max(caps_procenat["agresivan"], interpunkcija["agresivna"])),
+         score_spam, "SPAM"),
+
+        # p16 — umereni linkovi i (agresivna slova ili agresivna interpunkcija)
+        ("p16", min(broj_linkova["umereni"],
+                    max(caps_procenat["agresivan"], interpunkcija["agresivna"])),
+         score_spam, "SPAM"),
+
+        # p17 — (zastupljene ili dominantne) reci, (umereni ili brojni) linkovi,
+        #        (povisena ili blaga ili agresivna) slova
+        ("p17", min(max(kljucne_reci["zastupljene"], kljucne_reci["dominantne"]),
+                    max(broj_linkova["umereni"], broj_linkova["brojni"]),
+                    max(caps_procenat["poviseni"], caps_procenat["blago"],
+                        caps_procenat["agresivan"])),
+         score_spam, "SPAM"),
+    ]
+
+
 def kontroler_spam_score(mu: dict):
-    kljucne = mu["kljucne_reci"]
-    linkovi = mu["broj_linkova"]
-    caps    = mu["caps_procenat"]
-    inter   = mu["interpunkcija"]
+    pravila = sastavi_pravila(mu)
 
-    aktivacije = []
-    alfa_legitiman = []
-    alfa_sumnjiv   = []
-    alfa_spam      = []
-
-    # LEGITIMATE
-    p01 = min(kljucne["zanemarljive"], linkovi["minimalni"], caps["uobicajen"], inter["retka"])
-    aktivacije.append(np.fmin(p01, score_legitiman))
-    alfa_legitiman.append(p01)
-
-    # LEGITIMATE_ENERGETIC
-    p02 = min(caps["blago"], kljucne["zanemarljive"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p02, score_legitiman_energicno))
-    alfa_legitiman.append(p02)
-    p03 = min(inter["blago"], kljucne["zanemarljive"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p03, score_legitiman_energicno))
-    alfa_legitiman.append(p03)
-
-    # SUSPICIOUS
-    p04 = min(kljucne["zastupljene"], linkovi["umereni"], caps["poviseni"], inter["umerena"])
-    aktivacije.append(np.fmin(p04, score_sumnjiv))
-    alfa_sumnjiv.append(p04)
-    p05 = min(kljucne["zastupljene"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p05, score_sumnjiv))
-    alfa_sumnjiv.append(p05)
-    p06 = min(
-        np.fmax(kljucne["zanemarljive"], kljucne["zastupljene"]),
-        linkovi["umereni"],
-        caps["uobicajen"],
-        inter["retka"],
-    )
-    aktivacije.append(np.fmin(p06, score_sumnjiv))
-    alfa_sumnjiv.append(p06)
-    p07 = min(kljucne["dominantne"], caps["uobicajen"])
-    aktivacije.append(np.fmin(p07, score_sumnjiv))
-    alfa_sumnjiv.append(p07)
-    p08 = min(caps["agresivan"], kljucne["zanemarljive"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p08, score_sumnjiv))
-    alfa_sumnjiv.append(p08)
-    p09 = min(inter["agresivna"], kljucne["zanemarljive"], linkovi["minimalni"])
-    aktivacije.append(np.fmin(p09, score_sumnjiv))
-    alfa_sumnjiv.append(p09)
-    p10 = min(
-        np.fmax(linkovi["umereni"], linkovi["brojni"]),
-        np.fmax(caps["poviseni"], caps["blago"]),
-        kljucne["zanemarljive"],
-    )
-    aktivacije.append(np.fmin(p10, score_sumnjiv))
-    alfa_sumnjiv.append(p10)
-    p11 = min(
-        np.fmax(linkovi["umereni"], linkovi["brojni"]),
-        np.fmax(inter["umerena"], inter["blago"]),
-        kljucne["zanemarljive"],
-    )
-    aktivacije.append(np.fmin(p11, score_sumnjiv))
-    alfa_sumnjiv.append(p11)
-
-    # SPAM
-    p12 = np.fmax(kljucne["dominantne"], linkovi["brojni"])
-    aktivacije.append(np.fmin(p12, score_spam))
-    alfa_spam.append(p12)
-    p13 = min(kljucne["zastupljene"], np.fmax(caps["agresivan"], inter["agresivna"]))
-    aktivacije.append(np.fmin(p13, score_spam))
-    alfa_spam.append(p13)
-    p14 = min(linkovi["umereni"], np.fmax(caps["agresivan"], inter["agresivna"]))
-    aktivacije.append(np.fmin(p14, score_spam))
-    alfa_spam.append(p14)
-    p15 = kljucne["dominantne"]
-    aktivacije.append(np.fmin(p15, score_spam))
-    alfa_spam.append(p15)
-    p16 = min(
-        np.fmax(kljucne["zastupljene"], kljucne["dominantne"]),
-        np.fmax(linkovi["umereni"], linkovi["brojni"]),
-        np.fmax(caps["poviseni"], caps["agresivan"])
-    )
-    aktivacije.append(np.fmin(p16, score_spam))
-    alfa_spam.append(p16)
-
+    aktivacije = [np.fmin(jacina, izlazni_skup) for _, jacina, izlazni_skup, _ in pravila]
     agregirani_skup = np.fmax.reduce(aktivacije)
-    alfe = {
-        "LEGITIMAN": max(alfa_legitiman),
-        "SUMNJIVO":  max(alfa_sumnjiv),
-        "SPAM":      max(alfa_spam),
-    }
+
+    alfe = {"LEGITIMAN": 0.0, "SUMNJIVO": 0.0, "SPAM": 0.0}
+    for _, jacina, _, kategorija in pravila:
+        alfe[kategorija] = max(alfe[kategorija], float(jacina))
+
     return agregirani_skup, alfe

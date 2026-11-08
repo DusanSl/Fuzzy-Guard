@@ -1,31 +1,42 @@
-import numpy as np
+import skfuzzy as fuzz
+
 from fazi.pravila import (
     fuzzifikuj,
     kontroler_spam_score,
 )
 from fazi.defazifikacija import defazifikuj
+from fazi.skupovi import x_spam_score, izlazni_skupovi, KATEGORIJA_PO_SKUPU
 
 
 def pokreni_fis(
     val_kljucne:       float,
-    val_linkovi:       float,
+    val_linkova:       float,
     val_caps:          float,
     val_interpunkcija: float,
 ) -> dict:
 
-    mu = fuzzifikuj(val_kljucne, val_linkovi, val_caps, val_interpunkcija)
+    mu = fuzzifikuj(val_kljucne, val_linkova, val_caps, val_interpunkcija)
 
     agregirani_skup, alfe = kontroler_spam_score(mu)
 
     spam_score = defazifikuj(agregirani_skup)
 
     if max(alfe.values()) == 0:
-        kategorija = "LEGITIMAN"
-    else:
-        prioritet = {"SPAM": 2, "SUMNJIVO": 1, "LEGITIMAN": 0}
-        kategorija = max(alfe, key=lambda k: (alfe[k], prioritet[k]))
+        # Nijedno pravilo nije aktivirano. Pravila bi trebalo da pokrivaju ceo
+        # univerzum (testira se), pa je ovo samo zastita. Odsustvo dokaza nije
+        # dokaz odsustva: takav email ide na proveru, nikako u LEGITIMAN.
+        return {"spam_score": 47.0, "kategorija": "SUMNJIVO"}
+
+    # Kategoriju izvodimo iz istog broja koji se prikazuje korisniku: gledamo
+    # kojoj izlaznoj skupini defazifikovana vrednost najvise pripada. Time su
+    # broj i oznaka po definiciji saglasni.
+    clanstva = {
+        ime: float(fuzz.interp_membership(x_spam_score, skup, spam_score))
+        for ime, skup in izlazni_skupovi.items()
+    }
+    najjaci_skup = max(clanstva, key=clanstva.get)
 
     return {
         "spam_score": spam_score,
-        "kategorija": kategorija,
+        "kategorija": KATEGORIJA_PO_SKUPU[najjaci_skup],
     }
