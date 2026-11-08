@@ -373,7 +373,10 @@ cd ~/fuzzy-guard && git pull
 
 followed by **Reload** on the Web tab.
 
-### Docker
+### Docker (optional)
+
+Not used in production — PythonAnywhere runs the app via WSGI. The Dockerfile
+exists so the exact environment can be reproduced anywhere:
 
 ```bash
 docker build -t fuzzy-guard .
@@ -383,7 +386,7 @@ docker run -p 5000:5000 fuzzy-guard
 The learned lexicon (`podaci/recnik_naucen.json`) is copied into the image, so
 the container runs with the full `kombinovano` setup.
 
-Project conventions for contributors and AI agents are in [`AGENTS.md`](AGENTS.md).
+Project conventions for AI agents are kept locally in `AGENTS.md` (not published).
 
 ---
 
