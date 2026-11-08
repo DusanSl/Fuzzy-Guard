@@ -186,15 +186,19 @@ def test_teski_primeri_postoje():
 
 def test_teski_srpski_primeri_nemaju_rucne_kljucne_reci():
     """Teski primeri su namerno bez ijedne reci iz rucnog recnika."""
-    for tekst in ucitaj_teske_primere("sr"):
-        ulazi = analiziraj_email(tekst, nacin_recnik="rucni")
-        assert ulazi["kljucne_reci"] == 0.0, tekst
+    for primer in ucitaj_teske_primere("sr"):
+        ulazi = analiziraj_email(primer["tekst"], nacin_recnik="rucni")
+        assert ulazi["kljucne_reci"] == 0.0, primer["tekst"]
 
 
 def test_obican_ucitavac_ne_vraca_teske_primere():
     from obrada_teksta.analizator import ucitaj_sve_primere
-    normalni = set(ucitaj_sve_primere("en")) | set(ucitaj_sve_primere("sr"))
-    teski = set(ucitaj_teske_primere("en")) | set(ucitaj_teske_primere("sr"))
+    normalni = {p["tekst"] for p in ucitaj_sve_primere("en")} | {
+        p["tekst"] for p in ucitaj_sve_primere("sr")
+    }
+    teski = {p["tekst"] for p in ucitaj_teske_primere("en")} | {
+        p["tekst"] for p in ucitaj_teske_primere("sr")
+    }
     assert teski
     assert normalni.isdisjoint(teski)
 

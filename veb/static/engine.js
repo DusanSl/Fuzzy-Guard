@@ -1092,11 +1092,37 @@ async function izaberiUzorak(kljuc, nasumicno) {
     }
 }
 
-function izaberiRandom() {
-    const kljucevi = ['legitiman', 'sumnjiv', 'prevara'];
-    const kljuc = kljucevi[Math.floor(Math.random() * kljucevi.length)];
-    prikaziIndikatorUzorka(kljuc);
-    izaberiUzorak(kljuc, true);
+let primeriKes = { en: null, sr: null };
+
+async function izaberiRandom() {
+    const jezikUzorka = jezik;
+
+    try {
+        if (!primeriKes[jezikUzorka]) {
+            const odgovor = await fetch('/primeri-svi?jezik=' + jezikUzorka);
+            const podaci = await odgovor.json();
+            primeriKes[jezikUzorka] = podaci.primeri || [];
+        }
+
+        const lista = primeriKes[jezikUzorka];
+        if (!lista.length) return;
+
+        const uzorak = lista[Math.floor(Math.random() * lista.length)];
+
+        if (uzorak.kategorija && KATEGORIJA_UZORKA[uzorak.kategorija]) {
+            prikaziIndikatorUzorka(uzorak.kategorija);
+        } else {
+            sakrijIndikatorUzorka();
+        }
+
+        popuniPolja(uzorak);
+
+        const rezultat = await izracunajRezultat(uzorak.tekst, nacinRecnika);
+        prikaziRezultat(rezultat, { animiraj: true });
+        dodajUIstoriju(uzorak.tekst, uzorak.posaljilac, uzorak.tema, rezultat);
+    } catch (greska) {
+        prikaziGresku(greska.message || t().greskaMreza);
+    }
 }
 
 function postaviRecnik(nacin) {

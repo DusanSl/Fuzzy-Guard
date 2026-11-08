@@ -327,6 +327,21 @@ Use `FUZZY_GUARD_RECNIK=rucni python main.py` to run the app with the NN-free
 baseline. The ablation below is produced with
 `python -m neuronska_mreza.treniraj --recnik svi`.
 
+### Language coverage
+
+The learned lexicon is **English-only** — 271 terms, none of them Serbian — because
+it is trained on SpamAssassin. Serbian therefore relies entirely on the hand-written
+dictionary. This is deliberate: it shows both failure modes side by side.
+
+| Example | Manual | Learned | Combined |
+|---|---|---|---|
+| EN learned-only ("mortgage / settlement") | 8% LEGITIMATE | 80% SPAM | 80% SPAM |
+| SR hand-only ("čestitamo / nagrada") | 47% SUSPICIOUS | 11% LEGITIMATE | 47% SUSPICIOUS |
+
+Translating the learned lexicon into Serbian would make the UI symmetric, but it
+would no longer be *learned* from Serbian data. A Serbian corpus is future work;
+the hand dictionary remains the Serbian baseline.
+
 ### Results (held-out test set)
 
 Corpus: **SpamAssassin** (3,000 emails, 500 spam), 750 test emails, 125 spam.
@@ -370,8 +385,10 @@ Dataset sources:
 - The membership-function boundaries were calibrated on a small set of sample
   emails (`primeri.txt`). All reported model metrics come from held-out test
   data, never from the tuning set.
-- `primeri.txt` is **not labelled**: its `[EN]` / `[SR]` tags mark the language,
-  not the class. The sample set is a demo, not a benchmark.
+- `primeri.txt` carries `From:`, `Subject:` and `Category:` metadata. Categories
+  were assigned **automatically by the filter** (score thresholds), so they drive
+  the Random indicator but are not independent ground truth. The `[teski]` hard
+  examples are excluded from the Random pool.
 - Different emails can still produce the same `spam_score`. That is inherent to
   Mamdani inference: if two inputs have the same membership in every set and
   activate the same rules with the same strength, the defuzzified output is

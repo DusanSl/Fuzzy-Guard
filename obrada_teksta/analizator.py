@@ -297,6 +297,26 @@ def analiziraj_email(tekst: str, nacin_recnik: Optional[str] = None) -> dict:
     }
 
 
+def _izdvoji_metapodatke(linije: list) -> tuple:
+    posaljilac = tema = kategorija = ""
+    ostatak = []
+
+    for linija in linije:
+        if not ostatak:
+            if linija.startswith("From:"):
+                posaljilac = linija[5:].strip()
+                continue
+            if linija.startswith("Subject:"):
+                tema = linija[8:].strip()
+                continue
+            if linija.startswith("Category:"):
+                kategorija = linija[9:].strip()
+                continue
+        ostatak.append(linija)
+
+    return posaljilac, tema, kategorija, "\n".join(ostatak).strip()
+
+
 def _ucitaj_primere(jezik: str = "en", teski: bool = False) -> list:
     if not PUTANJA_PRIMERI.exists():
         return []
@@ -309,18 +329,29 @@ def _ucitaj_primere(jezik: str = "en", teski: bool = False) -> list:
         primeri_sr = []
 
         for blok in blokovi:
-            linije = blok.split("\n", 1)
+            linije = blok.split("\n")
             if len(linije) < 2:
                 continue
             tag = linije[0].strip().lower()
-            tekst = linije[1].strip()
 
             if ("teski" in tag) != teski:
                 continue
+
+            posaljilac, tema, kategorija, tekst = _izdvoji_metapodatke(linije[1:])
+            if not tekst:
+                continue
+
+            zapis = {
+                "posaljilac": posaljilac,
+                "tema": tema,
+                "kategorija": kategorija,
+                "tekst": tekst,
+            }
+
             if tag.startswith("[en]"):
-                primeri_en.append(tekst)
+                primeri_en.append(zapis)
             elif tag.startswith("[sr]"):
-                primeri_sr.append(tekst)
+                primeri_sr.append(zapis)
 
         return primeri_sr if jezik == "sr" else primeri_en
     except Exception:
