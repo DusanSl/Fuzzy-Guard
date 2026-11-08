@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify, render_template
 from obrada_teksta.analizator import (
     analiziraj_email,
     ucitaj_sve_primere,
-    ucitaj_teske_primere,
 )
 from fazi.zakljucivanje import pokreni_fis
 from fazi.skupovi import IZLAZNI_SKUPOVI_DEFINICIJE
@@ -33,13 +32,6 @@ def index():
 def primeri_svi():
     jezik = request.args.get("jezik", "en")
     lista = ucitaj_sve_primere(jezik)
-    return jsonify({"primeri": lista})
-
-
-@app.route("/primeri-teski")
-def primeri_teski():
-    jezik = request.args.get("jezik", "en")
-    lista = ucitaj_teske_primere(jezik)
     return jsonify({"primeri": lista})
 
 

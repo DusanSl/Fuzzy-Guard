@@ -15,7 +15,6 @@ from obrada_teksta.analizator import (
     SPAM_RECNIK_RECI,
     _izracunaj_kljucne_reci,
     ucitaj_nauceni_recnik,
-    ucitaj_teske_primere,
 )
 from fazi.pravila import fuzzifikuj, sastavi_pravila
 from fazi.zakljucivanje import pokreni_fis
@@ -177,30 +176,6 @@ def test_api_vraca_objasnjenje():
     assert "objasnjenje" in odgovor
     assert odgovor["objasnjenje"]["pokrivene_reci"]
     assert "aktivna_pravila" in odgovor["objasnjenje"]
-
-
-def test_teski_primeri_postoje():
-    assert len(ucitaj_teske_primere("sr")) >= 5
-    assert len(ucitaj_teske_primere("en")) >= 3
-
-
-def test_teski_srpski_primeri_nemaju_rucne_kljucne_reci():
-    """Teski primeri su namerno bez ijedne reci iz rucnog recnika."""
-    for primer in ucitaj_teske_primere("sr"):
-        ulazi = analiziraj_email(primer["tekst"], nacin_recnik="rucni")
-        assert ulazi["kljucne_reci"] == 0.0, primer["tekst"]
-
-
-def test_obican_ucitavac_ne_vraca_teske_primere():
-    from obrada_teksta.analizator import ucitaj_sve_primere
-    normalni = {p["tekst"] for p in ucitaj_sve_primere("en")} | {
-        p["tekst"] for p in ucitaj_sve_primere("sr")
-    }
-    teski = {p["tekst"] for p in ucitaj_teske_primere("en")} | {
-        p["tekst"] for p in ucitaj_teske_primere("sr")
-    }
-    assert teski
-    assert normalni.isdisjoint(teski)
 
 
 def test_objasnjenje_sadrzi_ulaze_pozicije_i_uslove():

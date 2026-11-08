@@ -137,7 +137,7 @@ const smanjenoKretanje = window.matchMedia('(prefers-reduced-motion: reduce)').m
 const jeMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 let jezik = ucitajLokalno('fg-prototip-jezik', 'en');
-let tema = ucitajLokalno('fg-prototip-tema', 'dark');
+let tema = ucitajLokalno('fg-prototip-tema-v2', 'dark');
 let nacinRecnika = ucitajLokalno('fg-prototip-recnik', 'kombinovano');
 let trenutniRezultat = null;
 let trenutniPogled = 'zasto';
@@ -1182,7 +1182,7 @@ function primeniTemu() {
     document.documentElement.dataset.theme = tema;
     const dugme = document.getElementById('tema-dugme');
     dugme.setAttribute('aria-label', tema === 'dark' ? t().temaSvetla : t().temaTamna);
-    sacuvajLokalno('fg-prototip-tema', tema);
+    sacuvajLokalno('fg-prototip-tema-v2', tema);
 }
 
 function promeniTemu() {

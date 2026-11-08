@@ -253,11 +253,7 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
 
 ### `GET /primeri-svi?jezik=en|sr`
 
-Returns the normal sample emails for the given language.
-
-### `GET /primeri-teski?jezik=en|sr`
-
-Returns the "hard" samples that deliberately avoid the hand-written keyword dictionary.
+Returns the sample emails for the given language, including `From`, `Subject` and `Category` metadata.
 
 ### `GET /skupovi`
 
@@ -387,8 +383,7 @@ Dataset sources:
   data, never from the tuning set.
 - `primeri.txt` carries `From:`, `Subject:` and `Category:` metadata. Categories
   were auto-assigned by the filter and then **manually corrected for obvious
-  misclassifications**; they are not a benchmark. The `[teski]` hard examples are
-  excluded from the Random pool.
+  misclassifications**; they are not a benchmark.
 - Different emails can still produce the same `spam_score`. That is inherent to
   Mamdani inference: if two inputs have the same membership in every set and
   activate the same rules with the same strength, the defuzzified output is

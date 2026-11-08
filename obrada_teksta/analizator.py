@@ -317,7 +317,7 @@ def _izdvoji_metapodatke(linije: list) -> tuple:
     return posaljilac, tema, kategorija, "\n".join(ostatak).strip()
 
 
-def _ucitaj_primere(jezik: str = "en", teski: bool = False) -> list:
+def _ucitaj_primere(jezik: str = "en") -> list:
     if not PUTANJA_PRIMERI.exists():
         return []
 
@@ -333,9 +333,6 @@ def _ucitaj_primere(jezik: str = "en", teski: bool = False) -> list:
             if len(linije) < 2:
                 continue
             tag = linije[0].strip().lower()
-
-            if ("teski" in tag) != teski:
-                continue
 
             posaljilac, tema, kategorija, tekst = _izdvoji_metapodatke(linije[1:])
             if not tekst:
@@ -359,8 +356,4 @@ def _ucitaj_primere(jezik: str = "en", teski: bool = False) -> list:
 
 
 def ucitaj_sve_primere(jezik: str = "en") -> list:
-    return _ucitaj_primere(jezik, teski=False)
-
-
-def ucitaj_teske_primere(jezik: str = "en") -> list:
-    return _ucitaj_primere(jezik, teski=True)
+    return _ucitaj_primere(jezik)
