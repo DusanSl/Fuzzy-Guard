@@ -119,6 +119,15 @@ include a neural-network part.
   rule-based unless a labelled Serbian set exists.
 - Document the architecture, hyperparameters and training procedure.
 
+## Defense documents
+
+- `ODBRANA.md` — detailed personal notes for the defense. Do not shorten it.
+- `Odbrana na casu.md` — minimal in-class sheet, tables only (system, demo,
+  email results, SMS transfer, metrics, Q&A). No prose paragraphs.
+- Numbers in `Odbrana na casu.md` must match `README.md` and `ODBRANA.md` exactly.
+  When the ablation is re-run, update all three together.
+- Both defense documents are local-only and are listed in `.gitignore`.
+
 ## Workflow
 
 - Run `python -m pytest` before finishing.

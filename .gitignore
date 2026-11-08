@@ -16,3 +16,7 @@ Thumbs.db
 
 # istrenirani model neuronske mreze (generise se ponovo)
 neuronska_mreza/model.joblib
+
+# licne beleske za odbranu (ne idu u repo)
+ODBRANA.md
+Odbrana na casu.md
