@@ -438,6 +438,22 @@ button:disabled { cursor: progress; }
     background: var(--upustvo);
 }
 
+.uzorak-indikator {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    color: var(--tekst-2);
+    white-space: nowrap;
+}
+
+.uzorak-indikator i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--boja);
+}
+
 .recnik-red {
     display: flex;
     align-items: center;

@@ -44,7 +44,6 @@
     <section class="uvod">
         <h1 data-i18n="naslov">Not a guess.
 A traceable score.</h1>
-        <p class="uvod-opis" data-i18n="uvodOpis">Four signals, nineteen rules, one defuzzified number — and every step visible.</p>
     </section>
 
     <div class="mreza">
@@ -75,6 +74,10 @@ A traceable score.</h1>
                         <button class="cip-dugme" type="button" data-uzorak="legitiman" data-i18n="uzorakLegitiman">Legitimate</button>
                         <button class="cip-dugme" type="button" data-uzorak="sumnjiv" data-i18n="uzorakSumnjiv">Suspicious</button>
                         <button class="cip-dugme" type="button" data-uzorak="prevara" data-i18n="uzorakPrevara">Spam</button>
+                        <button class="cip-dugme" type="button" id="dugme-random" data-i18n="uzorakRandom">Random</button>
+                        <span class="uzorak-indikator" id="uzorak-indikator" hidden aria-live="polite">
+                            <i></i><span id="uzorak-indikator-tekst"></span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -167,7 +170,6 @@ A traceable score.</h1>
             <span class="podnozje-razdjelnik">·</span>
             <button class="link-dugme" data-otvori-metod data-i18n="kakoRadi">How it works</button>
         </div>
-        <span class="prototip-znak"><i></i><span data-i18n="prototip">Design prototype</span></span>
     </footer>
 </main>
 

@@ -11,7 +11,7 @@ const prevodi = {
         od: 'From', tema: 'Subject',
         placeholder: 'Paste the email text here…',
         znakova: 'characters',
-        uzorakLegitiman: 'Legitimate', uzorakSumnjiv: 'Suspicious', uzorakPrevara: 'Spam',
+        uzorakLegitiman: 'Legitimate', uzorakSumnjiv: 'Suspicious', uzorakPrevara: 'Spam', uzorakRandom: 'Random',
         recnik: 'Keyword lexicon', rucni: 'Manual', nauceni: 'Learned', kombinovano: 'Combined',
         pokreni: 'Run analysis', analiziram: 'Analyzing…',
         sitno: 'Only the body is scored · nothing leaves this page.',
@@ -71,7 +71,7 @@ const prevodi = {
         od: 'Pošiljalac', tema: 'Tema',
         placeholder: 'Nalepite tekst emaila ovde…',
         znakova: 'znakova',
-        uzorakLegitiman: 'Legitiman', uzorakSumnjiv: 'Sumnjiv', uzorakPrevara: 'Prevara',
+        uzorakLegitiman: 'Legitiman', uzorakSumnjiv: 'Sumnjiv', uzorakPrevara: 'Prevara', uzorakRandom: 'Nasumično',
         recnik: 'Rečnik ključnih reči', rucni: 'Ručni', nauceni: 'Naučeni', kombinovano: 'Kombinovano',
         pokreni: 'Pokreni analizu', analiziram: 'Analiziram…',
         sitno: 'Ocenjuje se samo telo poruke · sve ostaje u pregledaču.',
@@ -287,21 +287,42 @@ const RECNIK_NAUCENI = {
 /* ---------- sample messages -------------------------------------- */
 
 const UZORCI = {
-    legitiman: {
-        posaljilac: 'Mina Petrović',
-        tema: 'Re: sync tomorrow',
-        tekst: 'Hi, just wanted to confirm our meeting tomorrow at 3pm. Let me know if that works for you.'
-    },
-    prevara: {
-        posaljilac: 'Account Security',
-        tema: 'Action required: your account will be closed',
-        tekst: 'URGENT: Your account will be CLOSED unless you ACT NOW! Click http://scam-alert.net to prevent your account from being CLOSED. Verify your details today.'
-    },
-    sumnjiv: {
-        posaljilac: 'Dostava',
-        tema: 'Vaš paket čeka',
-        tekst: 'Poštovani, vaš paket čeka na preuzimanju. Proverite adresu dostave na http://posta-dostava.net ili http://status-paketa.com kako bi isporuka bila završena.'
-    }
+    legitiman: [
+        {
+            posaljilac: 'Mina Petrovi?',
+            tema: 'Re: sync tomorrow',
+            tekst: 'Hi, just wanted to confirm our meeting tomorrow at 3pm. Let me know if that works for you.'
+        },
+        {
+            posaljilac: 'Marko Jovanovi?',
+            tema: 'Sastanak sutra',
+            tekst: 'Zdravo, potvr?ujem sastanak sutra u 15 ?asova. Vidimo se u kancelariji.'
+        }
+    ],
+    sumnjiv: [
+        {
+            posaljilac: 'Dostava',
+            tema: 'Va? paket ?eka',
+            tekst: 'Po?tovani, va? paket ?eka na preuzimanju. Proverite adresu dostave na http://posta-dostava.net ili http://status-paketa.com kako bi isporuka bila zavr?ena.'
+        },
+        {
+            posaljilac: 'Dear sir',
+            tema: 'Mortgage settlement',
+            tekst: 'Dear sir, regarding your mortgage, kindly review the attached settlement.'
+        }
+    ],
+    prevara: [
+        {
+            posaljilac: 'Account Security',
+            tema: 'Action required: your account will be closed',
+            tekst: 'URGENT: Your account will be CLOSED unless you ACT NOW! Click http://scam-alert.net to prevent your account from being CLOSED. Verify your details today.'
+        },
+        {
+            posaljilac: 'Nagradna igra',
+            tema: '?estitamo, osvojili ste!',
+            tekst: '?estitamo! Osvojili ste besplatnu nagradu. Kliknite ovde da preuzmete nagradu.'
+        }
+    ]
 };
 
 /* ---------- rule descriptions ------------------------------------ */
@@ -950,6 +971,7 @@ function ucitajIzIstorije(indeks) {
     document.getElementById('polje-tema').value = stavka.tema || '';
     azurirajBrojZnakova();
     skloniGresku();
+    sakrijIndikatorUzorka();
     prikaziRezultat(stavka.rezultat, { animiraj: true });
 }
 
@@ -1025,9 +1047,40 @@ function pokreniAnalizu() {
     }, smanjenoKretanje ? 140 : 360);
 }
 
-async function izaberiUzorak(kljuc) {
-    const uzorak = UZORCI[kljuc];
-    if (!uzorak) return;
+const INDEKS_UZORKA = { legitiman: 0, sumnjiv: 0, prevara: 0 };
+const KATEGORIJA_UZORKA = { legitiman: 'LEGITIMAN', sumnjiv: 'SUMNJIVO', prevara: 'SPAM' };
+let trenutniUzorakIndikator = null;
+
+function prikaziIndikatorUzorka(kljuc) {
+    const indikator = document.getElementById('uzorak-indikator');
+    const tekst = document.getElementById('uzorak-indikator-tekst');
+    const kategorija = KATEGORIJA_UZORKA[kljuc];
+    trenutniUzorakIndikator = kljuc;
+    indikator.hidden = false;
+    indikator.style.setProperty('--boja', bojaKategorije(kategorija));
+    tekst.textContent = t().kategorije[kategorija];
+}
+
+function sakrijIndikatorUzorka() {
+    trenutniUzorakIndikator = null;
+    document.getElementById('uzorak-indikator').hidden = true;
+}
+
+async function izaberiUzorak(kljuc, nasumicno) {
+    const grupa = UZORCI[kljuc];
+    if (!grupa || !grupa.length) return;
+
+    if (!nasumicno) sakrijIndikatorUzorka();
+
+    let indeks;
+    if (nasumicno) {
+        indeks = Math.floor(Math.random() * grupa.length);
+    } else {
+        indeks = INDEKS_UZORKA[kljuc] % grupa.length;
+        INDEKS_UZORKA[kljuc] = (indeks + 1) % grupa.length;
+    }
+
+    const uzorak = grupa[indeks];
     popuniPolja(uzorak);
 
     try {
@@ -1037,6 +1090,13 @@ async function izaberiUzorak(kljuc) {
     } catch (greska) {
         prikaziGresku(greska.message || t().greskaMreza);
     }
+}
+
+function izaberiRandom() {
+    const kljucevi = ['legitiman', 'sumnjiv', 'prevara'];
+    const kljuc = kljucevi[Math.floor(Math.random() * kljucevi.length)];
+    prikaziIndikatorUzorka(kljuc);
+    izaberiUzorak(kljuc, true);
 }
 
 function postaviRecnik(nacin) {
@@ -1070,6 +1130,7 @@ function ocistiProveru() {
     document.getElementById('polje-tema').value = '';
     azurirajBrojZnakova();
     skloniGresku();
+    sakrijIndikatorUzorka();
     vratiPraznoStanje();
     document.getElementById('tekst').focus();
 }
@@ -1148,6 +1209,8 @@ function primeniJezik() {
         if (recnik[kljuc] !== undefined) element.textContent = recnik[kljuc];
     });
 
+    if (trenutniUzorakIndikator) prikaziIndikatorUzorka(trenutniUzorakIndikator);
+
     document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
         const kljuc = element.getAttribute('data-i18n-placeholder');
         if (recnik[kljuc] !== undefined) element.placeholder = recnik[kljuc];
@@ -1210,6 +1273,8 @@ function poveziDogadjaje() {
         dugme.addEventListener('click', () => izaberiUzorak(dugme.dataset.uzorak));
     });
 
+    document.getElementById('dugme-random').addEventListener('click', izaberiRandom);
+
     document.querySelectorAll('[data-recnik]').forEach(dugme => {
         dugme.addEventListener('click', () => postaviRecnik(dugme.dataset.recnik));
     });
@@ -1256,23 +1321,27 @@ async function inicijalizuj() {
     poveziDogadjaje();
     primeniJezik();
 
+    const uzorakLegitiman = UZORCI.legitiman[0];
+    const uzorakSumnjiv = UZORCI.sumnjiv[0];
+    const uzorakPrevara = UZORCI.prevara[0];
+
     try {
         const [rezultatLegitiman, rezultatSumnjiv, rezultatPrevara] = await Promise.all([
-            izracunajRezultat(UZORCI.legitiman.tekst, nacinRecnika),
-            izracunajRezultat(UZORCI.sumnjiv.tekst, nacinRecnika),
-            izracunajRezultat(UZORCI.prevara.tekst, nacinRecnika)
+            izracunajRezultat(uzorakLegitiman.tekst, nacinRecnika),
+            izracunajRezultat(uzorakSumnjiv.tekst, nacinRecnika),
+            izracunajRezultat(uzorakPrevara.tekst, nacinRecnika)
         ]);
 
         istorija = [
-            { tekst: UZORCI.prevara.tekst, posaljilac: UZORCI.prevara.posaljilac, tema: UZORCI.prevara.tema, rezultat: rezultatPrevara, vreme: Date.now() },
-            { tekst: UZORCI.sumnjiv.tekst, posaljilac: UZORCI.sumnjiv.posaljilac, tema: UZORCI.sumnjiv.tema, rezultat: rezultatSumnjiv, vreme: Date.now() - 9 * 60000 },
-            { tekst: UZORCI.legitiman.tekst, posaljilac: UZORCI.legitiman.posaljilac, tema: UZORCI.legitiman.tema, rezultat: rezultatLegitiman, vreme: Date.now() - 24 * 60000 }
+            { tekst: uzorakPrevara.tekst, posaljilac: uzorakPrevara.posaljilac, tema: uzorakPrevara.tema, rezultat: rezultatPrevara, vreme: Date.now() },
+            { tekst: uzorakSumnjiv.tekst, posaljilac: uzorakSumnjiv.posaljilac, tema: uzorakSumnjiv.tema, rezultat: rezultatSumnjiv, vreme: Date.now() - 9 * 60000 },
+            { tekst: uzorakLegitiman.tekst, posaljilac: uzorakLegitiman.posaljilac, tema: uzorakLegitiman.tema, rezultat: rezultatLegitiman, vreme: Date.now() - 24 * 60000 }
         ];
 
-        popuniPolja(UZORCI.prevara);
+        popuniPolja(uzorakPrevara);
         prikaziRezultat(rezultatPrevara, { animiraj: false });
     } catch (greska) {
-        popuniPolja(UZORCI.prevara);
+        popuniPolja(uzorakPrevara);
         vratiPraznoStanje();
     }
 }
