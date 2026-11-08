@@ -59,6 +59,10 @@ def analiziraj():
         "interpunkcija": ulazi["interpunkcija"],
         "spam_score":    round(rezultat_fis["spam_score"], 2),
         "kategorija":    rezultat_fis["kategorija"],
+        "objasnjenje": {
+            "pokrivene_reci":  ulazi.get("pokrivene_reci", []),
+            "aktivna_pravila": rezultat_fis.get("aktivna_pravila", []),
+        },
     }
 
     return jsonify(rezultat)
