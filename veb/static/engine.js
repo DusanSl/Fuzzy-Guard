@@ -289,21 +289,21 @@ const RECNIK_NAUCENI = {
 const UZORCI = {
     legitiman: [
         {
-            posaljilac: 'Mina Petrovi?',
+            posaljilac: 'Mina Petrović',
             tema: 'Re: sync tomorrow',
             tekst: 'Hi, just wanted to confirm our meeting tomorrow at 3pm. Let me know if that works for you.'
         },
         {
-            posaljilac: 'Marko Jovanovi?',
+            posaljilac: 'Marko Jovanović',
             tema: 'Sastanak sutra',
-            tekst: 'Zdravo, potvr?ujem sastanak sutra u 15 ?asova. Vidimo se u kancelariji.'
+            tekst: 'Zdravo, potvrđujem sastanak sutra u 15 časova. Vidimo se u kancelariji.'
         }
     ],
     sumnjiv: [
         {
             posaljilac: 'Dostava',
-            tema: 'Va? paket ?eka',
-            tekst: 'Po?tovani, va? paket ?eka na preuzimanju. Proverite adresu dostave na http://posta-dostava.net ili http://status-paketa.com kako bi isporuka bila zavr?ena.'
+            tema: 'Vaš paket čeka',
+            tekst: 'Poštovani, vaš paket čeka na preuzimanju. Proverite adresu dostave na http://posta-dostava.net ili http://status-paketa.com kako bi isporuka bila završena.'
         },
         {
             posaljilac: 'Dear sir',
@@ -319,8 +319,8 @@ const UZORCI = {
         },
         {
             posaljilac: 'Nagradna igra',
-            tema: '?estitamo, osvojili ste!',
-            tekst: '?estitamo! Osvojili ste besplatnu nagradu. Kliknite ovde da preuzmete nagradu.'
+            tema: 'Čestitamo, osvojili ste!',
+            tekst: 'Čestitamo! Osvojili ste besplatnu nagradu. Kliknite ovde da preuzmete nagradu.'
         }
     ]
 };
@@ -971,7 +971,6 @@ function ucitajIzIstorije(indeks) {
     document.getElementById('polje-tema').value = stavka.tema || '';
     azurirajBrojZnakova();
     skloniGresku();
-    sakrijIndikatorUzorka();
     prikaziRezultat(stavka.rezultat, { animiraj: true });
 }
 
@@ -1048,29 +1047,9 @@ function pokreniAnalizu() {
 }
 
 const INDEKS_UZORKA = { legitiman: 0, sumnjiv: 0, prevara: 0 };
-const KATEGORIJA_UZORKA = { legitiman: 'LEGITIMAN', sumnjiv: 'SUMNJIVO', prevara: 'SPAM' };
-let trenutniUzorakIndikator = null;
-
-function prikaziIndikatorUzorka(kljuc) {
-    const indikator = document.getElementById('uzorak-indikator');
-    const tekst = document.getElementById('uzorak-indikator-tekst');
-    const kategorija = KATEGORIJA_UZORKA[kljuc];
-    trenutniUzorakIndikator = kljuc;
-    indikator.hidden = false;
-    indikator.style.setProperty('--boja', bojaKategorije(kategorija));
-    tekst.textContent = t().kategorije[kategorija];
-}
-
-function sakrijIndikatorUzorka() {
-    trenutniUzorakIndikator = null;
-    document.getElementById('uzorak-indikator').hidden = true;
-}
-
 async function izaberiUzorak(kljuc, nasumicno) {
     const grupa = UZORCI[kljuc];
     if (!grupa || !grupa.length) return;
-
-    if (!nasumicno) sakrijIndikatorUzorka();
 
     let indeks;
     if (nasumicno) {
@@ -1108,12 +1087,6 @@ async function izaberiRandom() {
         if (!lista.length) return;
 
         const uzorak = lista[Math.floor(Math.random() * lista.length)];
-
-        if (uzorak.kategorija && KATEGORIJA_UZORKA[uzorak.kategorija]) {
-            prikaziIndikatorUzorka(uzorak.kategorija);
-        } else {
-            sakrijIndikatorUzorka();
-        }
 
         popuniPolja(uzorak);
 
@@ -1156,7 +1129,6 @@ function ocistiProveru() {
     document.getElementById('polje-tema').value = '';
     azurirajBrojZnakova();
     skloniGresku();
-    sakrijIndikatorUzorka();
     vratiPraznoStanje();
     document.getElementById('tekst').focus();
 }
@@ -1235,7 +1207,6 @@ function primeniJezik() {
         if (recnik[kljuc] !== undefined) element.textContent = recnik[kljuc];
     });
 
-    if (trenutniUzorakIndikator) prikaziIndikatorUzorka(trenutniUzorakIndikator);
 
     document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
         const kljuc = element.getAttribute('data-i18n-placeholder');

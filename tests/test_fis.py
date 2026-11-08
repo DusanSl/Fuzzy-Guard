@@ -275,6 +275,16 @@ def test_dashboard_ima_nove_elemente():
     html = app.test_client().get("/").get_data(as_text=True)
     for element in ("spektar", "rezultat", "pogled-sadrzaj", "tema-dugme", "istorija-lista"):
         assert element in html
+    assert "uzorak-indikator" not in html
+
+
+def test_srpski_primeri_imaju_dijakritike():
+    from obrada_teksta.analizator import ucitaj_sve_primere
+    primer = next(
+        p for p in ucitaj_sve_primere("sr") if "Osvojili ste" in p["tekst"]
+    )
+    assert "Čestitamo" in primer["tekst"]
+    assert "?" not in primer["tekst"]
 
 
 def test_analiziraj_prihvata_recnik():
