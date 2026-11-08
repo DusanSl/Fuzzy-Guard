@@ -176,8 +176,10 @@ def main():
     elif argumenti.korpus == "sms":
         korpusi = KORPUSI[1:]
 
-    for indeks, (naziv, putanja) in enumerate(korpusi):
-        obradi_korpus(naziv, putanja, rezimi, sacuvaj_model=(indeks == 0))
+    for naziv, putanja in korpusi:
+        # model se cuva samo za primarni (email) korpus, da --korpus sms
+        # ne bi pregazio istrenirani email model
+        obradi_korpus(naziv, putanja, rezimi, sacuvaj_model=(putanja == KORPUSI[0][1]))
 
 
 if __name__ == "__main__":

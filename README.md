@@ -320,8 +320,14 @@ The fuzzy system trades precision for interpretability: every score can be
 traced back to a membership function and a rule. On the **SMS Spam Collection**
 (5,574 messages) the fuzzy system collapses to 3% spam recall with the hand
 dictionary, because its features are calibrated for email — SMS messages have
-almost no capitalisation or links. That domain sensitivity is a documented
-limitation, not a bug.
+almost no capitalisation or links.
+
+The learned lexicon does **not** transfer across domains: on SMS the fuzzy F1 is
+0.062 with the hand dictionary, **0.000** with the learned lexicon, and 0.062
+with both. The network learned email-specific vocabulary ("mortgage", "dear sir",
+"click link"), not universal spam patterns. That is exactly why the hand-written
+Serbian dictionary stays as the baseline, and why the lexicon should be retrained
+per domain. It is a documented limitation, not a bug.
 
 Dataset sources:
 

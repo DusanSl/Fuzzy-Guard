@@ -123,6 +123,33 @@ označeni skup, (b) klasično koristi zvonaste/gausove funkcije, ne trouglove,
 - Na SMS korpusu fazi sistem sa ručnim rečnikom ima odziv samo 3%: karakteristike
   su pravljene za email (SMS nema linkove ni velika slova). Ograničenje domena.
 
+## 12a. Da li se naučeni rečnik prenosi na SMS?
+
+Rečnik je naučen na engleskim emailovima (SpamAssassin), pa primenjen na SMS
+korpus (5.574 poruke, 747 spama). Isti model; menja se samo režim rečnika:
+
+| Model | Rečnik | Tačnost | Preciznost | Odziv | F1 |
+|---|---|---|---|---|---|
+| Fazi | `rucni` | 0.870 | 1.000 | 0.032 | 0.062 |
+| Fazi | `nauceni` | 0.866 | 0.000 | 0.000 | 0.000 |
+| Fazi | `kombinovano` | 0.870 | 1.000 | 0.032 | 0.062 |
+| MLP | `rucni` | 0.930 | 0.902 | 0.540 | 0.676 |
+| MLP | `nauceni` | 0.885 | 0.686 | 0.257 | 0.374 |
+| MLP | `kombinovano` | 0.925 | 0.843 | 0.545 | 0.662 |
+
+**Rezultat: rečnik se ne prenosi.** Naučeni rečnik ne donosi nijedan pogodak koji
+bi aktivirao spam pravila na SMS-u (F1 0.000), a kombinovani režim je identičan
+ručnom (F1 0.062). Mreža je naučila **email-specifičan** vokabular ("mortgage",
+"dear sir", "click link"), a ne opšte spam obrasce.
+
+To nije greška modela nego ograničenje domena — i to je ključni argument za
+zadržavanje ručnog srpskog rečnika kao baseline-a.
+
+**Odbrambena rečenica:** „Neuronska mreža uči rečnik iz podataka, ali onoliko
+koliko je taj rečnik prenosiv zavisi od domena. Na emailovima podiže F1 sa 0.469
+na 0.557; na SMS-u ne pomaže. Zato ručni srpski rečnik ostaje baseline koji uvek
+radi, a mreža je poboljšanje, ne zamena."
+
 ## 13. Ograničenja koja treba sami navesti
 
 - Kalibracija na malom skupu primera; mali broj označenih emailova na srpskom.
@@ -146,6 +173,8 @@ povećali rezoluciju skora.
   **31** sa kombinovanim (pre popravke 26).
 - SpamAssassin: fazi **F1 0.469 → 0.557** i odziv **0.608 → 0.784** prelaskom sa
   ručnog na kombinovani rečnik; MLP **F1 0.758 → 0.867**.
+- SMS: fazi **F1 0.062** (ručni) → **0.000** (naučeni) → **0.062** (kombinovani).
+  Naučeni email rečnik se **ne prenosi** na SMS — ograničenje domena.
 - Baza pravila: **0 nepokrivenih tačaka** (pre: 54).
 - Bug koji je popravljen: skok velikih slova 30% → 40% obarao je skor sa ~87 na
   47; sada razlika < 3 poena.
