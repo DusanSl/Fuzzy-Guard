@@ -44,7 +44,7 @@ The system extracts and analyzes four input features from the email text:
 | `caps_procenat` (Caps %) | Percentage of uppercase letters in the text | 0-100% |
 | `interpunkcija` (Punctuation) | Density of exclamation marks and question marks | 0-100% |
 
-The output `spam_score` (0-100%) is classified into one of three linguistic terms based on the highest membership degree: **LEGITIMATE** (LEGITIMAN), **SUSPICIOUS** (SUMNJIVO), or **SPAM** (SPAM).
+The defuzzified `spam_score` (0-100%) is then interpreted linguistically: each of the six output sets is evaluated at that score, and the set with the highest membership decides the category — **LEGITIMATE** (LEGITIMAN), **SUSPICIOUS** (SUMNJIVO), or **SPAM** (SPAM). Because the category is derived from the very number that is displayed, the score and the label can never contradict each other.
 
 ---
 
@@ -63,7 +63,12 @@ Fuzzy-Guard/
 │   ├── skupovi.py          # Fuzzy set definitions (trapezoidal and triangular membership functions)
 │   ├── pravila.py          # Fuzzy rules and fuzzification of inputs
 │   ├── zakljucivanje.py    # Main fuzzy inference controller
-│   └── defazifikacija.py   # Centroid defuzzification and category determination
+│   └── defazifikacija.py   # Centroid defuzzification
+├── neuronska_mreza/
+│   └── treniraj.py         # MLP comparison model (same 4 features, held-out test)
+├── podaci/
+│   ├── spamassassin.tsv    # 3,000 labelled emails (500 spam)
+│   └── SMSSpamCollection.tsv
 ├── veb/
 │   ├── static/
 │   │   ├── fonts/
@@ -78,12 +83,17 @@ Fuzzy-Guard/
 ├── screenshots/
 │   ├── Legit-example.webp  # Legitimate email example screenshot
 │   └── Spam-example.png    # Spam email example screenshot
+├── tests/
+│   └── test_fis.py         # Regression tests for the fuzzy system
 ├── main.py                 # Flask web application entrypoint & REST API routes
 ├── requirements.txt        # Python package dependencies
 ├── primeri.txt             # Pre-configured test emails (separated by '---')
+├── run.bat                 # One-click Windows launcher
+├── AGENTS.md               # Project conventions (naming, academic constraints)
 ├── Procfile                # Deployment configuration (web: python main.py)
 └── .gitignore
 ```
+
 
 ## Fuzzy Sets Configuration
 
@@ -91,33 +101,43 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
 
 * **Keywords** `[0-10]`
   - `zanemarljive` (Negligible): `trapmf [0, 0, 1, 3]`
-  - `zastupljene` (Present): `trimf [1, 4, 7]`
-  - `dominantne` (Dominant): `trapmf [5, 7, 10, 10]`
+  - `zastupljene` (Present): `trimf [1, 3, 7]`
+  - `dominantne` (Dominant): `trapmf [5, 8, 10, 10]`
 
 * **Link Count** `[0-10]`
   - `minimalni` (Minimal): `trapmf [0, 0, 0, 1]`
   - `umereni` (Moderate): `trimf [0, 1, 3]`
-  - `brojni` (Numerous): `trapmf [2, 4, 10, 10]`
+  - `brojni` (Numerous): `trapmf [2, 8, 10, 10]`
 
 * **Caps Percentage** `[0-100%]`
   - `uobicajen` (Normal): `trapmf [0, 0, 1, 12]`
-  - `poviseni` (Elevated): `trimf [7, 18, 35]`
-  - `blago_povisen` (Mildly Elevated): `trimf [10, 35, 65]`
-  - `agresivan` (Aggressive): `trapmf [45, 70, 100, 100]`
+  - `poviseni` (Elevated): `trimf [7, 16, 32]`
+  - `blago_povisen` (Mildly Elevated): `trimf [10, 25, 65]`
+  - `agresivan` (Aggressive): `trapmf [45, 85, 100, 100]`
 
 * **Punctuation** `[0-100%]`
   - `retka` (Sparse): `trapmf [0, 0, 2, 5]`
-  - `blago` (Mild): `trimf [2, 6, 10]`
-  - `umerena` (Moderate): `trimf [8, 15, 25]`
-  - `agresivna` (Aggressive): `trapmf [8, 14, 100, 100]`
+  - `blago` (Mild): `trimf [2, 5, 10]`
+  - `umerena` (Moderate): `trimf [6, 12, 25]`
+  - `agresivna` (Aggressive): `trapmf [14, 40, 100, 100]`
 
 * **Spam Score (Output)** `[0-100]`
-  - `score_legitiman` (Legitimate): `trapmf [0, 0, 8, 18]`
-  - `score_legitiman_energicno` (Energetically Legitimate): `trimf [10, 15, 20]`
-  - `score_blago_sumnjiv` (Mildly Suspicious): `trimf [24, 32, 40]`
-  - `score_sumnjiv` (Suspicious): `trimf [38, 47, 56]`
-  - `score_visoko_sumnjiv` (Highly Suspicious): `trimf [54, 64, 74]`
-  - `score_spam` (Spam): `trapmf [72, 84, 100, 100]`
+  - `score_legitiman` (Legitimate): `trapmf [0, 0, 8, 20]`
+  - `score_legitiman_energicno` (Energetically Legitimate): `trimf [10, 13, 22]`
+  - `score_blago_sumnjiv` (Mildly Suspicious): `trimf [24, 30, 42]`
+  - `score_sumnjiv` (Suspicious): `trimf [38, 44, 58]`
+  - `score_visoko_sumnjiv` (Highly Suspicious): `trimf [54, 60, 74]`
+  - `score_spam` (Spam): `trapmf [72, 88, 100, 100]`
+
+All sets are triangular or trapezoidal. Two design rules matter for the scores
+to stay informative:
+
+1. **No early saturation.** The right shoulder of a "bad" set sits at the end of
+   its universe, so membership keeps growing instead of flattening out at
+   `[2, 4, 10, 10]`.
+2. **No perfectly symmetric output triangles.** For a symmetric triangle the
+   centroid is identical at every activation strength, so the firing strength is
+   lost and every email that triggers the same rule gets exactly the same score.
 
 ---
 
@@ -130,6 +150,7 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | **p01** | `zanemarljive` (negligible) AND `minimalni` (minimal) AND `uobicajen` (normal) AND `retka` (sparse) | **LEGITIMATE** |
 | **p02** | `blago` (mildly elevated) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
 | **p03** | `blago` (mild) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
+| **p03b** | `umerena` (moderate) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
 | **p04** | `zastupljene` (present) AND `umereni` (moderate) AND `poviseni` (elevated) AND `umerena` (moderate) | **HIGH SUSPICION** |
 | **p05** | `zastupljene` (present) AND `minimalni` (minimal) links | **SUSPICIOUS** |
 | **p06a** | `zanemarljive` (negligible) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **MILDLY SUSPICIOUS** |
@@ -138,13 +159,19 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | **p07** | `dominantne` (dominant) AND `uobicajen` (normal) caps | **HIGH SUSPICION** |
 | **p08** | `agresivan` (aggressive) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **HIGH SUSPICION** |
 | **p09** | `agresivna` (aggressive) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **HIGH SUSPICION** |
-| **p10** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`poviseni` (elevated) OR `blago_povisen` (mildly elevated)) caps AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
-| **p11** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`umerena` (moderate) OR `blago` (mild)) punctuation AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
+| **p10** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`poviseni` OR `blago_povisen` OR `agresivan`) caps AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
+| **p11** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`umerena` OR `blago` OR `agresivna`) punctuation AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
 | **p12** | `dominantne` (dominant) keywords OR `brojni` (numerous) links | **SPAM** |
 | **p13** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p14** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
-| **p15** | `dominantne` (dominant) keywords | **SPAM** |
-| **p16** | (`zastupljene` (present) OR `dominantne` (dominant) keywords) AND (`umereni` (moderate) OR `brojni` (numerous) links) AND (`poviseni` (elevated) OR `agresivan` (aggressive) caps) | **SPAM** |
+| **p16** | (`zastupljene` OR `dominantne`) keywords AND (`umereni` OR `brojni`) links AND (`poviseni` OR `blago_povisen` OR `agresivan`) caps | **SPAM** |
+| **p17** | `zastupljene` (present) keywords AND `umereni` (moderate) links | **SUSPICIOUS** |
+
+Both `p03b` and `p17` close coverage holes: without them there were input
+combinations where **no rule fired at all** and the score silently fell back to a
+constant. `p15` (`dominantne` keywords → SPAM) was removed because `p12` already
+covers it through `max(dominantne, brojni)` and it therefore added no information.
+
 
 ## Installation & Running Locally
 
@@ -197,7 +224,7 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
   "broj_linkova": 1,       // Link count
   "caps_procenat": 50.00,  // Caps percentage
   "interpunkcija": 7.14,   // Punctuation
-  "spam_score": 88.73,     // Spam score
+  "spam_score": 88.46,     // Spam score
   "kategorija": "SPAM"     // Category
 }
 ```
@@ -212,6 +239,76 @@ Returns a random pre-configured email string from `primeri.txt`.
   "tekst": "Hi, just wanted to confirm our meeting tomorrow at 3pm..." // Text
 }
 ```
+
+---
+
+## Neural Network Component
+
+The course also covers neural networks, so the project includes a **separate**
+comparison model in `neuronska_mreza/`. The network does **not** participate in
+computing `spam_score`; the fuzzy system stays the interpretable classifier.
+
+The point of the comparison is fairness: the network receives the **same four
+features** as the fuzzy system, so any difference in performance comes from the
+model, not from better input data.
+
+```
+python -m neuronska_mreza.treniraj
+```
+
+It trains a `scikit-learn` MLP (`16-8` hidden units, ReLU) with a stratified
+75/25 train/test split and prints a confusion matrix, precision, recall and F1
+for both models.
+
+### Results (held-out test set)
+
+Corpus: **SpamAssassin** (3,000 emails, 500 spam), 750 test emails, 125 spam.
+
+| Model | Accuracy | Precision | Recall | F1 |
+|---|---|---|---|---|
+| Neural network (MLP) | 0.929 | 0.883 | 0.664 | 0.758 |
+| Fuzzy system (Mamdani) | 0.771 | 0.382 | 0.608 | 0.469 |
+
+The fuzzy system trades precision for interpretability: every score can be
+traced back to a membership function and a rule. On the **SMS Spam Collection**
+(5,574 messages) the fuzzy system collapses to 3% spam recall, because its
+features are calibrated for email — SMS messages have almost no capitalisation
+or links. That domain sensitivity is a documented limitation, not a bug.
+
+Dataset sources:
+
+- SpamAssassin public corpus: <https://spamassassin.apache.org/old/publiccorpus/>
+- UCI SMS Spam Collection: <https://archive.ics.uci.edu/dataset/228/sms+spam+collection>
+
+---
+
+## Validation and Limitations
+
+- The membership-function boundaries were calibrated on a small set of sample
+  emails (`primeri.txt`). All reported model metrics come from held-out test
+  data, never from the tuning set.
+- `primeri.txt` is **not labelled**: its `[EN]` / `[SR]` tags mark the language,
+  not the class. The sample set is a demo, not a benchmark.
+- Different emails can still produce the same `spam_score`. That is inherent to
+  Mamdani inference: if two inputs have the same membership in every set and
+  activate the same rules with the same strength, the defuzzified output is
+  identical by definition.
+- Serbian is covered by the rule base / keyword dictionary only; the trained
+  network is English-only.
+
+---
+
+## Development
+
+```bash
+python -m pytest
+```
+
+The test suite checks rule-base completeness (no input may leave every rule at
+zero), score/category agreement, the 35–45% caps regression, and that obvious
+spam and legitimate emails land in the expected categories.
+
+Project conventions for contributors and AI agents are in [`AGENTS.md`](AGENTS.md).
 
 ---
 

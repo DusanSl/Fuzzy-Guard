@@ -11,9 +11,9 @@ from fazi.skupovi import (
 
 
 def fuzzifikuj(
-    val_kljucne:     float,
-    val_linkovi:     float,
-    val_caps:        float,
+    val_kljucne:       float,
+    val_linkovi:       float,
+    val_caps:          float,
     val_interpunkcija: float,
 ) -> dict:
     return {
@@ -28,10 +28,10 @@ def fuzzifikuj(
             "brojni":    stepen_pripadnosti(x_broj_linkova, linkovi_brojni,    val_linkovi),
         },
         "caps_procenat": {
-            "uobicajen": stepen_pripadnosti(x_caps_procenat, caps_uobicajen, val_caps),
-            "poviseni":  stepen_pripadnosti(x_caps_procenat, caps_poviseni,  val_caps),
-            "blago":     stepen_pripadnosti(x_caps_procenat, caps_blago_povisen, val_caps),
-            "agresivan": stepen_pripadnosti(x_caps_procenat, caps_agresivan, val_caps),
+            "uobicajen": stepen_pripadnosti(x_caps_procenat, caps_uobicajen,       val_caps),
+            "poviseni":  stepen_pripadnosti(x_caps_procenat, caps_poviseni,        val_caps),
+            "blago":     stepen_pripadnosti(x_caps_procenat, caps_blago_povisen,   val_caps),
+            "agresivan": stepen_pripadnosti(x_caps_procenat, caps_agresivan,       val_caps),
         },
         "interpunkcija": {
             "retka":     stepen_pripadnosti(x_interpunkcija, interpunkcija_retka,     val_interpunkcija),
@@ -42,62 +42,101 @@ def fuzzifikuj(
     }
 
 
-def kontroler_spam_score(mu: dict):
-    k = mu["kljucne_reci"]
-    l = mu["broj_linkova"]
-    c = mu["caps_procenat"]
-    i = mu["interpunkcija"]
+def sastavi_pravila(mu: dict) -> list:
+    """Vraca listu pravila kao (naziv, jacina, izlazni skup, kategorija).
 
-    # (naziv, jacina, izlazni skup, kategorija)
-    # Jacina je fuzzy AND (min) / OR (max) nad stepenima pripadnosti.
-    pravila = [
+    Jacina je fazi AND (min) / OR (max) nad stepenima pripadnosti.
+    """
+    kljucne_reci  = mu["kljucne_reci"]
+    broj_linkova  = mu["broj_linkova"]
+    caps_procenat = mu["caps_procenat"]
+    interpunkcija = mu["interpunkcija"]
+
+    return [
         # LEGITIMNO
-        ("p01", min(k["zanemarljive"], l["minimalni"], c["uobicajen"], i["retka"]),
+        ("p01", min(kljucne_reci["zanemarljive"], broj_linkova["minimalni"],
+                    caps_procenat["uobicajen"], interpunkcija["retka"]),
          score_legitiman, "LEGITIMAN"),
-        ("p02", min(c["blago"], k["zanemarljive"], l["minimalni"]),
+        ("p02", min(caps_procenat["blago"], kljucne_reci["zanemarljive"],
+                    broj_linkova["minimalni"]),
          score_legitiman_energicno, "LEGITIMAN"),
-        ("p03", min(i["blago"], k["zanemarljive"], l["minimalni"]),
+        ("p03", min(interpunkcija["blago"], kljucne_reci["zanemarljive"],
+                    broj_linkova["minimalni"]),
+         score_legitiman_energicno, "LEGITIMAN"),
+        # Bez kljucnih reci i bez linkova, umerena interpunkcija je jedini
+        # signal i nije dovoljna za sumnju (pokriva tacke koje su ranije
+        # ostajale bez ijednog aktivnog pravila).
+        ("p03b", min(interpunkcija["umerena"], kljucne_reci["zanemarljive"],
+                     broj_linkova["minimalni"]),
          score_legitiman_energicno, "LEGITIMAN"),
 
         # BLAGO SUMNJIVO - cist tekst sa jednim do dva linka
-        ("p06a", min(k["zanemarljive"], l["umereni"], c["uobicajen"], i["retka"]),
+        ("p06a", min(kljucne_reci["zanemarljive"], broj_linkova["umereni"],
+                     caps_procenat["uobicajen"], interpunkcija["retka"]),
          score_blago_sumnjiv, "SUMNJIVO"),
 
         # SUMNJIVO - prisutne kljucne reci, ostalo je jos uobicajeno
-        ("p05",  min(k["zastupljene"], l["minimalni"]),
+        ("p05", min(kljucne_reci["zastupljene"], broj_linkova["minimalni"]),
          score_sumnjiv, "SUMNJIVO"),
-        ("p06b", min(k["zastupljene"], l["umereni"], c["uobicajen"], i["retka"]),
+        ("p06b", min(kljucne_reci["zastupljene"], broj_linkova["umereni"],
+                     caps_procenat["uobicajen"], interpunkcija["retka"]),
          score_sumnjiv, "SUMNJIVO"),
-        ("p10",  min(max(l["umereni"], l["brojni"]), max(c["poviseni"], c["blago"]), k["zanemarljive"]),
+        ("p10", min(max(broj_linkova["umereni"], broj_linkova["brojni"]),
+                    max(caps_procenat["poviseni"], caps_procenat["blago"],
+                        caps_procenat["agresivan"]),
+                    kljucne_reci["zanemarljive"]),
          score_sumnjiv, "SUMNJIVO"),
-        ("p11",  min(max(l["umereni"], l["brojni"]), max(i["umerena"], i["blago"]), k["zanemarljive"]),
+        ("p11", min(max(broj_linkova["umereni"], broj_linkova["brojni"]),
+                    max(interpunkcija["umerena"], interpunkcija["blago"],
+                        interpunkcija["agresivna"]),
+                    kljucne_reci["zanemarljive"]),
          score_sumnjiv, "SUMNJIVO"),
+        # Prisutne kljucne reci + umereni linkovi. Pokriva tacke koje su
+        # ranije ostajale bez pravila jer je p11 zahtevalo zanemarljive reci.
+        ("p17", min(kljucne_reci["zastupljene"], broj_linkova["umereni"]),
+         score_sumnjiv, "SUMNJIVO"),
+
         # VISOKO SUMNJIVO - jedan jak signal ili cetiri umerena istovremeno
-        ("p04",  min(k["zastupljene"], l["umereni"], c["poviseni"], i["umerena"]),
+        ("p04", min(kljucne_reci["zastupljene"], broj_linkova["umereni"],
+                    caps_procenat["poviseni"], interpunkcija["umerena"]),
          score_visoko_sumnjiv, "SUMNJIVO"),
-        ("p06c", min(k["dominantne"], l["umereni"], c["uobicajen"], i["retka"]),
+        ("p06c", min(kljucne_reci["dominantne"], broj_linkova["umereni"],
+                     caps_procenat["uobicajen"], interpunkcija["retka"]),
          score_visoko_sumnjiv, "SUMNJIVO"),
-        ("p07",  min(k["dominantne"], c["uobicajen"]),
+        ("p07", min(kljucne_reci["dominantne"], caps_procenat["uobicajen"]),
          score_visoko_sumnjiv, "SUMNJIVO"),
-        ("p08",  min(c["agresivan"], k["zanemarljive"], l["minimalni"]),
+        ("p08", min(caps_procenat["agresivan"], kljucne_reci["zanemarljive"],
+                    broj_linkova["minimalni"]),
          score_visoko_sumnjiv, "SUMNJIVO"),
-        ("p09",  min(i["agresivna"], k["zanemarljive"], l["minimalni"]),
+        ("p09", min(interpunkcija["agresivna"], kljucne_reci["zanemarljive"],
+                    broj_linkova["minimalni"]),
          score_visoko_sumnjiv, "SUMNJIVO"),
 
         # SPAM
-        ("p12", np.fmax(k["dominantne"], l["brojni"]), score_spam, "SPAM"),
-        ("p13", min(k["zastupljene"], np.fmax(c["agresivan"], i["agresivna"])),
+        # p15 ("dominantne reci -> SPAM") je uklonjeno: p12 ga u potpunosti
+        # pokriva preko max(...), pa nije dodavalo informaciju.
+        ("p12", max(kljucne_reci["dominantne"], broj_linkova["brojni"]),
          score_spam, "SPAM"),
-        ("p14", min(l["umereni"], np.fmax(c["agresivan"], i["agresivna"])),
+        ("p13", min(kljucne_reci["zastupljene"],
+                    max(caps_procenat["agresivan"], interpunkcija["agresivna"])),
          score_spam, "SPAM"),
-        ("p15", k["dominantne"], score_spam, "SPAM"),
-        ("p16", min(max(k["zastupljene"], k["dominantne"]),
-                    max(l["umereni"], l["brojni"]),
-                    max(c["poviseni"], c["agresivan"])),
+        ("p14", min(broj_linkova["umereni"],
+                    max(caps_procenat["agresivan"], interpunkcija["agresivna"])),
+         score_spam, "SPAM"),
+        # p16 mora da ukljuci i blago_povisen: bez njega je opseg 35-45%
+        # velikih slova ostajao nepokriven i skor je padao sa ~87 na 47.
+        ("p16", min(max(kljucne_reci["zastupljene"], kljucne_reci["dominantne"]),
+                    max(broj_linkova["umereni"], broj_linkova["brojni"]),
+                    max(caps_procenat["poviseni"], caps_procenat["blago"],
+                        caps_procenat["agresivan"])),
          score_spam, "SPAM"),
     ]
 
-    aktivacije = [np.fmin(jacina, skup) for _, jacina, skup, _ in pravila]
+
+def kontroler_spam_score(mu: dict):
+    pravila = sastavi_pravila(mu)
+
+    aktivacije = [np.fmin(jacina, izlazni_skup) for _, jacina, izlazni_skup, _ in pravila]
     agregirani_skup = np.fmax.reduce(aktivacije)
 
     alfe = {"LEGITIMAN": 0.0, "SUMNJIVO": 0.0, "SPAM": 0.0}
