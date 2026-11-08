@@ -13,10 +13,10 @@ The application features a responsive web interface with full bilingual support 
 - **Fuzzy Inference System (FIS):** Employs Mamdani fuzzy inference to evaluate multiple email attributes simultaneously.
 - **Bilingual Interface:** Real-time translation toggle between English and Serbian.
 - **History Tracking:** View and recall previous checks performed during the active session.
-- **Sample Loader:** Instantly load random pre-defined test emails to see the system in action.
-- **Hard-sample Loader:** Loads spam that deliberately avoids the hand-written dictionary, to show the limit of keyword matching (especially in Serbian).
-- **Explainable verdict:** a fuzzy spectrum drawn from the actual output sets, plus **Why / Inputs / Rules** tabs showing matched words in context, membership degrees and the rules that fired.
-- **Modern UI:** dark by default, with a light "lab notebook" theme. Bilingual, responsive, keyboard-friendly.
+- **Sample Loader:** Load a legitimate, suspicious or spam example with one click.
+- **Explainable verdict:** a fuzzy spectrum drawn from the actual output sets, plus **Why / Inputs / Rules** tabs showing matched words in context, membership degrees and the rules that fired. Matches are colour-coded (keywords, links, capitals, punctuation).
+- **Modern UI:** clean, Apple-inspired layout with a sticky top bar. Dark by default with a light theme; bilingual, responsive and keyboard-friendly.
+- **Method dialog:** a short walkthrough of the pipeline (extract → fuzzify → infer → defuzzify) with the output spectrum.
 
 ---
 
@@ -218,31 +218,58 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
 **Request Body (JSON):**
 ```json
 {
-  "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!" // Text
+  "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!",
+  "recnik": "kombinovano"   // optional: rucni | nauceni | kombinovano
 }
 ```
 
 **Response (JSON):**
 ```json
 {
-  "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!", // Text
+  "tekst": "CONGRATULATIONS! You WON a FREE prize! Click http://fakesite.com NOW!",
   "kljucne_reci": 7,       // Keywords
   "broj_linkova": 1,       // Link count
-  "caps_procenat": 50.00,  // Caps percentage
+  "caps_procenat": 69.23,  // Caps percentage
   "interpunkcija": 7.14,   // Punctuation
   "spam_score": 88.46,     // Spam score
-  "kategorija": "SPAM"     // Category
+  "kategorija": "SPAM",    // Category
+  "objasnjenje": {
+    "tekst": "...",        // cleaned visible text
+    "pokrivene_reci": [    // matched keywords + positions
+      { "rec": "won", "broj": 1, "tezina": 1.0, "izvor": "rucni", "pozicije": [[21, 24]] }
+    ],
+    "oznake": [            // links / CAPS / punctuation positions
+      { "tip": "link", "pozicije": [[45, 66]] }
+    ],
+    "aktivna_pravila": [   // strongest fired rules
+      { "pravilo": "p14", "jacina": 0.667, "kategorija": "SPAM" }
+    ],
+    "ulazi": {             // values + membership degrees
+      "kljucne_reci": { "vrednost": 7.0, "pripadnosti": { "dominantne": 0.667 } }
+    }
+  }
 }
 ```
 
-### `GET /primer`
+### `GET /primeri-svi?jezik=en|sr`
 
-Returns a random pre-configured email string from `primeri.txt`.
+Returns the normal sample emails for the given language.
 
-**Response (JSON):**
+### `GET /primeri-teski?jezik=en|sr`
+
+Returns the "hard" samples that deliberately avoid the hand-written keyword dictionary.
+
+### `GET /skupovi`
+
+Returns the six output membership functions used by the UI spectrum.
+
 ```json
 {
-  "tekst": "Hi, just wanted to confirm our meeting tomorrow at 3pm..." // Text
+  "univerzum": { "min": 0, "max": 100, "korak": 1 },
+  "skupovi": [
+    { "ime": "legitiman", "naziv": "legitiman", "tip": "trapmf",
+      "params": [0, 0, 8, 20], "kategorija": "LEGITIMAN" }
+  ]
 }
 ```
 

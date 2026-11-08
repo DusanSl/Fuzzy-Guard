@@ -269,8 +269,24 @@ def test_skupovi_endpoint_vraca_sest_skupova():
 def test_dashboard_ima_nove_elemente():
     from main import app
     html = app.test_client().get("/").get_data(as_text=True)
-    for element in ("spektar", "verdict-sadrzaj", "tab-sadrzaj", "tema-dugme", "istorija"):
+    for element in ("spektar", "rezultat", "pogled-sadrzaj", "tema-dugme", "istorija-lista"):
         assert element in html
+
+
+def test_analiziraj_prihvata_recnik():
+    from main import app
+    klijent = app.test_client()
+    tekst = "mortgage"
+
+    rucni = klijent.post(
+        "/analiziraj", json={"tekst": tekst, "recnik": "rucni"}
+    ).get_json()
+    nauceni = klijent.post(
+        "/analiziraj", json={"tekst": tekst, "recnik": "nauceni"}
+    ).get_json()
+
+    assert rucni["kljucne_reci"] == 0.0
+    assert nauceni["kljucne_reci"] > 0.0
 
 
 
