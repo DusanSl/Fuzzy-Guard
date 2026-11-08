@@ -91,19 +91,37 @@ označeni skup, (b) klasično koristi zvonaste/gausove funkcije, ne trouglove,
 
 ## 12. Neuronska mreža
 
-- Iste četiri karakteristike kao fazi sistem — fer poređenje.
-- MLP 16–8, ReLU, stratifikovani 75/25 split, rani prekid.
-- SpamAssassin, 750 test emailova (125 spam):
+- Mreža **ne računa** `spam_score`. Ona uči **spam rečnik**: koji su termini
+  karakteristični za spam, sa težinama. Fazi sistem i dalje odlučuje.
+- TF-IDF (1–2 grama) → jedan neuron (logistička aktivacija). Termin se zadržava
+  samo ako se javlja u bar 10 spamova i bar **3× češće u spamu nego u hamu**.
+- Tri režima ulaza `kljucne_reci`:
 
-| Model | Tačnost | Preciznost | Odziv | F1 |
-|---|---|---|---|---|
-| MLP | 0.929 | 0.883 | 0.664 | 0.758 |
-| Fazi | 0.771 | 0.382 | 0.608 | 0.469 |
+| Režim | Značenje | Srpski |
+|---|---|---|
+| `rucni` | samo ručni rečnik — **bez neuronske mreže** | puno |
+| `nauceni` | samo naučeni rečnik (engleski korpus) | nema |
+| `kombinovano` | oba (podrazumevano) | puno |
 
-- Mreža je tačnija, ali fazi sistem je interpretabilan i ne zahteva trening.
-- Mreža **ne ulazi** u `spam_score`; služi kao drugo mišljenje i poređenje.
-- Na SMS korpusu fazi sistem ima odziv samo 3%: karakteristike su pravljene za
-  email (SMS nema linkove ni velika slova). To je ograničenje domena.
+- Srpski deo ručnog rečnika se **nikada ne uklanja**: korpus je engleski, pa
+  mreža ne može da nauči nijednu srpsku reč. To je ujedno i baseline — kako
+  projekat radi bez neuronske mreže.
+
+- SpamAssassin, 750 test emailova (125 spam), ablation:
+
+| Model | Rečnik | Tačnost | Preciznost | Odziv | F1 |
+|---|---|---|---|---|---|
+| MLP | rucni | 0.929 | 0.883 | 0.664 | 0.758 |
+| Fazi | rucni | 0.771 | 0.382 | 0.608 | 0.469 |
+| MLP | nauceni | 0.956 | 0.942 | 0.784 | 0.856 |
+| Fazi | nauceni | 0.791 | 0.424 | 0.712 | 0.531 |
+| MLP | kombinovano | 0.957 | 0.904 | 0.832 | 0.867 |
+| Fazi | kombinovano | 0.792 | 0.432 | 0.784 | **0.557** |
+
+- Naučeni rečnik podiže F1 fazi sistema sa **0.469 na 0.557** i odziv sa
+  **0.608 na 0.784**, bez ijedne izmene pravila ili fazi inferencije.
+- Na SMS korpusu fazi sistem sa ručnim rečnikom ima odziv samo 3%: karakteristike
+  su pravljene za email (SMS nema linkove ni velika slova). Ograničenje domena.
 
 ## 13. Ograničenja koja treba sami navesti
 
@@ -123,9 +141,12 @@ povećali rezoluciju skora.
 
 ## Brojevi koje treba zapamtiti
 
-- 4 ulaza, **19 pravila**, 6 izlaznih skupova, univerzum 0–100 (korak 1).
-- 50 demonstracionih emailova → **29 različitih skorova** (pre popravke 26).
-- SpamAssassin: **MLP F1 0.758**, **fazi F1 0.469**.
+- 4 ulaza, **19 pravila** (p01–p17, dva suffiksa), 6 izlaznih skupova, univerzum 0–100.
+- 50 demonstracionih emailova → **29 različitih skorova** sa ručnim rečnikom,
+  **31** sa kombinovanim (pre popravke 26).
+- SpamAssassin: fazi **F1 0.469 → 0.557** i odziv **0.608 → 0.784** prelaskom sa
+  ručnog na kombinovani rečnik; MLP **F1 0.758 → 0.867**.
 - Baza pravila: **0 nepokrivenih tačaka** (pre: 54).
 - Bug koji je popravljen: skok velikih slova 30% → 40% obarao je skor sa ~87 na
   47; sada razlika < 3 poena.
+- **13 testova** prolazi; srpski rečnik je baseline bez neuronske mreže.

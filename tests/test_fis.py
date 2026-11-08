@@ -10,6 +10,12 @@ from pathlib import Path
 import skfuzzy as fuzz
 
 from obrada_teksta.analizator import analiziraj_email
+from obrada_teksta import analizator
+from obrada_teksta.analizator import (
+    SPAM_RECNIK_RECI,
+    _izracunaj_kljucne_reci,
+    ucitaj_nauceni_recnik,
+)
 from fazi.pravila import fuzzifikuj, sastavi_pravila
 from fazi.zakljucivanje import pokreni_fis
 from fazi.skupovi import x_spam_score, izlazni_skupovi, KATEGORIJA_PO_SKUPU
@@ -102,3 +108,38 @@ def test_interpunkcija_ne_okida_agresivno_previse_rano():
 def test_primeri_daju_dovoljno_razlicitih_skorova():
     skorovi = {round(analiziraj_tekst(tekst)["spam_score"], 2) for tekst in ucitaj_primere()}
     assert len(skorovi) >= 25
+
+
+def test_srpski_recnik_je_sacuvan():
+    """Rucni (srpski) recnik je baseline bez neuronske mreze i ne sme da nestane."""
+    for rec in ("besplatno", "nagrada", "klikni", "čestitamo", "osvojio"):
+        assert rec in SPAM_RECNIK_RECI
+
+
+def test_nauceni_recnik_se_ucitava():
+    recnik = ucitaj_nauceni_recnik()
+    assert isinstance(recnik, dict)
+    assert len(recnik) > 0
+    assert all(tezina > 0 for tezina in recnik.values())
+
+
+def test_kombinovani_recnik_ne_broji_isti_termin_dvaput():
+    # "free" postoji u rucnom recniku, pa se naucena verzija preskace
+    assert _izracunaj_kljucne_reci("free", "rucni") == 1.0
+    assert _izracunaj_kljucne_reci("free", "kombinovano") == 1.0
+
+
+def test_nauceni_recnik_dodaje_nove_termine():
+    recnik = ucitaj_nauceni_recnik()
+    rucni = set(SPAM_RECNIK_RECI)
+    novi = next((termin for termin in recnik if termin not in rucni and " " not in termin), None)
+    assert novi is not None, "nauceni recnik ne sadrzi nijedan nov termin"
+    assert _izracunaj_kljucne_reci(novi, "nauceni") > 0
+
+
+def test_rucni_recnik_radi_bez_naucenog(monkeypatch):
+    """Ako nema naucenog recnika, sistem mora da radi kao pre neuronske mreze."""
+    monkeypatch.setattr(analizator, "_NAUCENI_RECNIK", {})
+    assert _izracunaj_kljucne_reci("free", "kombinovano") == 1.0
+    assert _izracunaj_kljucne_reci("free prize", "kombinovano") == 3.0
+

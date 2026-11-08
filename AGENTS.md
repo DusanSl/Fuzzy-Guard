@@ -62,9 +62,24 @@ The same rule applies to membership-set names: write `caps_blago_povisen`, never
 - Every rule is a tuple `(naziv, jacina, izlazni_skup, kategorija)`.
 - Fuzzy AND is `min(...)`; fuzzy OR is `max(...)`.
 - Every rule must add information. Delete a rule whose antecedent is a subset of
-  another rule's antecedent when both have the same output set. (This is why
-  `p15` was removed: `p12` already covers it via `max(...)`.)
+  another rule's antecedent when both have the same output set. (For example, a
+  standalone "dominant keywords -> SPAM" rule adds nothing next to
+  "dominant keywords OR numerous links -> SPAM", so it was removed.)
 - Expose per-rule activation strengths so tests can assert on them.
+
+## Rule numbering and layout
+
+- Rules run in one continuous sequence: `p01`, `p02`, `p03`, ... `pNN`. No
+  skipped numbers and no jumping around (never `p01 -> p16`).
+- A letter suffix is allowed **only** for a rule that is a close variant of the
+  one immediately before it (`p03` and `p03a`, `p06` and `p06a`). A suffix must
+  never create a new gap in the numbering.
+- Order by severity: LEGITIMATE, mildly suspicious, suspicious, highly
+  suspicious, SPAM last.
+- Every rule is its own block: a blank line, a one-line comment naming the rule
+  and its condition, then the tuple.
+- The README rule table uses the same numbers and the same order.
+
 
 ## Scoring invariants (enforced by tests)
 
@@ -81,6 +96,16 @@ The same rule applies to membership-set names: write `caps_blago_povisen`, never
 The course covers fuzzy systems **and** neural networks, so the project must
 include a neural-network part.
 
+- **Keep the hand-written keyword dictionary** (`SPAM_RECNIK_RECI` and
+  `SPAM_RECNIK_FRAZE` in `obrada_teksta/analizator.py`), including all Serbian
+  entries. Never delete it and never let the learned lexicon replace it.
+  It is the **baseline without the neural network** and the only Serbian
+  coverage, because the training corpora are English-only.
+- The learned lexicon is additive and English-only. It is merged with the hand
+  dictionary, never substituted for it.
+- Keep all three input modes runnable so the project can show behaviour with and
+  without the network: `rucni` (no NN), `nauceni` (NN only), `kombinovano`
+  (default, both).
 - Keep the fuzzy system interpretable. The network must never turn the fuzzy
   rules into a black box; it may tune parameters or act as a second opinion.
 - Any network work requires a real, labelled dataset. `primeri.txt` is **not**

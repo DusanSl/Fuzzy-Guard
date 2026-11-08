@@ -65,8 +65,10 @@ Fuzzy-Guard/
 │   ├── zakljucivanje.py    # Main fuzzy inference controller
 │   └── defazifikacija.py   # Centroid defuzzification
 ├── neuronska_mreza/
-│   └── treniraj.py         # MLP comparison model (same 4 features, held-out test)
+│   ├── nauci_recnik.py     # learns the spam lexicon and exports JSON
+│   └── treniraj.py         # MLP comparison + lexicon ablation
 ├── podaci/
+│   ├── recnik_naucen.json  # learned spam words with weights
 │   ├── spamassassin.tsv    # 3,000 labelled emails (500 spam)
 │   └── SMSSpamCollection.tsv
 ├── veb/
@@ -150,27 +152,29 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | **p01** | `zanemarljive` (negligible) AND `minimalni` (minimal) AND `uobicajen` (normal) AND `retka` (sparse) | **LEGITIMATE** |
 | **p02** | `blago` (mildly elevated) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
 | **p03** | `blago` (mild) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
-| **p03b** | `umerena` (moderate) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **LEGITIMATE** |
-| **p04** | `zastupljene` (present) AND `umereni` (moderate) AND `poviseni` (elevated) AND `umerena` (moderate) | **HIGH SUSPICION** |
+| **p03a** | `umerena` (moderate) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links — variant of p03 | **LEGITIMATE** |
+| **p04** | `zanemarljive` (negligible) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **MILDLY SUSPICIOUS** |
 | **p05** | `zastupljene` (present) AND `minimalni` (minimal) links | **SUSPICIOUS** |
-| **p06a** | `zanemarljive` (negligible) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **MILDLY SUSPICIOUS** |
-| **p06b** | `zastupljene` (present) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **SUSPICIOUS** |
-| **p06c** | `dominantne` (dominant) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **HIGH SUSPICION** |
-| **p07** | `dominantne` (dominant) AND `uobicajen` (normal) caps | **HIGH SUSPICION** |
-| **p08** | `agresivan` (aggressive) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **HIGH SUSPICION** |
-| **p09** | `agresivna` (aggressive) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **HIGH SUSPICION** |
-| **p10** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`poviseni` OR `blago_povisen` OR `agresivan`) caps AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
-| **p11** | (`umereni` (moderate) OR `brojni` (numerous)) links AND (`umerena` OR `blago` OR `agresivna`) punctuation AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
-| **p12** | `dominantne` (dominant) keywords OR `brojni` (numerous) links | **SPAM** |
-| **p13** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
-| **p14** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
-| **p16** | (`zastupljene` OR `dominantne`) keywords AND (`umereni` OR `brojni`) links AND (`poviseni` OR `blago_povisen` OR `agresivan`) caps | **SPAM** |
-| **p17** | `zastupljene` (present) keywords AND `umereni` (moderate) links | **SUSPICIOUS** |
+| **p06** | `zastupljene` (present) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **SUSPICIOUS** |
+| **p06a** | `zastupljene` (present) AND `umereni` (moderate) links — p06 without the caps/punctuation guards | **SUSPICIOUS** |
+| **p07** | (`umereni` OR `brojni`) links AND (`poviseni` OR `blago_povisen` OR `agresivan`) caps AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
+| **p08** | (`umereni` OR `brojni`) links AND (`umerena` OR `blago` OR `agresivna`) punctuation AND `zanemarljive` (negligible) keywords | **SUSPICIOUS** |
+| **p09** | `zastupljene` (present) AND `umereni` (moderate) AND `poviseni` (elevated) AND `umerena` (moderate) | **HIGH SUSPICION** |
+| **p10** | `dominantne` (dominant) AND `umereni` (moderate) AND `uobicajen` (normal) AND `retka` (sparse) | **HIGH SUSPICION** |
+| **p11** | `dominantne` (dominant) AND `uobicajen` (normal) caps | **HIGH SUSPICION** |
+| **p12** | `agresivan` (aggressive) caps AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **HIGH SUSPICION** |
+| **p13** | `agresivna` (aggressive) punctuation AND `zanemarljive` (negligible) AND `minimalni` (minimal) links | **HIGH SUSPICION** |
+| **p14** | `dominantne` (dominant) keywords OR `brojni` (numerous) links | **SPAM** |
+| **p15** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
+| **p16** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
+| **p17** | (`zastupljene` OR `dominantne`) keywords AND (`umereni` OR `brojni`) links AND (`poviseni` OR `blago_povisen` OR `agresivan`) caps | **SPAM** |
 
-Both `p03b` and `p17` close coverage holes: without them there were input
-combinations where **no rule fired at all** and the score silently fell back to a
-constant. `p15` (`dominantne` keywords → SPAM) was removed because `p12` already
-covers it through `max(dominantne, brojni)` and it therefore added no information.
+Rules are numbered in one continuous run `p01 → p17`. A letter suffix is used
+only for a close variant of the rule directly before it (`p03`/`p03a`,
+`p06`/`p06a`). `p03a` and `p06a` close coverage holes: without them there were
+input combinations where **no rule fired at all** and the score fell back to a
+constant. A standalone "dominant keywords → SPAM" rule was removed because
+`p14` already covers it through `max(dominantne, brojni)`.
 
 
 ## Installation & Running Locally
@@ -244,36 +248,80 @@ Returns a random pre-configured email string from `primeri.txt`.
 
 ## Neural Network Component
 
-The course also covers neural networks, so the project includes a **separate**
-comparison model in `neuronska_mreza/`. The network does **not** participate in
-computing `spam_score`; the fuzzy system stays the interpretable classifier.
+The course also covers neural networks, so the project includes a neural part in
+`neuronska_mreza/`. The network does **not** compute `spam_score` — the fuzzy
+system stays the only decision maker. Instead the network **learns the spam
+lexicon**: it discovers which words and phrases are characteristic of spam and
+exports them with weights.
 
-The point of the comparison is fairness: the network receives the **same four
-features** as the fuzzy system, so any difference in performance comes from the
-model, not from better input data.
+```text
+labelled emails → TF-IDF (1–2 grams) → single-neuron classifier
+                → coefficients → podaci/recnik_naucen.json
+```
+
+At runtime those weights feed the first fuzzy input, `kljucne_reci`, exactly as
+the hand-written list does:
+
+```text
+kljucne_reci = hand-dictionary hits (weight 1.0)
+             + learned-lexicon hits (learned weight)
+             → normalised to 0–10 → Mamdani FIS (unchanged)
+```
+
+Terms are only kept if they appear in at least 10 spam emails and are **at least
+3× more frequent in spam than in ham**, which filters out generic words like
+"information" and "contact". HTML/MIME artifacts ("font", "href", "nbsp") are
+rejected explicitly.
 
 ```
-python -m neuronska_mreza.treniraj
+python -m neuronska_mreza.nauci_recnik      # learn + export the lexicon
+python -m neuronska_mreza.treniraj          # compare models
 ```
 
-It trains a `scikit-learn` MLP (`16-8` hidden units, ReLU) with a stratified
-75/25 train/test split and prints a confusion matrix, precision, recall and F1
-for both models.
+### The Serbian dictionary is the "without NN" baseline
+
+The hand-written dictionary in `obrada_teksta/analizator.py` — including the full
+Serbian list — is **never removed**. The training corpora are English-only, so
+the network cannot learn a single Serbian word; the hand dictionary is the only
+Serbian coverage and the baseline that shows how the project behaves **without**
+a neural network.
+
+Three modes are therefore kept runnable at all times:
+
+| Mode | Meaning | Serbian coverage |
+|---|---|---|
+| `rucni` | hand dictionary only — **no neural network** | full |
+| `nauceni` | learned lexicon only | none (English corpus) |
+| `kombinovano` | both (default) | full |
+
+Use `FUZZY_GUARD_RECNIK=rucni python main.py` to run the app with the NN-free
+baseline. The ablation below is produced with
+`python -m neuronska_mreza.treniraj --recnik svi`.
 
 ### Results (held-out test set)
 
 Corpus: **SpamAssassin** (3,000 emails, 500 spam), 750 test emails, 125 spam.
 
-| Model | Accuracy | Precision | Recall | F1 |
-|---|---|---|---|---|
-| Neural network (MLP) | 0.929 | 0.883 | 0.664 | 0.758 |
-| Fuzzy system (Mamdani) | 0.771 | 0.382 | 0.608 | 0.469 |
+| Model | Lexicon | Accuracy | Precision | Recall | F1 |
+|---|---|---|---|---|---|
+| Neural network (MLP) | `rucni` | 0.929 | 0.883 | 0.664 | 0.758 |
+| Fuzzy system (Mamdani) | `rucni` | 0.771 | 0.382 | 0.608 | 0.469 |
+| Neural network (MLP) | `nauceni` | 0.956 | 0.942 | 0.784 | 0.856 |
+| Fuzzy system (Mamdani) | `nauceni` | 0.791 | 0.424 | 0.712 | 0.531 |
+| Neural network (MLP) | `kombinovano` | 0.957 | 0.904 | 0.832 | 0.867 |
+| Fuzzy system (Mamdani) | `kombinovano` | 0.792 | 0.432 | 0.784 | **0.557** |
+
+The learned lexicon raises the fuzzy system's F1 from **0.469 to 0.557** and its
+recall from **0.608 to 0.784**, without changing the rule base or the fuzzy
+inference. The network therefore has a measurable job: it supplies better
+evidence, while the fuzzy rules still make the decision.
 
 The fuzzy system trades precision for interpretability: every score can be
 traced back to a membership function and a rule. On the **SMS Spam Collection**
-(5,574 messages) the fuzzy system collapses to 3% spam recall, because its
-features are calibrated for email — SMS messages have almost no capitalisation
-or links. That domain sensitivity is a documented limitation, not a bug.
+(5,574 messages) the fuzzy system collapses to 3% spam recall with the hand
+dictionary, because its features are calibrated for email — SMS messages have
+almost no capitalisation or links. That domain sensitivity is a documented
+limitation, not a bug.
 
 Dataset sources:
 

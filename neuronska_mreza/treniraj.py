@@ -1,20 +1,29 @@
-"""Neuronska mreza za detekciju spama.
+"""Poredjenje neuronske mreze i fazi sistema.
 
-Ovaj modul je namerno odvojen od fazi sistema. Mreza NE ucestvuje u izracunavanju
-``spam_score`` — sluzi kao drugo misljenje i kao poredjenje za odbranu projekta.
-
-Mreza koristi iste cetiri ulazne karakteristike kao fazi sistem, tako da je
-poredjenje fer:
+Mreza NE ucestvuje u izracunavanju ``spam_score`` — sluzi kao drugo misljenje i
+kao poredjenje za odbranu projekta. Oba modela dobijaju iste cetiri ulazne
+karakteristike, tako da je poredjenje fer:
 
     kljucne_reci, broj_linkova, caps_procenat, interpunkcija
 
+Za ``kljucne_reci`` postoje tri rezima (vidi ``obrada_teksta/analizator.py``):
+
+    rucni        - samo lista odrzavana rukom
+    nauceni      - samo recnik koji je naucila mreza
+    kombinovano  - rucni + nauceni (podrazumevano)
+
 Korpusi:
-- ``podaci/spamassassin.tsv`` — 3000 emailova (500 spama). Primarni korpus,
-  jer je projekat filter za email.
+- ``podaci/spamassassin.tsv`` — 3000 emailova (500 spama). Primarni korpus.
 - ``podaci/SMSSpamCollection.tsv`` — 5574 SMS poruka (747 spama). Sekundarni
   korpus; pokazuje da iste karakteristike slabije rade van email domena.
+
+Pokretanje:
+
+    python -m neuronska_mreza.treniraj
+    python -m neuronska_mreza.treniraj --recnik svi
 """
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -41,6 +50,7 @@ KORPUSI = (
 PUTANJA_MODEL = Path(__file__).parent / "model.joblib"
 
 KARAKTERISTIKE = ("kljucne_reci", "broj_linkova", "caps_procenat", "interpunkcija")
+REZIMI = ("rucni", "nauceni", "kombinovano")
 
 
 def ucitaj_podatke(putanja: Path):
@@ -55,17 +65,17 @@ def ucitaj_podatke(putanja: Path):
     return tekstovi, np.array(oznake)
 
 
-def izvuci_karakteristike(tekstovi: list) -> np.ndarray:
+def izvuci_karakteristike(tekstovi: list, nacin_recnik: str) -> np.ndarray:
     redovi = []
     for tekst in tekstovi:
-        ulazi = analiziraj_email(tekst)
+        ulazi = analiziraj_email(tekst, nacin_recnik=nacin_recnik)
         redovi.append([ulazi[ime] for ime in KARAKTERISTIKE])
     return np.array(redovi, dtype=float)
 
 
-def fazi_predikcija(tekst: str) -> int:
+def fazi_predikcija(tekst: str, nacin_recnik: str) -> int:
     """1 ako fazi sistem kaze SPAM, inace 0 (SUMNJIVO se racuna kao ham)."""
-    ulazi = analiziraj_email(tekst)
+    ulazi = analiziraj_email(tekst, nacin_recnik=nacin_recnik)
     rezultat = pokreni_fis(
         ulazi["kljucne_reci"],
         ulazi["broj_linkova"],
@@ -75,11 +85,7 @@ def fazi_predikcija(tekst: str) -> int:
     return 1 if rezultat["kategorija"] == "SPAM" else 0
 
 
-def pisi_metrike(naziv: str, istinite, predvidjene) -> dict:
-    print(f"\n--- {naziv} ---")
-    print(classification_report(istinite, predvidjene, target_names=["ham", "spam"], digits=3))
-    print("matrica konfuzije:")
-    print(confusion_matrix(istinite, predvidjene))
+def metrike(istinite, predvidjene) -> dict:
     return {
         "tacnost": accuracy_score(istinite, predvidjene),
         "preciznost": precision_score(istinite, predvidjene, zero_division=0),
@@ -88,59 +94,91 @@ def pisi_metrike(naziv: str, istinite, predvidjene) -> dict:
     }
 
 
-def obradi_korpus(naziv: str, putanja: Path, sacuvaj_model: bool = False) -> dict:
+def obradi_korpus(naziv: str, putanja: Path, rezimi: tuple, sacuvaj_model: bool = False):
     if not putanja.exists():
         print(f"\n[preskoceno] {naziv}: nema fajla {putanja}")
-        return {}
+        return
 
     print(f"\n================ {naziv} ================")
     tekstovi, oznake = ucitaj_podatke(putanja)
-    X = izvuci_karakteristike(tekstovi)
 
-    X_train, X_test, y_train, y_test, tekst_train, tekst_test = train_test_split(
-        X, oznake, tekstovi,
-        test_size=0.25,
-        random_state=42,
-        stratify=oznake,
+    indeksi = np.arange(len(oznake))
+    indeksi_train, indeksi_test = train_test_split(
+        indeksi, test_size=0.25, random_state=42, stratify=oznake
     )
-
-    skaliraj = StandardScaler().fit(X_train)
-    mreza = MLPClassifier(
-        hidden_layer_sizes=(16, 8),
-        activation="relu",
-        max_iter=800,
-        early_stopping=True,
-        random_state=42,
-    )
-    mreza.fit(skaliraj.transform(X_train), y_train)
-
-    mreza_pred = mreza.predict(skaliraj.transform(X_test))
-    fazi_pred = np.array([fazi_predikcija(tekst) for tekst in tekst_test])
+    y_train, y_test = oznake[indeksi_train], oznake[indeksi_test]
+    tekst_train = [tekstovi[i] for i in indeksi_train]
+    tekst_test = [tekstovi[i] for i in indeksi_test]
 
     print(f"Trening: {len(y_train)} primera | Test: {len(y_test)} primera | "
           f"spam u testu: {int(y_test.sum())}")
 
-    metrike_mreze = pisi_metrike("Neuronska mreza (MLP)", y_test, mreza_pred)
-    metrike_fazi = pisi_metrike("Fazi sistem (Mamdani)", y_test, fazi_pred)
+    rezultati = {}
+    for nacin in rezimi:
+        X_train = izvuci_karakteristike(tekst_train, nacin)
+        X_test = izvuci_karakteristike(tekst_test, nacin)
 
-    print("\nPoredjenje:")
-    print(f"{'model':22s} {'tacnost':>8s} {'preciznost':>11s} {'odziv':>7s} {'F1':>7s}")
-    for ime, metrike in (("Neuronska mreza", metrike_mreze), ("Fazi sistem", metrike_fazi)):
-        print(f"{ime:22s} {metrike['tacnost']:8.3f} {metrike['preciznost']:11.3f} "
-              f"{metrike['odziv']:7.3f} {metrike['f1']:7.3f}")
+        skaliraj = StandardScaler().fit(X_train)
+        mreza = MLPClassifier(
+            hidden_layer_sizes=(16, 8),
+            activation="relu",
+            max_iter=800,
+            early_stopping=True,
+            random_state=42,
+        )
+        mreza.fit(skaliraj.transform(X_train), y_train)
+        metrike_mreze = metrike(y_test, mreza.predict(skaliraj.transform(X_test)))
+
+        fazi_pred = np.array([fazi_predikcija(tekst, nacin) for tekst in tekst_test])
+        metrike_fazi = metrike(y_test, fazi_pred)
+
+        rezultati[nacin] = (metrike_mreze, metrike_fazi, fazi_pred)
+
+        if sacuvaj_model and nacin == "kombinovano":
+            import joblib
+            joblib.dump({"skaliraj": skaliraj, "mreza": mreza}, PUTANJA_MODEL)
+
+    print(f"\n{'model':26s} {'recnik':13s} {'tacnost':>8s} {'preciznost':>11s} "
+          f"{'odziv':>7s} {'F1':>7s}")
+    for nacin in rezimi:
+        metrike_mreze, metrike_fazi, _ = rezultati[nacin]
+        for naziv_modela, m in (("Neuronska mreza (MLP)", metrike_mreze),
+                                ("Fazi sistem (Mamdani)", metrike_fazi)):
+            print(f"{naziv_modela:26s} {nacin:13s} {m['tacnost']:8.3f} "
+                  f"{m['preciznost']:11.3f} {m['odziv']:7.3f} {m['f1']:7.3f}")
+
+    if "kombinovano" in rezultati:
+        _, _, fazi_pred = rezultati["kombinovano"]
+        print("\nMatrica konfuzije fazi sistema (kombinovano):")
+        print(confusion_matrix(y_test, fazi_pred))
+        print(classification_report(y_test, fazi_pred, target_names=["ham", "spam"], digits=3))
 
     if sacuvaj_model:
-        import joblib
-        joblib.dump({"skaliraj": skaliraj, "mreza": mreza}, PUTANJA_MODEL)
-        print(f"\nModel sacuvan u {PUTANJA_MODEL}")
-
-    return {"mreza": metrike_mreze, "fazi": metrike_fazi}
+        print(f"Model sacuvan u {PUTANJA_MODEL}")
 
 
-def treniraj():
-    for indeks, (naziv, putanja) in enumerate(KORPUSI):
-        obradi_korpus(naziv, putanja, sacuvaj_model=(indeks == 0))
+def main():
+    parser = argparse.ArgumentParser(description="Poredjenje MLP i fazi sistema.")
+    parser.add_argument(
+        "--recnik", choices=(*REZIMI, "svi"), default="kombinovano",
+        help="koji recnik koristi ulaz 'kljucne_reci'",
+    )
+    parser.add_argument(
+        "--korpus", choices=("svi", "email", "sms"), default="svi",
+        help="koji korpus evaluirati",
+    )
+    argumenti = parser.parse_args()
+
+    rezimi = REZIMI if argumenti.recnik == "svi" else (argumenti.recnik,)
+    korpusi = KORPUSI
+    if argumenti.korpus == "email":
+        korpusi = KORPUSI[:1]
+    elif argumenti.korpus == "sms":
+        korpusi = KORPUSI[1:]
+
+    for indeks, (naziv, putanja) in enumerate(korpusi):
+        obradi_korpus(naziv, putanja, rezimi, sacuvaj_model=(indeks == 0))
 
 
 if __name__ == "__main__":
-    treniraj()
+    main()
