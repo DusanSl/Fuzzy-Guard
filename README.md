@@ -238,7 +238,6 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
 **Response (JSON):**
 ```json
 {
-  "tekst": "DEAR SIR, YOUR MORTGAGE SETTLEMENT IS GUARANTEED! ...",
   "skraceno": false,       // true if the body exceeded the analysis cap
   "recnik": "en",          // lexicon used, resolved from auto
   "kljucne_reci": 6.61,    // Weighted lexicon matches

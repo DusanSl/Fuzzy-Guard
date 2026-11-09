@@ -15,12 +15,42 @@ KOREN = Path(__file__).parent
 MAKS_DUŽINA_ZAHTEVA = 256 * 1024
 MAKS_ANALIZIRANIH_ZNAKOVA = 50_000
 
+# Šabloni dodaju ?v=<mtime> na CSS i JS, pa statika može dugo da se kešira:
+# novi sadržaj uvek dobija novi URL.
+KEŠIRANJE_STATIKE_SEKUNDI = 365 * 24 * 60 * 60
+
+BEZBEDNOSNA_ZAGLAVLJA = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": (
+        "default-src 'self'; base-uri 'none'; object-src 'none'; "
+        "frame-ancestors 'none'; form-action 'self'; connect-src 'self'; "
+        "img-src 'self' data:; font-src 'self'; "
+        # engine.js upisuje style atribute (širine traka), pa je
+        # 'unsafe-inline' potreban samo za stilove. Skripte ostaju 'self'.
+        "style-src 'self' 'unsafe-inline'; script-src 'self'"
+    ),
+}
+
 app = Flask(
     __name__,
     template_folder=str(KOREN / "veb" / "sabloni"),
     static_folder=str(KOREN / "veb" / "static"),
 )
 app.config["MAX_CONTENT_LENGTH"] = MAKS_DUŽINA_ZAHTEVA
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = KEŠIRANJE_STATIKE_SEKUNDI
+
+
+@app.after_request
+def bezbednosna_zaglavlja(odgovor):
+    for ime, vrednost in BEZBEDNOSNA_ZAGLAVLJA.items():
+        odgovor.headers.setdefault(ime, vrednost)
+    if request.endpoint != "static":
+        # Odgovor može da sadrži tekst emaila, pa ga posrednici ne smeju da
+        # čuvaju u kešu.
+        odgovor.headers["Cache-Control"] = "no-store"
+    return odgovor
 
 
 @app.context_processor
@@ -118,7 +148,8 @@ def analiziraj():
     )
 
     rezultat = {
-        "tekst":         analizirani_tekst,
+        # Vidljivi tekst se šalje samo u objasnjenje.tekst; duplo slanje celog
+        # teksta je na ulazu od 50.000 znakova pravilo odgovor većim za ~50 KB.
         "skraceno":      skraceno,
         "recnik":        ulazi.get("recnik", nacin_recnika),
         "kljucne_reci":  ulazi["kljucne_reci"],

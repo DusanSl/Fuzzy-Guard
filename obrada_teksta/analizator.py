@@ -76,17 +76,56 @@ def detektuj_jezik(tekst: str) -> str:
 
 _UZORAK_LINKA = re.compile(r"(?i)\b(?:https?://|hxxps?://|www\.)[^\s<>\"']+")
 _UZORAK_HREF = re.compile(r"(?i)href\s*=\s*[\"']([^\"']+)[\"']")
-_UZORAK_SKRIPT = re.compile(r"(?is)<(script|style)\b.*?</\1>")
-_UZORAK_TAG = re.compile(r"(?s)<[^>]+>")
+# Oznaka koja otvara ``<script>`` ili ``<style>``. ``[^<>]`` ne prelazi preko
+# druge otvorene zagrade, pa se na ulazu punom znakova "<" ne skenira do kraja
+# teksta za svaku poziciju. Sa ``[^>]*`` je 50.000 znakova "<script>" trošilo
+# preko sekunde procesora po zahtevu, a ``/analiziraj`` je javni endpoint.
+_UZORAK_SKRIPT_OTVARANJE = re.compile(r"(?i)<(script|style)\b[^<>]*>")
+_UZORAK_TAG = re.compile(r"(?s)<[^<>]*>")
+_UZORAK_PREKIDA = re.compile(r"(?i)<br\s*/?>|</p>|</div>|</li>|</tr>|</h[1-6]>")
 _UZORAK_CAPS = re.compile(r"\b[A-Z\u010c\u0106\u0160\u017d\u0110]{3,}\b")
 _UZORAK_INTERPUNKCIJA = re.compile(r"[!?]+")
+
+
+def _ukloni_skriptove(tekst: str) -> str:
+    """Uklanja sadržaj ``<script>`` i ``<style>`` blokova u jednom prolazu.
+
+    ``str.find`` pomera poziciju napred posle svakog bloka, pa je ukupan rad
+    linearan. Lenji ``.*?`` regularni izraz je na nezatvorenom bloku skenirao
+    do kraja teksta za svako otvaranje.
+    """
+    tekst_mali = tekst.lower()
+    if "</script" not in tekst_mali and "</style" not in tekst_mali:
+        # Nema nijedne zatvarajuće oznake, pa nema šta da se ukloni.
+        return tekst
+
+    delovi = []
+    pozicija = 0
+    for poklapanje in _UZORAK_SKRIPT_OTVARANJE.finditer(tekst):
+        if poklapanje.start() < pozicija:
+            # Ovo otvaranje je već uklonjeno zajedno sa svojim blokom.
+            continue
+        ime_oznake = poklapanje.group(1).lower()
+        pocetak_zatvaranja = tekst_mali.find("</" + ime_oznake, poklapanje.end())
+        if pocetak_zatvaranja == -1:
+            # Blok nije zatvoren: oznaka se briše kao obična oznaka, a tekst
+            # posle nje ostaje vidljiv.
+            continue
+        kraj_zatvaranja = tekst_mali.find(">", pocetak_zatvaranja)
+        if kraj_zatvaranja == -1:
+            kraj_zatvaranja = len(tekst) - 1
+        delovi.append(tekst[pozicija:poklapanje.start()])
+        pozicija = kraj_zatvaranja + 1
+
+    delovi.append(tekst[pozicija:])
+    return " ".join(delovi)
 
 
 def _ocisti_html(tekst: str) -> str:
     """Dekodira entitete i uklanja HTML, ostavljajući vidljivi tekst."""
     tekst = html.unescape(tekst)
-    tekst = _UZORAK_SKRIPT.sub(" ", tekst)
-    tekst = re.sub(r"(?i)<br\s*/?>|</p>|</div>|</li>|</tr>|</h[1-6]>", " ", tekst)
+    tekst = _ukloni_skriptove(tekst)
+    tekst = _UZORAK_PREKIDA.sub(" ", tekst)
     tekst = _UZORAK_TAG.sub(" ", tekst)
     return re.sub(r"\s+", " ", tekst).strip()
 

@@ -805,7 +805,7 @@ function napraviPravila(rezultat) {
         const boja = bojaKategorije(pravilo.kategorija);
         return `<li class="pravilo" style="--boja: ${boja}">
             <div class="pravilo-vrh">
-                <span class="pravilo-id">${pravilo.naziv}</span>
+                <span class="pravilo-id">${pobjegni(pravilo.naziv)}</span>
                 <span class="pravilo-uslov">${pobjegni(opis)}</span>
             </div>
             <div class="pravilo-dno">
@@ -1146,6 +1146,7 @@ function zatvoriMetod() {
 /* ---------- wiring ------------------------------------------------ */
 
 function poveziDogadjaje() {
+    document.getElementById('marka').addEventListener('click', dogadjaj => dogadjaj.preventDefault());
     document.getElementById('tema-dugme').addEventListener('click', promeniTemu);
     document.getElementById('jezik-dugme').addEventListener('click', promeniJezik);
     document.getElementById('pokreni-dugme').addEventListener('click', pokreniAnalizu);
