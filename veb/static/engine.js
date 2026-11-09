@@ -19,6 +19,13 @@ const prevodi = {
         greskaMreza: 'Could not reach the server.',
         procena: 'Assessment', kopiraj: 'Copy result', kopirano: 'Result copied',
         doprinosiNaslov: 'What contributed',
+        pomocDoprinosiNaslov: 'What the numbers mean',
+        pomocDoprinosi: 'Each row shows the measured value, the dominant fuzzy set, and its membership degree. A membership of 1.00 means the value fully belongs to that set.',
+        pomocTezineNaslov: 'How the keyword score works',
+        pomocTezine: 'Each matched word or phrase has a learned weight. The system adds the weights and caps the total at 10. The weight is a statistical association with spam in the training data, not a danger rating. The longest match wins, and overlapping matches count once.',
+        zbirTezina: 'Sum of learned weights',
+        siroviZbir: 'raw sum',
+        tezinaPoPogotku: 'weight per match',
         prazno: 'Run an analysis to see the score, the active fuzzy sets and the rules that produced it.',
         skorNatpis: 'Spam suspicion · 0–100',
         osaLegitiman: 'Legitimate', osaSumnjivo: 'Suspicious', osaSpam: 'Spam',
@@ -111,6 +118,13 @@ const prevodi = {
         greskaMreza: 'Greška u komunikaciji sa serverom.',
         procena: 'Procena', kopiraj: 'Kopiraj rezultat', kopirano: 'Rezultat kopiran',
         doprinosiNaslov: 'Šta je uticalo',
+        pomocDoprinosiNaslov: 'Šta znače brojevi',
+        pomocDoprinosi: 'Svaki red prikazuje izmerenu vrednost, dominantni fazi skup i stepen pripadnosti. Stepen 1,00 znači da vrednost u potpunosti pripada tom skupu.',
+        pomocTezineNaslov: 'Kako se računa ocena ključnih reči',
+        pomocTezine: 'Svaka pronađena reč ili fraza ima naučenu težinu. Sistem sabira težine i ograničava zbir na 10. Težina pokazuje statističku povezanost sa spamom u podacima za trening, a ne koliko je izraz opasan. Prednost ima duže poklapanje, a poklapanja koja se preklapaju broje se jednom.',
+        zbirTezina: 'Zbir naučenih težina',
+        siroviZbir: 'sirovi zbir',
+        tezinaPoPogotku: 'težina po pogotku',
         prazno: 'Pokrenite analizu da vidite ocenu, aktivne fazi skupove i pravila koja su je proizvela.',
         skorNatpis: 'Sumnjivost na spam · 0–100',
         osaLegitiman: 'Legitimno', osaSumnjivo: 'Sumnjivo', osaSpam: 'Spam',
@@ -214,6 +228,40 @@ function pobjegni(tekst) {
     return String(tekst == null ? '' : tekst)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+function pomoc(kljuc, naslov, tekst) {
+    return `<span class="pomoc">
+        <button class="pomoc-dugme" type="button" aria-expanded="false" aria-controls="pomoc-${pobjegni(kljuc)}" aria-label="${pobjegni(naslov)}">?</button>
+        <span class="pomoc-panel" id="pomoc-${pobjegni(kljuc)}" role="tooltip" hidden><b>${pobjegni(naslov)}</b>${pobjegni(tekst)}</span>
+    </span>`;
+}
+
+function zatvoriPomoc(osim) {
+    document.querySelectorAll('.pomoc-dugme[aria-expanded="true"]').forEach(dugme => {
+        if (dugme === osim) return;
+        dugme.setAttribute('aria-expanded', 'false');
+        const panel = document.getElementById(dugme.getAttribute('aria-controls'));
+        if (!panel) return;
+        panel.hidden = true;
+        panel.style.position = '';
+        panel.style.top = '';
+        panel.style.left = '';
+    });
+}
+
+function pozicionirajPomoc(dugme, panel) {
+    const dugmeRect = dugme.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const margina = 8;
+    let top = dugmeRect.bottom + 7;
+    if (top + panelRect.height > window.innerHeight - margina) {
+        top = Math.max(margina, dugmeRect.top - panelRect.height - 7);
+    }
+    const left = Math.max(margina, Math.min(dugmeRect.left, window.innerWidth - panelRect.width - margina));
+    panel.style.position = 'fixed';
+    panel.style.top = `${top}px`;
+    panel.style.left = `${left}px`;
 }
 
 function bojaKategorije(kategorija) {
@@ -586,7 +634,7 @@ function napraviZasto(rezultat) {
     const elementi = [];
     const pregled = napraviPregled(rezultat);
 
-    elementi.push(`<p class="pogled-naslov">${pobjegni(t().doprinosiNaslov)}</p>`);
+    elementi.push(`<div class="pogled-naslov-red"><p class="pogled-naslov">${pobjegni(t().doprinosiNaslov)}</p>${pomoc('doprinosi', t().pomocDoprinosiNaslov, t().pomocDoprinosi)}</div>`);
     elementi.push(napraviDoprinose(rezultat));
 
     elementi.push(`<p class="pogled-naslov" style="margin-top:13px">${pobjegni(t().pronasli)}</p>`);
@@ -601,25 +649,29 @@ function napraviZasto(rezultat) {
         });
         elementi.push('<div class="legenda">' + kombinacije.map(kljuc => {
             const tipovi = kljuc.split('+');
-            const boje = tipovi.map(bojaTipa);
-            const pozadina = boje.length === 1
-                ? boje[0]
-                : `linear-gradient(90deg, ${boje.map((boja, indeks) =>
-                    `${boja} ${(indeks / boje.length) * 100}% ${((indeks + 1) / boje.length) * 100}%`
-                ).join(', ')})`;
-            return `<span><i style="background:${pozadina}"></i>${pobjegni(tipovi.map(tip => t().legenda[tip]).join(' + '))}</span>`;
+            const uzorak = tipovi.map(tip => `legenda-uzorak--${tip}`).join(' ');
+            return `<span><i class="legenda-uzorak ${uzorak}"></i>${pobjegni(tipovi.map(tip => t().legenda[tip]).join(' + '))}</span>`;
         }).join('') + '</div>');
     }
 
-    elementi.push(`<p class="pogled-naslov" style="margin-top:13px">${pobjegni(t().prepoznate)}</p>`);
+    elementi.push(`<div class="pogled-naslov-red" style="margin-top:13px"><p class="pogled-naslov">${pobjegni(t().prepoznate)}</p>${pomoc('tezine', t().pomocTezineNaslov, t().pomocTezine)}</div>`);
 
     if (rezultat.pogodjene.length) {
         elementi.push('<div class="cipovi">' + rezultat.pogodjene.map(stavka => {
             const izvor = stavka.izvor === 'en' ? t().izvorEn
                 : stavka.izvor === 'sr' ? t().izvorSr : t().izvorRucni;
-            return `<span class="cip" title="${pobjegni(izvor)} · ${formatirajBroj(stavka.tezina)}">` +
-                   `${pobjegni(stavka.rec)}${stavka.broj > 1 ? ` <b>×${stavka.broj}</b>` : ''}</span>`;
+            const ukupno = stavka.tezina * stavka.broj;
+            return `<span class="cip" title="${pobjegni(izvor)} · ${pobjegni(t().tezinaPoPogotku)} ${formatirajBroj(stavka.tezina)}">` +
+                   `${pobjegni(stavka.rec)}${stavka.broj > 1 ? ` <b>×${stavka.broj}</b>` : ''}` +
+                   ` <b class="cip-tezina">+${formatirajBroj(ukupno)}</b></span>`;
         }).join('') + '</div>');
+
+        const siroviZbir = rezultat.pogodjene.reduce((zbir, stavka) => zbir + stavka.tezina * stavka.broj, 0);
+        const prikazZbira = Number(rezultat.vrednosti.kljucne_reci) || 0;
+        const dodatak = siroviZbir > prikazZbira + 0.05
+            ? ` <span>(${pobjegni(t().siroviZbir)} ${pobjegni(formatirajBroj(siroviZbir))})</span>`
+            : '';
+        elementi.push(`<p class="zbir-tezina">${pobjegni(t().zbirTezina)}: <b>${pobjegni(formatirajBroj(prikazZbira))} / 10</b>${dodatak}</p>`);
     } else {
         elementi.push(`<p class="tiho">${pobjegni(t().nemaPogodaka)}</p>`);
     }
@@ -627,19 +679,8 @@ function napraviZasto(rezultat) {
     return elementi.join('');
 }
 
-function bojaTipa(tip) {
-    if (tip === 'keyword') return 'var(--sumnjivo)';
-    if (tip === 'link') return 'var(--link)';
-    if (tip === 'caps') return 'var(--spam)';
-    return 'var(--ljubicasta)';
-}
-
 function napraviDoprinose(rezultat) {
     const redosled = ['kljucne_reci', 'broj_linkova', 'caps_procenat', 'interpunkcija'];
-    const tipPoKljucu = {
-        kljucne_reci: 'keyword', broj_linkova: 'link',
-        caps_procenat: 'caps', interpunkcija: 'interpunkcija'
-    };
 
     return '<div class="doprinosi">' + redosled.map(kljuc => {
         const vrednost = rezultat.vrednosti[kljuc];
@@ -651,8 +692,8 @@ function napraviDoprinose(rezultat) {
         const skup = najjaci.ime ? (t().skupovi[najjaci.ime] || najjaci.ime) : '—';
         const mu = najjaci.mu >= 0 ? formatirajDva(najjaci.mu) : '—';
 
-        return `<div class="doprinos" style="--boja:${bojaTipa(tipPoKljucu[kljuc])}">
-            <span class="doprinos-signal"><i></i>${pobjegni(t().signali[kljuc])}</span>
+        return `<div class="doprinos">
+            <span class="doprinos-signal">${pobjegni(t().signali[kljuc])}</span>
             <span class="doprinos-vrednost">${pobjegni(formatirajBroj(vrednost))}<small>${pobjegni(t().jedinice[kljuc])}</small></span>
             <span class="doprinos-skup">${pobjegni(skup)} <b>${pobjegni(mu)}</b></span>
         </div>`;
@@ -1158,7 +1199,29 @@ function poveziDogadjaje() {
         if (dugme) ucitajIzIstorije(Number(dugme.dataset.indeks));
     });
 
+    document.addEventListener('click', dogadjaj => {
+        const dugme = dogadjaj.target.closest('.pomoc-dugme');
+        if (dugme) {
+            const otvoreno = dugme.getAttribute('aria-expanded') === 'true';
+            zatvoriPomoc();
+            if (!otvoreno) {
+                dugme.setAttribute('aria-expanded', 'true');
+                const panel = document.getElementById(dugme.getAttribute('aria-controls'));
+                if (panel) {
+                    panel.hidden = false;
+                    pozicionirajPomoc(dugme, panel);
+                }
+            }
+            return;
+        }
+        if (!dogadjaj.target.closest('.pomoc')) zatvoriPomoc();
+    });
+
+    window.addEventListener('scroll', () => zatvoriPomoc(), true);
+    window.addEventListener('resize', () => zatvoriPomoc());
+
     document.addEventListener('keydown', dogadjaj => {
+        if (dogadjaj.key === 'Escape') zatvoriPomoc();
         if ((dogadjaj.metaKey || dogadjaj.ctrlKey) && dogadjaj.key === 'Enter') {
             dogadjaj.preventDefault();
             pokreniAnalizu();

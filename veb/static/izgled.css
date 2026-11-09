@@ -835,45 +835,99 @@ button:disabled { cursor: progress; }
     text-transform: none;
 }
 
-.pogled-naslov span { font-weight: 500; }
+.pogled-naslov > span { font-weight: 500; }
 
-.doprinosi {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 5px;
-    margin-bottom: 10px;
-}
-
-.doprinos {
+.pogled-naslov-red {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 1px 6px;
-    padding: 6px 8px;
-    border: 1px solid var(--linija);
-    border-radius: 8px;
-    background: var(--upustvo);
-    font-size: 10.5px;
-    line-height: 1.35;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 7px;
 }
 
-.doprinos-signal {
+.pogled-naslov-red .pogled-naslov { margin: 0; }
+
+.pomoc {
+    position: relative;
+    display: inline-flex;
+}
+
+.pomoc-dugme {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 1px solid var(--linija-jaka);
+    border-radius: 50%;
+    background: var(--povrsina-2);
+    color: var(--tekst-3);
+    font: 600 10px/1 var(--font);
+    cursor: pointer;
+}
+
+.pomoc-dugme:hover,
+.pomoc-dugme[aria-expanded="true"] {
+    border-color: var(--fokus);
+    color: var(--fokus);
+}
+
+.pomoc-panel {
+    position: absolute;
+    top: calc(100% + 7px);
+    left: 0;
+    z-index: 25;
+    width: min(260px, calc(100vw - 64px));
+    padding: 10px 12px;
+    border: 1px solid var(--linija-jaka);
+    border-radius: 10px;
+    background: var(--povrsina);
+    color: var(--tekst-2);
+    box-shadow: var(--senka);
+    font-size: 10.5px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.pomoc-panel b {
+    display: block;
+    margin-bottom: 4px;
     color: var(--tekst);
     font-weight: 600;
 }
 
-.doprinos-signal i {
-    width: 5px;
-    height: 5px;
-    border-radius: 2px;
-    background: var(--boja);
+.doprinosi {
+    margin-bottom: 10px;
+    border: 1px solid var(--linija);
+    border-radius: 10px;
+    background: var(--povrsina-2);
+    overflow: hidden;
+}
+
+.doprinos {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+    padding: 9px 11px;
+}
+
+.doprinos + .doprinos { border-top: 1px solid var(--linija); }
+
+.doprinos-signal {
+    color: var(--tekst);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
 }
 
 .doprinos-vrednost {
     color: var(--tekst);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: right;
     font-variant-numeric: tabular-nums;
 }
 
@@ -881,12 +935,14 @@ button:disabled { cursor: progress; }
     margin-left: 1px;
     color: var(--tekst-3);
     font-size: 9px;
+    font-weight: 400;
 }
 
 .doprinos-skup {
-    flex-basis: 100%;
+    grid-column: 1 / -1;
     color: var(--tekst-3);
     font-size: 9.5px;
+    line-height: 1.3;
 }
 
 .doprinos-skup b {
@@ -911,49 +967,38 @@ button:disabled { cursor: progress; }
 }
 
 .obj-mark {
-    border-radius: 3px;
-    padding: 0 2px;
+    border-radius: 2px;
+    padding: 0 1px;
+    background: transparent;
     color: var(--tekst);
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
 }
 
 .obj-mark--keyword {
-    background: color-mix(in srgb, var(--sumnjivo) 26%, transparent);
-    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--sumnjivo) 60%, transparent);
     text-decoration: underline;
-    text-decoration-color: color-mix(in srgb, var(--sumnjivo) 80%, transparent);
+    text-decoration-color: var(--fokus);
     text-decoration-thickness: 2px;
     text-underline-offset: 2px;
 }
 
 .obj-mark--link {
-    background: color-mix(in srgb, var(--link) 24%, transparent);
-    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--link) 55%, transparent);
+    color: var(--fokus);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--fokus) 55%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
 }
 
 .obj-mark--caps {
-    background: color-mix(in srgb, var(--spam) 24%, transparent);
-    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--spam) 55%, transparent);
+    background: color-mix(in srgb, var(--tekst) 8%, transparent);
 }
 
 .obj-mark--interpunkcija {
-    background: color-mix(in srgb, var(--ljubicasta) 24%, transparent);
-    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--ljubicasta) 50%, transparent);
+    text-decoration: underline dotted var(--tekst-3);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
 }
-
-/* Dark surfaces: a fainter wash and semantic text colour read better than a
-   white highlight block. Light mode keeps the original treatment. */
-[data-theme="dark"] .obj-mark {
-    color: var(--oznaka-boja);
-    background: color-mix(in srgb, var(--oznaka-boja) 13%, transparent);
-    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--oznaka-boja) 42%, transparent);
-}
-
-[data-theme="dark"] .obj-mark--keyword { --oznaka-boja: var(--sumnjivo); }
-[data-theme="dark"] .obj-mark--link { --oznaka-boja: var(--link); }
-[data-theme="dark"] .obj-mark--caps { --oznaka-boja: var(--spam); }
-[data-theme="dark"] .obj-mark--interpunkcija { --oznaka-boja: var(--ljubicasta); }
 
 .legenda {
     display: flex;
@@ -970,11 +1015,19 @@ button:disabled { cursor: progress; }
     color: var(--tekst-3);
 }
 
-.legenda i {
-    width: 5px;
-    height: 5px;
+.legenda-uzorak {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 9px;
     border-radius: 2px;
-    background: var(--boja);
+}
+
+.legenda-uzorak--keyword { border-bottom: 2px solid var(--fokus); }
+.legenda-uzorak--caps { background: color-mix(in srgb, var(--tekst) 9%, transparent); }
+.legenda-uzorak--link { height: 3px; background: var(--fokus); }
+.legenda-uzorak--interpunkcija {
+    height: 2px;
+    background: repeating-linear-gradient(90deg, var(--tekst-3) 0 2px, transparent 2px 4px);
 }
 
 .cipovi {
@@ -997,6 +1050,20 @@ button:disabled { cursor: progress; }
 }
 
 .cip b { font-weight: 500; color: var(--tekst-3); }
+
+.cip-tezina { margin-left: 1px; }
+
+.zbir-tezina {
+    margin: 7px 0 0;
+    color: var(--tekst-3);
+    font-size: 10px;
+}
+
+.zbir-tezina b {
+    color: var(--tekst);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
 
 .tiho {
     margin: 0;

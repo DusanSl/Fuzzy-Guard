@@ -155,4 +155,4 @@ def pronadji_poklapanja(tekst: str, termini: Iterable) -> tuple:
         key=lambda stavka: stavka["broj"] * stavka["tezina"],
         reverse=True,
     )
-    return min(evidencija, 10.0), pogodjene[:8]
+    return min(evidencija, 10.0), pogodjene
