@@ -190,7 +190,7 @@ button:disabled { cursor: progress; }
     border-radius: 999px;
     background: none;
     color: var(--tekst-2);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.04em;
     transition: color 0.15s ease, border-color 0.15s ease;
@@ -426,7 +426,7 @@ button:disabled { cursor: progress; }
     border-radius: 999px;
     background: none;
     color: var(--tekst-2);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 500;
     white-space: nowrap;
     transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
@@ -518,7 +518,7 @@ button:disabled { cursor: progress; }
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.1);
     font-family: inherit;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     opacity: 0.55;
 }
@@ -528,7 +528,7 @@ button:disabled { cursor: progress; }
 .sitno {
     margin: 10px 0 0;
     text-align: center;
-    font-size: 10.5px;
+    font-size: 11px;
     line-height: 1.45;
     color: var(--tekst-3);
 }
@@ -558,7 +558,7 @@ button:disabled { cursor: progress; }
     border-radius: 999px;
     background: color-mix(in srgb, var(--boja) 11%, transparent);
     color: var(--boja);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.065em;
     text-transform: uppercase;
@@ -688,7 +688,7 @@ button:disabled { cursor: progress; }
     align-items: baseline;
     gap: 2px 8px;
     color: var(--tekst-3);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.4;
 }
 
@@ -696,9 +696,9 @@ button:disabled { cursor: progress; }
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    min-width: 76px;
+    min-width: 82px;
     color: var(--tekst-2);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -757,7 +757,7 @@ button:disabled { cursor: progress; }
 }
 
 .signal-skup {
-    font-size: 9.5px;
+    font-size: 11px;
     color: var(--tekst-3);
     white-space: nowrap;
     overflow: hidden;
@@ -785,7 +785,7 @@ button:disabled { cursor: progress; }
 }
 
 .signal-vrednost span {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--tekst-3);
 }
 
@@ -828,7 +828,7 @@ button:disabled { cursor: progress; }
     justify-content: space-between;
     gap: 10px;
     margin: 0 0 7px;
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.015em;
     color: var(--tekst-3);
@@ -855,14 +855,14 @@ button:disabled { cursor: progress; }
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     padding: 0;
     border: 1px solid var(--linija-jaka);
     border-radius: 50%;
     background: var(--povrsina-2);
     color: var(--tekst-3);
-    font: 600 10px/1 var(--font);
+    font: 600 11px/1 var(--font);
     cursor: pointer;
 }
 
@@ -877,14 +877,14 @@ button:disabled { cursor: progress; }
     top: calc(100% + 7px);
     left: 0;
     z-index: 25;
-    width: min(260px, calc(100vw - 64px));
+    width: min(280px, calc(100vw - 64px));
     padding: 10px 12px;
     border: 1px solid var(--linija-jaka);
     border-radius: 10px;
     background: var(--povrsina);
     color: var(--tekst-2);
     box-shadow: var(--senka);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 400;
     line-height: 1.5;
     letter-spacing: 0;
@@ -934,14 +934,14 @@ button:disabled { cursor: progress; }
 .doprinos-vrednost small {
     margin-left: 1px;
     color: var(--tekst-3);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 400;
 }
 
 .doprinos-skup {
     grid-column: 1 / -1;
     color: var(--tekst-3);
-    font-size: 9.5px;
+    font-size: 11px;
     line-height: 1.3;
 }
 
@@ -1011,7 +1011,7 @@ button:disabled { cursor: progress; }
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 9.5px;
+    font-size: 11px;
     color: var(--tekst-3);
 }
 
@@ -1044,7 +1044,7 @@ button:disabled { cursor: progress; }
     border: 1px solid var(--linija);
     border-radius: 7px;
     background: var(--upustvo);
-    font-size: 10.5px;
+    font-size: 11.5px;
     color: var(--tekst-2);
     font-variant-numeric: tabular-nums;
 }
@@ -1056,7 +1056,7 @@ button:disabled { cursor: progress; }
 .zbir-tezina {
     margin: 7px 0 0;
     color: var(--tekst-3);
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .zbir-tezina b {
@@ -1136,21 +1136,21 @@ button:disabled { cursor: progress; }
     border-radius: 4px;
     background: color-mix(in srgb, var(--boja) 12%, transparent);
     color: var(--boja);
-    font-size: 9.5px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.03em;
 }
 
 .pravilo-uslov {
     flex: 1;
-    font-size: 10.5px;
+    font-size: 11.5px;
     line-height: 1.45;
     color: var(--tekst-2);
 }
 
 .pravilo-jacina {
     flex: none;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     color: var(--tekst-3);
     font-variant-numeric: tabular-nums;
@@ -1159,7 +1159,7 @@ button:disabled { cursor: progress; }
 .pravilo-kat {
     flex: none;
     color: var(--boja);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.05em;
     white-space: nowrap;
@@ -1255,7 +1255,7 @@ button:disabled { cursor: progress; }
     margin-top: 1px;
     overflow: hidden;
     color: var(--tekst-3);
-    font-size: 10.5px;
+    font-size: 11.5px;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
@@ -1272,7 +1272,7 @@ button:disabled { cursor: progress; }
 .istorija-vreme {
     justify-self: end;
     color: var(--tekst-3);
-    font-size: 10.5px;
+    font-size: 11.5px;
     white-space: nowrap;
 }
 
@@ -1325,7 +1325,7 @@ button:disabled { cursor: progress; }
     padding: 3px 8px;
     border: 1px solid var(--linija);
     border-radius: 999px;
-    font-size: 9.5px;
+    font-size: 11px;
     letter-spacing: 0.03em;
 }
 
@@ -1383,7 +1383,7 @@ dialog[open] { animation: pojavljivanje 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .dijalog-natpis {
     margin: 0;
     color: var(--tekst-3);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -1415,7 +1415,7 @@ dialog[open] { animation: pojavljivanje 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
 
 .korak-indeks {
     color: var(--tekst-3);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     font-variant-numeric: tabular-nums;
@@ -1474,7 +1474,7 @@ dialog[open] { animation: pojavljivanje 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
 
 .metod-tabela th {
     color: var(--tekst-3);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1563,7 +1563,7 @@ dialog[open] { animation: pojavljivanje 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
     border: 1px solid var(--linija);
     border-radius: 999px;
     color: var(--tekst-2);
-    font-size: 10.5px;
+    font-size: 11px;
     letter-spacing: 0.02em;
 }
 
