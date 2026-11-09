@@ -692,26 +692,6 @@ button:disabled { cursor: progress; }
     opacity: 0.85;
 }
 
-.trag {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin: 9px 0 0;
-    font-size: 10.5px;
-    color: var(--tekst-3);
-    font-variant-numeric: tabular-nums;
-}
-
-.trag b { font-weight: 600; color: var(--tekst-2); }
-
-.trag-kat {
-    font-weight: 600;
-    letter-spacing: 0.045em;
-    text-transform: uppercase;
-    color: var(--boja);
-}
-
 .razdjelnik {
     height: 1px;
     margin: 17px 0;
@@ -1293,6 +1273,80 @@ dialog[open] { animation: pojavljivanje 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
     line-height: 1.5;
 }
 
+.metod-blok {
+    margin: 18px 0 0;
+}
+
+.metod-podnaslov {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.metod-tekst {
+    margin: 6px 0 0;
+    max-width: 60ch;
+    color: var(--tekst-2);
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.metod-tekst + .metod-tekst { margin-top: 5px; }
+
+.metod-tabela {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+    font-size: 10.5px;
+    line-height: 1.45;
+}
+
+.metod-tabela th,
+.metod-tabela td {
+    padding: 6px 8px;
+    border-top: 1px solid var(--linija);
+    text-align: left;
+    vertical-align: top;
+}
+
+.metod-tabela th {
+    color: var(--tekst-3);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.metod-tabela td:first-child {
+    color: var(--tekst);
+    font-weight: 600;
+}
+
+.metod-tabela td:last-child {
+    color: var(--tekst-3);
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.metod-lista {
+    margin: 8px 0 0;
+    padding-left: 16px;
+    color: var(--tekst-3);
+    font-size: 10.5px;
+    line-height: 1.55;
+}
+
+.metod-lista li + li { margin-top: 4px; }
+
+.metod-fusnota {
+    margin: 8px 0 0;
+    color: var(--tekst-3);
+    font-size: 9.5px;
+    line-height: 1.5;
+}
+
 .dijalog-spektar {
     margin: 18px 0 0;
     padding: 12px 14px 8px;
@@ -1399,6 +1453,8 @@ dialog[open] { animation: pojavljivanje 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .segment-stavka { padding: 0 9px; }
     .skor-broj { font-size: 68px; }
     .koraci { grid-template-columns: 1fr; }
+    .metod-tabela { font-size: 10px; }
+    .metod-tabela th, .metod-tabela td { padding: 5px 6px; }
     .dijalog-sadrzaj { padding: 22px 18px 20px; }
     .podnozje { flex-direction: column; align-items: flex-start; }
 }

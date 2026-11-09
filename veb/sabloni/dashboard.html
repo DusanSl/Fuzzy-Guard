@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fuzzy Guard</title>
     <link rel="icon" href="{{ url_for('static', filename='ikona.svg') }}" type="image/svg+xml">
+    <script>
+        // Primeni sačuvanu temu i jezik pre prvog iscrtavanja da ne bi treperilo.
+        try {
+            var sacuvanaTema = localStorage.getItem('fg-prototip-tema-v2');
+            if (sacuvanaTema === 'light' || sacuvanaTema === 'dark') {
+                document.documentElement.dataset.theme = sacuvanaTema;
+            }
+            var sacuvanJezik = localStorage.getItem('fg-prototip-jezik');
+            if (sacuvanJezik === 'en' || sacuvanJezik === 'sr') {
+                document.documentElement.lang = sacuvanJezik;
+            }
+        } catch (greska) { /* zadrži podrazumevano */ }
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='izgled.css') }}?v={{ verzija_fajla('izgled.css') }}">
 </head>
 <body>
@@ -132,13 +145,6 @@ A traceable score.</h1>
                     </div>
                 </figure>
 
-                <p class="trag">
-                    <span data-i18n="teziste">Centroid</span>
-                    <b id="centroid">0.0</b>
-                    <span>→</span>
-                    <span class="trag-kat" id="trag-kategorija"></span>
-                </p>
-
                 <hr class="razdjelnik">
                 <div class="signali" id="signali"></div>
                 <hr class="razdjelnik">
@@ -181,19 +187,106 @@ A traceable score.</h1>
                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
             </button>
         </div>
-        <p class="dijalog-uvod" data-i18n="metodUvod">No machine learning decides the verdict. Four extracted signals are fuzzified, evaluated against nineteen rules, aggregated and defuzzified into one number.</p>
+        <p class="dijalog-uvod" data-i18n="metodUvod">No machine learning decides the verdict. The message is cleaned, matched against a learned keyword lexicon, described by four features, fuzzified, evaluated against nineteen rules, aggregated and defuzzified into one number — and every step is visible.</p>
 
         <ol class="koraci">
-            <li class="korak"><span class="korak-indeks">01</span><h3 data-i18n="korak1Naslov">Extract</h3><p data-i18n="korak1Opis">Keywords, links, capitals and punctuation are counted from the body.</p></li>
-            <li class="korak"><span class="korak-indeks">02</span><h3 data-i18n="korak2Naslov">Fuzzify</h3><p data-i18n="korak2Opis">Each value gets a degree of membership in triangular and trapezoidal sets.</p></li>
-            <li class="korak"><span class="korak-indeks">03</span><h3 data-i18n="korak3Naslov">Infer</h3><p data-i18n="korak3Opis">Nineteen Mamdani rules combine memberships with min and max.</p></li>
-            <li class="korak"><span class="korak-indeks">04</span><h3 data-i18n="korak4Naslov">Defuzzify</h3><p data-i18n="korak4Opis">The aggregated output set is reduced to its centroid, 0–100.</p></li>
+            <li class="korak"><span class="korak-indeks">01</span><h3 data-i18n="korak1Naslov">Clean and extract</h3><p data-i18n="korak1Opis">Entities are decoded, scripts and tags removed, and only the visible body is analysed.</p></li>
+            <li class="korak"><span class="korak-indeks">02</span><h3 data-i18n="korak2Naslov">Learned lexicon</h3><p data-i18n="korak2Opis">Weighted matches against the learned English and Serbian word lists produce the 0–10 keyword score.</p></li>
+            <li class="korak"><span class="korak-indeks">03</span><h3 data-i18n="korak3Naslov">Measure</h3><p data-i18n="korak3Opis">Keywords, unique links, capital letters and punctuation are counted from the body.</p></li>
+            <li class="korak"><span class="korak-indeks">04</span><h3 data-i18n="korak4Naslov">Fuzzify</h3><p data-i18n="korak4Opis">Each feature gets a degree of membership in triangular and trapezoidal sets.</p></li>
+            <li class="korak"><span class="korak-indeks">05</span><h3 data-i18n="korak5Naslov">Infer</h3><p data-i18n="korak5Opis">Nineteen Mamdani rules combine memberships with min and max; each fired rule clips its output set.</p></li>
+            <li class="korak"><span class="korak-indeks">06</span><h3 data-i18n="korak6Naslov">Defuzzify and explain</h3><p data-i18n="korak6Opis">The clipped sets are aggregated with max; the centroid 0–100 becomes the score, and the category is read from the same value.</p></li>
         </ol>
+
+        <section class="metod-blok">
+            <h3 class="metod-podnaslov" data-i18n="metodSignaliNaslov">What is measured</h3>
+            <p class="metod-tekst" data-i18n="metodSignaliUvod">Only the message body is scored. The From and Subject fields are shown for context and never reach the classifier.</p>
+            <table class="metod-tabela">
+                <thead>
+                    <tr>
+                        <th data-i18n="metodTabelaSignal">Signal</th>
+                        <th data-i18n="metodTabelaNacin">How it is measured</th>
+                        <th data-i18n="metodTabelaSkala">Scale</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td data-i18n="signaliKljucneReci">Keywords</td>
+                        <td data-i18n="metodKljucneOpis">Weighted hits against the selected learned lexicon, summed and capped at 10.</td>
+                        <td>0–10</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="signaliLinkovi">Links</td>
+                        <td data-i18n="metodLinkoviOpis">Unique URLs found in the text or in href attributes, capped at 10.</td>
+                        <td>0–10</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="signaliCaps">Capitals</td>
+                        <td data-i18n="metodCapsOpis">Uppercase letters divided by all letters, after links are removed.</td>
+                        <td>0–100%</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="signaliInterpunkcija">Punctuation</td>
+                        <td data-i18n="metodInterpunkcijaOpis">Exclamation and question marks divided by non-space characters, times 100.</td>
+                        <td>0–100%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
 
         <div class="dijalog-spektar">
             <svg id="spektar-metod" viewBox="0 0 420 92" aria-hidden="true"></svg>
             <p data-i18n="metodSpektarOpis">All six output sets, drawn from the membership functions used in the score.</p>
         </div>
+
+        <section class="metod-blok">
+            <h3 class="metod-podnaslov" data-i18n="metodMrezaNaslov">Where the neural network fits</h3>
+            <p class="metod-tekst" data-i18n="metodMrezaTekst1">The MLP is trained offline on labelled SpamAssassin. Its only runtime product is the keyword lexicon — the weights saved in the two learned word lists.</p>
+            <p class="metod-tekst" data-i18n="metodMrezaTekst2">It never sees the four features and never outputs the spam score. The verdict stays with the fuzzy rules.</p>
+            <table class="metod-tabela">
+                <thead>
+                    <tr>
+                        <th data-i18n="metodTabelaModel">Model</th>
+                        <th data-i18n="metodTabelaTacnost">Accuracy</th>
+                        <th>F1</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td data-i18n="metodModelFaziEn">Fuzzy + EN lexicon</td>
+                        <td data-i18n="metodTacnostFaziEn">90.3%</td>
+                        <td data-i18n="metodF1FaziEn">0.697</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelFaziOba">Fuzzy + both lexicons</td>
+                        <td data-i18n="metodTacnostFaziOba">90.0%</td>
+                        <td data-i18n="metodF1FaziOba">0.704</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelMrezaEn">MLP standalone, EN</td>
+                        <td data-i18n="metodTacnostMrezaEn">93.5%</td>
+                        <td data-i18n="metodF1MrezaEn">0.770</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelMrezaOba">MLP standalone, both</td>
+                        <td data-i18n="metodTacnostMrezaOba">92.9%</td>
+                        <td data-i18n="metodF1MrezaOba">0.736</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="metod-fusnota" data-i18n="metodMrezaFusnota">Held-out SpamAssassin test: 750 emails, 125 spam. The Serbian corpus is partly synthetic, so those figures are not production accuracy.</p>
+        </section>
+
+        <section class="metod-blok">
+            <h3 class="metod-podnaslov" data-i18n="metodPravilaNaslov">Rules and limits</h3>
+            <p class="metod-tekst" data-i18n="metodPravilaTekst">Nineteen rules are grouped by severity: 4 legitimate, 11 suspicious and 4 spam. Each rule clips its output set at its activation strength; the largest value at each point survives aggregation.</p>
+            <ul class="metod-lista">
+                <li data-i18n="metodOgranicenje1">The four features are email-shaped, so SMS and chat messages are scored poorly.</li>
+                <li data-i18n="metodOgranicenje2">Different emails can share a score when the fuzzy sets cannot separate them.</li>
+                <li data-i18n="metodOgranicenje3">Membership boundaries were calibrated on the hand-labelled examples; all reported metrics come from held-out data.</li>
+                <li data-i18n="metodOgranicenje4">The Serbian benchmark is partly machine-translated and partly synthetic.</li>
+            </ul>
+        </section>
 
         <div class="dijalog-cipovi">
             <span class="dijalog-cip" data-i18n="cipPravila">19 rules</span>

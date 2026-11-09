@@ -33,11 +33,38 @@ const prevodi = {
         podnozjeMetod: 'Mamdani inference · min/max · centroid defuzzification',
         kakoRadi: 'How it works', prototip: 'Design prototype', zatvori: 'Close',
         metodNatpis: 'Method', metodNaslov: 'A score you can take apart.',
-        metodUvod: 'No machine learning decides the verdict. Four extracted signals are fuzzified, evaluated against nineteen rules, aggregated and defuzzified into one number.',
-        korak1Naslov: 'Extract', korak1Opis: 'Keywords, links, capitals and punctuation are counted from the body.',
-        korak2Naslov: 'Fuzzify', korak2Opis: 'Each value gets a degree of membership in triangular and trapezoidal sets.',
-        korak3Naslov: 'Infer', korak3Opis: 'Nineteen Mamdani rules combine memberships with min and max.',
-        korak4Naslov: 'Defuzzify', korak4Opis: 'The aggregated output set is reduced to its centroid, 0–100.',
+        metodUvod: 'No machine learning decides the verdict. The message is cleaned, matched against a learned keyword lexicon, described by four features, fuzzified, evaluated against nineteen rules, aggregated and defuzzified into one number — and every step is visible.',
+        korak1Naslov: 'Clean and extract', korak1Opis: 'Entities are decoded, scripts and tags removed, and only the visible body is analysed.',
+        korak2Naslov: 'Learned lexicon', korak2Opis: 'Weighted matches against the learned English and Serbian word lists produce the 0–10 keyword score.',
+        korak3Naslov: 'Measure', korak3Opis: 'Keywords, unique links, capital letters and punctuation are counted from the body.',
+        korak4Naslov: 'Fuzzify', korak4Opis: 'Each feature gets a degree of membership in triangular and trapezoidal sets.',
+        korak5Naslov: 'Infer', korak5Opis: 'Nineteen Mamdani rules combine memberships with min and max; each fired rule clips its output set.',
+        korak6Naslov: 'Defuzzify and explain', korak6Opis: 'The clipped sets are aggregated with max; the centroid 0–100 becomes the score, and the category is read from the same value.',
+        metodSignaliNaslov: 'What is measured',
+        metodSignaliUvod: 'Only the message body is scored. The From and Subject fields are shown for context and never reach the classifier.',
+        metodTabelaSignal: 'Signal', metodTabelaNacin: 'How it is measured', metodTabelaSkala: 'Scale',
+        signaliKljucneReci: 'Keywords', signaliLinkovi: 'Links', signaliCaps: 'Capitals', signaliInterpunkcija: 'Punctuation',
+        metodKljucneOpis: 'Weighted hits against the selected learned lexicon, summed and capped at 10.',
+        metodLinkoviOpis: 'Unique URLs found in the text or in href attributes, capped at 10.',
+        metodCapsOpis: 'Uppercase letters divided by all letters, after links are removed.',
+        metodInterpunkcijaOpis: 'Exclamation and question marks divided by non-space characters, times 100.',
+        metodMrezaNaslov: 'Where the neural network fits',
+        metodMrezaTekst1: 'The MLP is trained offline on labelled SpamAssassin. Its only runtime product is the keyword lexicon — the weights saved in the two learned word lists.',
+        metodMrezaTekst2: 'It never sees the four features and never outputs the spam score. The verdict stays with the fuzzy rules.',
+        metodTabelaModel: 'Model', metodTabelaTacnost: 'Accuracy',
+        metodModelFaziEn: 'Fuzzy + EN lexicon', metodModelFaziOba: 'Fuzzy + both lexicons',
+        metodModelMrezaEn: 'MLP standalone, EN', metodModelMrezaOba: 'MLP standalone, both',
+        metodTacnostFaziEn: '90.3%', metodTacnostFaziOba: '90.0%',
+        metodTacnostMrezaEn: '93.5%', metodTacnostMrezaOba: '92.9%',
+        metodF1FaziEn: '0.697', metodF1FaziOba: '0.704',
+        metodF1MrezaEn: '0.770', metodF1MrezaOba: '0.736',
+        metodMrezaFusnota: 'Held-out SpamAssassin test: 750 emails, 125 spam. The Serbian corpus is partly synthetic, so those figures are not production accuracy.',
+        metodPravilaNaslov: 'Rules and limits',
+        metodPravilaTekst: 'Nineteen rules are grouped by severity: 4 legitimate, 11 suspicious and 4 spam. Each rule clips its output set at its activation strength; the largest value at each point survives aggregation.',
+        metodOgranicenje1: 'The four features are email-shaped, so SMS and chat messages are scored poorly.',
+        metodOgranicenje2: 'Different emails can share a score when the fuzzy sets cannot separate them.',
+        metodOgranicenje3: 'Membership boundaries were calibrated on the hand-labelled examples; all reported metrics come from held-out data.',
+        metodOgranicenje4: 'The Serbian benchmark is partly machine-translated and partly synthetic.',
         metodSpektarOpis: 'All six output sets, drawn from the membership functions used in the score.',
         cipPravila: '19 rules', cipSkupovi: 'trimf / trapmf', cipTeziste: 'centroid', cipMreza: 'NN supplies vocabulary only',
         metodNapomena: 'The category is read from the same defuzzified value that is displayed, so the score and the label cannot disagree.',
@@ -93,11 +120,38 @@ const prevodi = {
         podnozjeMetod: 'Mamdani · min/max · centroid defazifikacija',
         kakoRadi: 'Kako radi', prototip: 'Dizajn prototip', zatvori: 'Zatvori',
         metodNatpis: 'Metod', metodNaslov: 'Ocena koju možete da rastavite.',
-        metodUvod: 'Odluku ne donosi neuronska mreža. Četiri izdvojena signala se fuzifikuju, proveravaju kroz devetnaest pravila, agregiraju i defazifikuju u jedan broj.',
-        korak1Naslov: 'Izdvajanje', korak1Opis: 'Ključne reči, linkovi, velika slova i interpunkcija broje se iz tela poruke.',
-        korak2Naslov: 'Fuzifikacija', korak2Opis: 'Svaka vrednost dobija stepen pripadnosti u trouglastim i trapezoidnim skupovima.',
-        korak3Naslov: 'Zaključivanje', korak3Opis: 'Devetnaest Mamdani pravila kombinuje pripadnosti kroz min i max.',
-        korak4Naslov: 'Defazifikacija', korak4Opis: 'Agregirani izlazni skup svodi se na svoje težište, 0–100.',
+        metodUvod: 'Odluku ne donosi neuronska mreža. Poruka se čisti, poređuje sa naučenim rečnikom ključnih reči, opisuje kroz četiri signala, fuzifikuje, proverava kroz devetnaest pravila, agregira i defazifikuje u jedan broj — i svaki korak je vidljiv.',
+        korak1Naslov: 'Čišćenje i izdvajanje', korak1Opis: 'Entiteti se dekodiraju, skripte i oznake uklanjaju, a analizira se samo vidljivo telo poruke.',
+        korak2Naslov: 'Naučeni rečnik', korak2Opis: 'Ponderisani pogoci u naučenim engleskim i srpskim listama reči daju ocenu ključnih reči od 0 do 10.',
+        korak3Naslov: 'Merenje', korak3Opis: 'Ključne reči, jedinstveni linkovi, velika slova i interpunkcija broje se iz tela poruke.',
+        korak4Naslov: 'Fuzifikacija', korak4Opis: 'Svaki signal dobija stepen pripadnosti u trouglastim i trapezoidnim skupovima.',
+        korak5Naslov: 'Zaključivanje', korak5Opis: 'Devetnaest Mamdani pravila kombinuje pripadnosti kroz min i max; svako aktivirano pravilo odseca svoj izlazni skup.',
+        korak6Naslov: 'Defazifikacija i objašnjenje', korak6Opis: 'Odsečeni skupovi se agregiraju kroz max; težište 0–100 postaje ocena, a kategorija se čita iz iste vrednosti.',
+        metodSignaliNaslov: 'Šta se meri',
+        metodSignaliUvod: 'Ocenjuje se samo telo poruke. Polja pošiljalac i tema služe samo kao kontekst i nikada ne ulaze u klasifikator.',
+        metodTabelaSignal: 'Signal', metodTabelaNacin: 'Kako se meri', metodTabelaSkala: 'Skala',
+        signaliKljucneReci: 'Ključne reči', signaliLinkovi: 'Linkovi', signaliCaps: 'Velika slova', signaliInterpunkcija: 'Interpunkcija',
+        metodKljucneOpis: 'Ponderisani pogoci u izabranom naučenom rečniku, sabrani i ograničeni na 10.',
+        metodLinkoviOpis: 'Jedinstveni linkovi pronađeni u tekstu ili href atributima, najviše 10.',
+        metodCapsOpis: 'Velika slova podeljena sa svim slovima, nakon uklanjanja linkova.',
+        metodInterpunkcijaOpis: 'Znaci uzvika i pitanja podeljeni sa karakterima bez razmaka, puta 100.',
+        metodMrezaNaslov: 'Gde je neuronska mreža',
+        metodMrezaTekst1: 'MLP se trenira unapred na označenom SpamAssassin skupu. Njen jedini proizvod u radu je rečnik ključnih reči — težine sačuvane u dve naučene liste reči.',
+        metodMrezaTekst2: 'Ona nikada ne vidi četiri signala i nikada ne daje ocenu spama. Presudu donose fazi pravila.',
+        metodTabelaModel: 'Model', metodTabelaTacnost: 'Tačnost',
+        metodModelFaziEn: 'Fazi + EN rečnik', metodModelFaziOba: 'Fazi + oba rečnika',
+        metodModelMrezaEn: 'MLP samostalno, EN', metodModelMrezaOba: 'MLP samostalno, oba',
+        metodTacnostFaziEn: '90,3%', metodTacnostFaziOba: '90,0%',
+        metodTacnostMrezaEn: '93,5%', metodTacnostMrezaOba: '92,9%',
+        metodF1FaziEn: '0,697', metodF1FaziOba: '0,704',
+        metodF1MrezaEn: '0,770', metodF1MrezaOba: '0,736',
+        metodMrezaFusnota: 'Izdvojeni SpamAssassin test: 750 emailova, 125 spam. Srpski korpus je delimično sintetički, pa ti rezultati nisu produkcijska tačnost.',
+        metodPravilaNaslov: 'Pravila i ograničenja',
+        metodPravilaTekst: 'Devetnaest pravila grupisano je po težini: 4 legitimna, 11 sumnjivih i 4 spam. Svako pravilo odseca svoj izlazni skup na jačini aktivacije; najveća vrednost u svakoj tački preživljava agregaciju.',
+        metodOgranicenje1: 'Četiri signala su oblikovana za email, pa se SMS i čet poruke ocenjuju slabo.',
+        metodOgranicenje2: 'Različiti emailovi mogu imati istu ocenu kada ih fazi skupovi ne razlikuju.',
+        metodOgranicenje3: 'Granice skupova kalibrisane su na ručno označenim primerima; sve prikazane metrike dolaze sa izdvojenih podataka.',
+        metodOgranicenje4: 'Srpski benchmark je delimično mašinski preveden, a delimično sintetički.',
         metodSpektarOpis: 'Svih šest izlaznih skupova, iz istih funkcija pripadnosti koje ulaze u ocenu.',
         cipPravila: '19 pravila', cipSkupovi: 'trimf / trapmf', cipTeziste: 'centroid', cipMreza: 'mreža daje samo rečnik',
         metodNapomena: 'Kategorija se čita iz iste defazifikovane vrednosti koja je prikazana, pa ocena i oznaka ne mogu da se raziđu.',
@@ -161,6 +215,12 @@ function bojaKategorije(kategorija) {
 function formatirajBroj(vrednost) {
     const zaokruzeno = Math.round(vrednost * 10) / 10;
     return Number.isInteger(zaokruzeno) ? String(zaokruzeno) : zaokruzeno.toFixed(1).replace('.', jezik === 'sr' ? ',' : '.');
+}
+
+function formatirajProcenat(vrednost) {
+    const broj = Number(vrednost);
+    const zaokruzeno = Number.isFinite(broj) ? Math.round(broj * 10) / 10 : 0;
+    return zaokruzeno.toFixed(1).replace('.', jezik === 'sr' ? ',' : '.');
 }
 /* ---------- fuzzy sets (loaded from /skupovi) -------------------- */
 
@@ -399,9 +459,9 @@ function nacrtajSpektar(svg, skor, opcije) {
 
 function animirajSkor(konacan) {
     const element = document.getElementById('skor-broj');
-    const cilj = Math.round(konacan);
+    const cilj = Number(konacan) || 0;
 
-    if (smanjenoKretanje) { element.textContent = String(cilj); return; }
+    if (smanjenoKretanje) { element.textContent = formatirajProcenat(cilj); return; }
 
     const pocetak = performance.now();
     const trajanje = 540;
@@ -409,7 +469,7 @@ function animirajSkor(konacan) {
     function korak(sada) {
         const napredak = Math.min(1, (sada - pocetak) / trajanje);
         const ublazeno = 1 - Math.pow(1 - napredak, 3);
-        element.textContent = String(Math.round(cilj * ublazeno));
+        element.textContent = formatirajProcenat(napredak < 1 ? cilj * ublazeno : cilj);
         if (napredak < 1) requestAnimationFrame(korak);
     }
 
@@ -441,17 +501,12 @@ function prikaziRezultat(rezultat, opcije) {
 
     document.getElementById('skor-opis').textContent = t().opisiKategorija[rezultat.kategorija];
     if (podesavanja.animiraj === false) {
-        document.getElementById('skor-broj').textContent = String(Math.round(rezultat.skor));
+        document.getElementById('skor-broj').textContent = formatirajProcenat(rezultat.skor);
     } else {
         animirajSkor(rezultat.skor);
     }
 
     nacrtajSpektar(document.getElementById('spektar'), rezultat.skor);
-
-    document.getElementById('centroid').textContent = formatirajBroj(rezultat.skor);
-    const tragKategorija = document.getElementById('trag-kategorija');
-    tragKategorija.textContent = t().kategorije[rezultat.kategorija];
-    tragKategorija.style.setProperty('--boja', boja);
 
     renderSignali(rezultat);
     renderPogled();
@@ -662,7 +717,7 @@ function renderIstorija() {
                 <span class="istorija-pregled">${pobjegni(pregled)}</span>
                 <span class="istorija-meta">${pobjegni(meta)}</span>
             </span>
-            <span class="istorija-skore">${Math.round(rezultat.skor)}%</span>
+            <span class="istorija-skore">${formatirajProcenat(rezultat.skor)}%</span>
             <span class="istorija-vreme">${pobjegni(relativnoVreme(stavka.vreme))}</span>
         </button>`;
     }).join('');
@@ -862,8 +917,7 @@ async function kopirajRezultat() {
     const recnik = t();
     const linije = [
         'Fuzzy Guard',
-        `${recnik.procena}: ${Math.round(rezultat.skor)}% (${recnik.kategorije[rezultat.kategorija]})`,
-        `${recnik.teziste}: ${formatirajBroj(rezultat.skor)}`,
+        `${recnik.procena}: ${formatirajProcenat(rezultat.skor)}% (${recnik.kategorije[rezultat.kategorija]})`,
         `${recnik.signali.kljucne_reci}: ${formatirajBroj(rezultat.vrednosti.kljucne_reci)}/10 | ` +
         `${recnik.signali.broj_linkova}: ${rezultat.vrednosti.broj_linkova}/10 | ` +
         `${recnik.signali.caps_procenat}: ${formatirajBroj(rezultat.vrednosti.caps_procenat)}% | ` +
