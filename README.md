@@ -368,10 +368,11 @@ Corpus: **SpamAssassin** (3,000 emails, 500 spam), 750 test emails, 125 spam.
 | Neural network (MLP) | `kombinovano` | 0.929 | 0.974 | 0.592 | 0.736 |
 | Fuzzy system (Mamdani) | `kombinovano` | 0.900 | 0.695 | 0.712 | 0.704 |
 
-The learned English lexicon raises the fuzzy system's F1 from **0.526 to 0.704**
-and its recall from **0.440 to 0.712**, without changing the rule base or the
-fuzzy inference. The Serbian lexicon is weaker on English text (as expected) and
-exists to cover Serbian input.
+The learned lexicons raise the fuzzy system's F1 from **0.526** to **0.697**
+with the English lexicon and to **0.704** with both, while recall rises from
+**0.440** to **0.672** and **0.712** respectively, without changing the rule
+base or the fuzzy inference. The Serbian lexicon is weaker on English text (as
+expected) and exists to cover Serbian input.
 
 The fuzzy system trades precision for interpretability: every score can be
 traced back to a membership function and a rule. On the **SMS Spam Collection**
