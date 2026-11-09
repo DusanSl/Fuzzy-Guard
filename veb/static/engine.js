@@ -18,6 +18,7 @@ const prevodi = {
         greskaPrazno: 'Add some text first.',
         greskaMreza: 'Could not reach the server.',
         procena: 'Assessment', kopiraj: 'Copy result', kopirano: 'Result copied',
+        doprinosiNaslov: 'What contributed',
         prazno: 'Run an analysis to see the score, the active fuzzy sets and the rules that produced it.',
         skorNatpis: 'Spam suspicion · 0–100',
         osaLegitiman: 'Legitimate', osaSumnjivo: 'Suspicious', osaSpam: 'Spam',
@@ -26,7 +27,7 @@ const prevodi = {
         spektarAria: 'Fuzzy output spectrum: six output sets in three categories. Legitimate: legitimate and strongly legitimate. Suspicious: mildly suspicious, suspicious and highly suspicious. Spam: spam.',
         teziste: 'Centroid',
         tabZasto: 'Why', tabUlazi: 'Inputs', tabPravila: 'Rules',
-        pronasli: 'Matched in the text', prepoznate: 'Matched words',
+        pronasli: 'Matched in the text', prepoznate: 'Matched keywords',
         nemaPogodaka: 'No dictionary hits. Here the score comes from links, capitals and punctuation alone.',
         legenda: { keyword: 'keyword', link: 'link', caps: 'capitals', interpunkcija: 'punctuation' },
         izvorRucni: 'hand dictionary', izvorEn: 'English lexicon', izvorSr: 'Serbian lexicon',
@@ -109,6 +110,7 @@ const prevodi = {
         greskaPrazno: 'Dodajte tekst poruke.',
         greskaMreza: 'Greška u komunikaciji sa serverom.',
         procena: 'Procena', kopiraj: 'Kopiraj rezultat', kopirano: 'Rezultat kopiran',
+        doprinosiNaslov: 'Šta je uticalo',
         prazno: 'Pokrenite analizu da vidite ocenu, aktivne fazi skupove i pravila koja su je proizvela.',
         skorNatpis: 'Sumnjivost na spam · 0–100',
         osaLegitiman: 'Legitimno', osaSumnjivo: 'Sumnjivo', osaSpam: 'Spam',
@@ -117,7 +119,7 @@ const prevodi = {
         spektarAria: 'Spektar fazi izlaza: šest izlaznih skupova u tri kategorije. Legitimno: legitiman i izrazito legitiman. Sumnjivo: blago sumnjiv, sumnjiv i visoko sumnjiv. Spam: spam.',
         teziste: 'Težište',
         tabZasto: 'Zašto', tabUlazi: 'Ulazi', tabPravila: 'Pravila',
-        pronasli: 'Pronađeno u tekstu', prepoznate: 'Prepoznate reči',
+        pronasli: 'Pronađeno u tekstu', prepoznate: 'Pronađene ključne reči',
         nemaPogodaka: 'Nema pogodaka u rečniku. Ocena ovde dolazi samo iz linkova, velikih slova i interpunkcije.',
         legenda: { keyword: 'ključna reč', link: 'link', caps: 'velika slova', interpunkcija: 'interpunkcija' },
         izvorRucni: 'ručni rečnik', izvorEn: 'engleski rečnik', izvorSr: 'srpski rečnik',
@@ -229,6 +231,12 @@ function formatirajProcenat(vrednost) {
     const broj = Number(vrednost);
     const zaokruzeno = Number.isFinite(broj) ? Math.round(broj * 10) / 10 : 0;
     return zaokruzeno.toFixed(1).replace('.', jezik === 'sr' ? ',' : '.');
+}
+
+function formatirajDva(vrednost) {
+    const broj = Number(vrednost);
+    const zaokruzeno = Number.isFinite(broj) ? broj : 0;
+    return zaokruzeno.toFixed(2).replace('.', jezik === 'sr' ? ',' : '.');
 }
 /* ---------- fuzzy sets (loaded from /skupovi) -------------------- */
 
@@ -576,22 +584,31 @@ function renderPogled() {
 
 function napraviZasto(rezultat) {
     const elementi = [];
-    const tipovi = new Set();
+    const pregled = napraviPregled(rezultat);
 
-    (rezultat.pogodjene || []).forEach(stavka => {
-        if (stavka.pozicije.length) tipovi.add('keyword');
-    });
-    if (rezultat.linkovi.length) tipovi.add('link');
-    if (/\b[A-ZČĆŠŽĐ]{3,}\b/.test(rezultat.vidljivi)) tipovi.add('caps');
-    if (/[!?]/.test(rezultat.vidljivi)) tipovi.add('interpunkcija');
+    elementi.push(`<p class="pogled-naslov">${pobjegni(t().doprinosiNaslov)}</p>`);
+    elementi.push(napraviDoprinose(rezultat));
 
-    elementi.push(`<p class="pogled-naslov">${pobjegni(t().pronasli)}</p>`);
-    elementi.push(`<div class="pregled">${napraviPregled(rezultat)}</div>`);
+    elementi.push(`<p class="pogled-naslov" style="margin-top:13px">${pobjegni(t().pronasli)}</p>`);
+    elementi.push(`<div class="pregled">${pregled.html}</div>`);
 
-    if (tipovi.size) {
-        elementi.push('<div class="legenda">' + Array.from(tipovi).map(tip =>
-            `<span style="--boja: var(--${tip === 'keyword' ? 'sumnjivo' : tip === 'link' ? 'link' : tip === 'caps' ? 'spam' : 'ljubicasta'})"><i></i>${pobjegni(t().legenda[tip])}</span>`
-        ).join('') + '</div>');
+    if (pregled.kombinacije.size) {
+        const redosled = { keyword: 0, link: 1, caps: 2, interpunkcija: 3 };
+        const kombinacije = Array.from(pregled.kombinacije).sort((prva, druga) => {
+            const prvi = prva.split('+');
+            const drugi = druga.split('+');
+            return (prvi.length - drugi.length) || (redosled[prvi[0]] - redosled[drugi[0]]);
+        });
+        elementi.push('<div class="legenda">' + kombinacije.map(kljuc => {
+            const tipovi = kljuc.split('+');
+            const boje = tipovi.map(bojaTipa);
+            const pozadina = boje.length === 1
+                ? boje[0]
+                : `linear-gradient(90deg, ${boje.map((boja, indeks) =>
+                    `${boja} ${(indeks / boje.length) * 100}% ${((indeks + 1) / boje.length) * 100}%`
+                ).join(', ')})`;
+            return `<span><i style="background:${pozadina}"></i>${pobjegni(tipovi.map(tip => t().legenda[tip]).join(' + '))}</span>`;
+        }).join('') + '</div>');
     }
 
     elementi.push(`<p class="pogled-naslov" style="margin-top:13px">${pobjegni(t().prepoznate)}</p>`);
@@ -610,46 +627,101 @@ function napraviZasto(rezultat) {
     return elementi.join('');
 }
 
-function napraviPregled(rezultat) {
+function bojaTipa(tip) {
+    if (tip === 'keyword') return 'var(--sumnjivo)';
+    if (tip === 'link') return 'var(--link)';
+    if (tip === 'caps') return 'var(--spam)';
+    return 'var(--ljubicasta)';
+}
+
+function napraviDoprinose(rezultat) {
+    const redosled = ['kljucne_reci', 'broj_linkova', 'caps_procenat', 'interpunkcija'];
+    const tipPoKljucu = {
+        kljucne_reci: 'keyword', broj_linkova: 'link',
+        caps_procenat: 'caps', interpunkcija: 'interpunkcija'
+    };
+
+    return '<div class="doprinosi">' + redosled.map(kljuc => {
+        const vrednost = rezultat.vrednosti[kljuc];
+        const pripadnosti = rezultat.mu[kljuc] || {};
+        const najjaci = Object.keys(pripadnosti).reduce((najbolji, ime) => {
+            const mu = Number(pripadnosti[ime]) || 0;
+            return mu > najbolji.mu ? { ime, mu } : najbolji;
+        }, { ime: '', mu: -1 });
+        const skup = najjaci.ime ? (t().skupovi[najjaci.ime] || najjaci.ime) : '—';
+        const mu = najjaci.mu >= 0 ? formatirajDva(najjaci.mu) : '—';
+
+        return `<div class="doprinos" style="--boja:${bojaTipa(tipPoKljucu[kljuc])}">
+            <span class="doprinos-signal"><i></i>${pobjegni(t().signali[kljuc])}</span>
+            <span class="doprinos-vrednost">${pobjegni(formatirajBroj(vrednost))}<small>${pobjegni(t().jedinice[kljuc])}</small></span>
+            <span class="doprinos-skup">${pobjegni(skup)} <b>${pobjegni(mu)}</b></span>
+        </div>`;
+    }).join('') + '</div>';
+}
+
+function kljucOznake(skup) {
+    return ['keyword', 'link', 'caps', 'interpunkcija'].filter(tip => skup.has(tip)).join('+');
+}
+
+function izracunajOznake(rezultat) {
     const tekst = rezultat.vidljivi || '';
-    const delovi = [];
-    const prioritet = { link: 4, caps: 3, keyword: 2, interpunkcija: 1 };
+    const oznake = Array.from({ length: tekst.length }, () => null);
+    const dodaj = (od, do_, tip) => {
+        const pocetak = Math.max(0, od);
+        const kraj = Math.min(tekst.length, do_);
+        for (let indeks = pocetak; indeks < kraj; indeks += 1) {
+            if (/\s/.test(tekst[indeks])) continue;
+            if (!oznake[indeks]) oznake[indeks] = new Set();
+            oznake[indeks].add(tip);
+        }
+    };
 
     (rezultat.pogodjene || []).forEach(stavka => {
-        stavka.pozicije.forEach(pozicija => delovi.push({ a: pozicija[0], b: pozicija[1], tip: 'keyword' }));
+        (stavka.pozicije || []).forEach(pozicija => dodaj(pozicija[0], pozicija[1], 'keyword'));
     });
 
     [['link', UZORAK_LINKA], ['caps', UZORAK_CAPS], ['interpunkcija', UZORAK_INTERPUNKCIJA]].forEach(([tip, uzorak]) => {
         Array.from(tekst.matchAll(uzorak)).slice(0, 50).forEach(poklapanje => {
-            delovi.push({ a: poklapanje.index, b: poklapanje.index + poklapanje[0].length, tip });
+            dodaj(poklapanje.index, poklapanje.index + poklapanje[0].length, tip);
         });
     });
 
-    delovi.sort((prvi, drugi) =>
-        (prioritet[drugi.tip] - prioritet[prvi.tip]) ||
-        ((drugi.b - drugi.a) - (prvi.b - prvi.a)) ||
-        (prvi.a - drugi.a)
-    );
-
-    const prihvaceni = [];
-    delovi.forEach(deo => {
-        if (deo.a >= deo.b) return;
-        if (prihvaceni.some(uzet => deo.a < uzet.b && deo.b > uzet.a)) return;
-        prihvaceni.push(deo);
+    const kombinacije = new Set();
+    oznake.forEach(skup => {
+        if (!skup || !skup.size) return;
+        kombinacije.add(kljucOznake(skup));
     });
-    prihvaceni.sort((prvi, drugi) => prvi.a - drugi.a);
 
+    return { tekst, oznake, kombinacije };
+}
+
+function napraviPregled(rezultat) {
+    const { tekst, oznake, kombinacije } = izracunajOznake(rezultat);
     let html = '';
-    let pozicija = 0;
-    prihvaceni.forEach(deo => {
-        if (deo.a < pozicija || deo.a > tekst.length) return;
-        html += pobjegni(tekst.slice(pozicija, deo.a));
-        html += `<mark class="obj-mark obj-mark--${deo.tip}">${pobjegni(tekst.slice(deo.a, deo.b))}</mark>`;
-        pozicija = deo.b;
-    });
-    html += pobjegni(tekst.slice(pozicija));
+    let indeks = 0;
 
-    return html || pobjegni(tekst);
+    while (indeks < tekst.length) {
+        const skup = oznake[indeks];
+        if (!skup || !skup.size) {
+            let kraj = indeks + 1;
+            while (kraj < tekst.length && (!oznake[kraj] || !oznake[kraj].size)) kraj += 1;
+            html += pobjegni(tekst.slice(indeks, kraj));
+            indeks = kraj;
+            continue;
+        }
+
+        const kljuc = kljucOznake(skup);
+        let kraj = indeks + 1;
+        while (kraj < tekst.length && oznake[kraj] && kljucOznake(oznake[kraj]) === kljuc) kraj += 1;
+
+        const tipovi = kljuc.split('+');
+        const klase = tipovi.map(tip => `obj-mark--${tip}`).join(' ');
+        const opis = tipovi.map(tip => t().legenda[tip]).join(' + ');
+        html += `<mark class="obj-mark ${klase}" title="${pobjegni(opis)}">${pobjegni(tekst.slice(indeks, kraj))}</mark>`;
+        indeks = kraj;
+    }
+
+    return { html: html || pobjegni(tekst), kombinacije };
 }
 
 function napraviUlaze(rezultat) {

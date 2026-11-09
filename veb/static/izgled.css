@@ -837,6 +837,64 @@ button:disabled { cursor: progress; }
 
 .pogled-naslov span { font-weight: 500; }
 
+.doprinosi {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.doprinos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 1px 6px;
+    padding: 6px 8px;
+    border: 1px solid var(--linija);
+    border-radius: 8px;
+    background: var(--upustvo);
+    font-size: 10.5px;
+    line-height: 1.35;
+}
+
+.doprinos-signal {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--tekst);
+    font-weight: 600;
+}
+
+.doprinos-signal i {
+    width: 5px;
+    height: 5px;
+    border-radius: 2px;
+    background: var(--boja);
+}
+
+.doprinos-vrednost {
+    color: var(--tekst);
+    font-variant-numeric: tabular-nums;
+}
+
+.doprinos-vrednost small {
+    margin-left: 1px;
+    color: var(--tekst-3);
+    font-size: 9px;
+}
+
+.doprinos-skup {
+    flex-basis: 100%;
+    color: var(--tekst-3);
+    font-size: 9.5px;
+}
+
+.doprinos-skup b {
+    color: var(--tekst-2);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
 .pregled {
     max-height: 148px;
     overflow-y: auto;
@@ -863,6 +921,10 @@ button:disabled { cursor: progress; }
 .obj-mark--keyword {
     background: color-mix(in srgb, var(--sumnjivo) 26%, transparent);
     box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--sumnjivo) 60%, transparent);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--sumnjivo) 80%, transparent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
 }
 
 .obj-mark--link {
