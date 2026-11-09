@@ -9,7 +9,7 @@ from pathlib import Path
 
 import skfuzzy as fuzz
 
-from obrada_teksta.analizator import analiziraj_email, ucitaj_nauceni_recnik
+from obrada_teksta.analizator import analiziraj_email, detektuj_jezik, ucitaj_nauceni_recnik
 from obrada_teksta import analizator
 from obrada_teksta.analizator import _izracunaj_kljucne_reci
 from obrada_teksta.podudaranje import pronadji_poklapanja
@@ -126,6 +126,27 @@ def test_nauceni_recnici_se_ucitavaju():
         assert isinstance(recnik, dict)
         assert len(recnik) > 0
         assert all(tezina > 0 for tezina in recnik.values())
+
+
+def test_detektuje_engleski_tekst():
+    tekst = (
+        "Dear sir, your account will be closed. Click the link and verify "
+        "your payment today to receive your prize."
+    )
+    assert detektuj_jezik(tekst) == "en"
+
+
+def test_detektuje_srpski_tekst():
+    tekst = (
+        "Poštovani, vaš paket čeka na isporuku. Proverite podatke naloga "
+        "i potvrdite uplatu danas."
+    )
+    assert detektuj_jezik(tekst) == "sr"
+
+
+def test_kratak_tekst_koristi_oba_recnika():
+    assert detektuj_jezik("Hi") == "kombinovano"
+    assert detektuj_jezik("Dear sir, vaš paket") == "kombinovano"
 
 
 def test_kombinovani_recnik_spaja_oba_jezika():
@@ -322,6 +343,19 @@ def test_analiziraj_prihvata_recnik():
     assert en["kljucne_reci"] > 0.0
     assert kombinovano["kljucne_reci"] >= en["kljucne_reci"]
     assert sr["kljucne_reci"] >= 0.0
+
+
+def test_analiziraj_auto_bi_vraca_izabrani_recnik():
+    from main import app
+    klijent = app.test_client()
+    tekst = (
+        "Poštovani, vaš paket čeka na isporuku. Proverite podatke naloga "
+        "i potvrdite uplatu danas."
+    )
+    odgovor = klijent.post(
+        "/analiziraj", json={"tekst": tekst, "recnik": "auto"}
+    ).get_json()
+    assert odgovor["recnik"] == "sr"
 
 
 def test_skupovi_endpoint_vraca_ulaze_i_izlaze():

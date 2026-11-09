@@ -19,11 +19,58 @@ RECNICI_PO_JEZIKU = {
 
 # en         - samo engleski naučeni rečnik
 # sr         - samo srpski naučeni rečnik
-# kombinovano - oba (podrazumevano)
-VALIDNI_RECNICI = ("en", "sr", "kombinovano")
+# kombinovano - oba
+# auto       - jezik se određuje iz same poruke; kratak/mešovit tekst koristi oba
+VALIDNI_RECNICI = ("en", "sr", "kombinovano", "auto")
 NACIN_RECNIKA = os.environ.get("FUZZY_GUARD_RECNIK", "kombinovano").strip().lower()
 
 _RECNICI_KEŠ = {}
+
+# --- detekcija jezika poruke ---------------------------------------------
+
+_SRPSKA_SLOVA = frozenset("čćšžđ")
+_SRPSKE_RECI = frozenset("""
+    i je na za da se ne su u sa od do koji koja koje ovo ovaj ova vas vaš
+    vasa vaša vase vaše molimo postovani poštovani dragi gospodine gospodjo
+    obavestenje obaveštenje paket isporuka uplata racun račun kliknite ponuda
+    nagrada besplatno hitno proverite proveriti obavezno rok danas sutra poruka
+    adresa podaci nalog novac isplata zarada dobitak potvrdite posaljite
+    pošaljite otvorite kupite jeftino tablete sada ograniceno ograničeno
+    dobitnik gotovina garancija investicija kredit prihod odobreno primite
+    kontaktirajte cena porucite poručite bezbednost banka poklon
+""".split())
+
+_ENGLESKE_RECI = frozenset("""
+    the and you your to of is are this that with for from click link offer
+    free prize urgent account verify payment today limited dear sir guarantee
+    guaranteed investment mortgage loan credit profit reward approved income
+    dollars receive contact buy cheap pills now winner cash bonus message
+    please here will can not have price order shipping delivery confirm
+    update security bank pay money gift
+""".split())
+
+
+def detektuj_jezik(tekst: str) -> str:
+    """Vraća ``en``, ``sr`` ili ``kombinovano`` za dati tekst.
+
+    Kratak ili nejasan tekst pada na oba rečnika, da se ne izgubi pogodak
+    samo zato što detekcija nije sigurna.
+    """
+    tekst = (tekst or "").lower()
+    slova = [karakter for karakter in tekst if karakter.isalpha()]
+    if len(slova) < 20:
+        return "kombinovano"
+
+    reci = re.findall(r"[a-zčćšžđ]+", tekst)
+    srpski_poeni = 3 * sum(1 for karakter in tekst if karakter in _SRPSKA_SLOVA)
+    srpski_poeni += sum(1 for rec in reci if rec in _SRPSKE_RECI)
+    engleski_poeni = sum(1 for rec in reci if rec in _ENGLESKE_RECI)
+
+    if srpski_poeni >= engleski_poeni + 2 and srpski_poeni >= 2:
+        return "sr"
+    if engleski_poeni >= srpski_poeni + 2 and engleski_poeni >= 2:
+        return "en"
+    return "kombinovano"
 
 # --- normalizacija teksta -------------------------------------------------
 
@@ -127,10 +174,13 @@ def analiziraj_email(
     legacy_recnik=None,
 ) -> dict:
     vidljivi_tekst = _ocisti_html(tekst)
+    izabrani_recnik = (nacin_recnik or NACIN_RECNIKA).strip().lower()
+    if izabrani_recnik == "auto":
+        izabrani_recnik = detektuj_jezik(vidljivi_tekst)
 
     broj_kljucnih_reci, pogodjene_reci = _izracunaj_kljucne_reci(
         vidljivi_tekst,
-        (nacin_recnik or NACIN_RECNIKA),
+        izabrani_recnik,
         legacy_recnik=legacy_recnik,
     )
 
@@ -179,6 +229,7 @@ def analiziraj_email(
     ]
 
     return {
+        "recnik":        izabrani_recnik,
         "kljucne_reci":  float(broj_kljucnih_reci),
         "broj_linkova":  float(broj_linkova),
         "caps_procenat": round(caps_procenat, 2),

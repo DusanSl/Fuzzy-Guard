@@ -87,19 +87,19 @@ def skupovi():
 
 @app.route("/analiziraj", methods=["POST"])
 def analiziraj():
-    nacin_recnika = "kombinovano"
+    nacin_recnika = "auto"
     if request.is_json:
         podaci = request.get_json(silent=True) or {}
     else:
         podaci = request.form
 
     tekst_emaila = podaci.get("tekst", "")
-    nacin_recnika = podaci.get("recnik", "kombinovano")
+    nacin_recnika = podaci.get("recnik", "auto")
 
     if not isinstance(tekst_emaila, str):
         return jsonify({"greska": "Tekst emaila mora biti string."}), 400
     if nacin_recnika not in VALIDNI_RECNICI:
-        nacin_recnika = "kombinovano"
+        nacin_recnika = "auto"
 
     tekst_emaila = tekst_emaila.strip()
     if not tekst_emaila:
@@ -120,6 +120,7 @@ def analiziraj():
     rezultat = {
         "tekst":         analizirani_tekst,
         "skraceno":      skraceno,
+        "recnik":        ulazi.get("recnik", nacin_recnika),
         "kljucne_reci":  ulazi["kljucne_reci"],
         "broj_linkova":  ulazi["broj_linkova"],
         "caps_procenat": ulazi["caps_procenat"],

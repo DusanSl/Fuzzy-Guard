@@ -12,7 +12,7 @@ const prevodi = {
         placeholder: 'Paste the email text here…',
         znakova: 'characters',
         uzorakLegitiman: 'Legitimate', uzorakSumnjiv: 'Suspicious', uzorakPrevara: 'Spam', uzorakRandom: 'Random',
-        recnik: 'Keyword lexicon', en: 'English', sr: 'Serbian', kombinovano: 'Both',
+        recnik: 'Keyword lexicon', recnikAuto: 'auto', en: 'English', sr: 'Serbian', kombinovano: 'Both',
         pokreni: 'Run analysis', analiziram: 'Analyzing…',
         sitno: 'Only the body is scored · nothing leaves this page.',
         greskaPrazno: 'Add some text first.',
@@ -111,7 +111,7 @@ const prevodi = {
         placeholder: 'Nalepite tekst emaila ovde…',
         znakova: 'znakova',
         uzorakLegitiman: 'Legitiman', uzorakSumnjiv: 'Sumnjiv', uzorakPrevara: 'Prevara', uzorakRandom: 'Nasumično',
-        recnik: 'Rečnik ključnih reči', en: 'Engleski', sr: 'Srpski', kombinovano: 'Oba',
+        recnik: 'Rečnik ključnih reči', recnikAuto: 'automatski', en: 'Engleski', sr: 'Srpski', kombinovano: 'Oba',
         pokreni: 'Pokreni analizu', analiziram: 'Analiziram…',
         sitno: 'Ocenjuje se samo telo poruke · sve ostaje u pregledaču.',
         greskaPrazno: 'Dodajte tekst poruke.',
@@ -216,7 +216,6 @@ const jeMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 let jezik = ucitajLokalno('fg-prototip-jezik', 'en');
 let tema = ucitajLokalno('fg-prototip-tema-v2', 'dark');
-let nacinRecnika = ucitajLokalno('fg-prototip-recnik', 'kombinovano');
 let trenutniRezultat = null;
 let trenutniPogled = 'zasto';
 let istorija = [];
@@ -376,13 +375,13 @@ function pripadnost(tip, params, x) {
 const UZORAK_LINKA = /\b(?:https?:\/\/|hxxps?:\/\/|www\.)[^\s<>"']+/gi;
 const UZORAK_CAPS = /\b[A-ZČĆŠŽĐ]{3,}\b/g;
 const UZORAK_INTERPUNKCIJA = /[!?]+/g;
-async function izracunajRezultat(tekst, nacin) {
+async function izracunajRezultat(tekst) {
     await ucitajSkupove();
 
     const odgovor = await fetch('/analiziraj', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tekst, recnik: nacin })
+        body: JSON.stringify({ tekst, recnik: 'auto' })
     });
 
     const podaci = await odgovor.json();
@@ -447,6 +446,7 @@ async function izracunajRezultat(tekst, nacin) {
 
     return {
         tekst,
+        recnik: podaci.recnik || null,
         vidljivi: objasnjenje.tekst || tekst,
         vrednosti,
         pogodjene: objasnjenje.pokrivene_reci || [],
@@ -655,6 +655,11 @@ function napraviZasto(rezultat) {
     }
 
     elementi.push(`<div class="pogled-naslov-red" style="margin-top:13px"><p class="pogled-naslov">${pobjegni(t().prepoznate)}</p>${pomoc('tezine', t().pomocTezineNaslov, t().pomocTezine)}</div>`);
+
+    if (rezultat.recnik) {
+        const nazivRecnika = t()[rezultat.recnik] || rezultat.recnik;
+        elementi.push(`<p class="leksikon-status">${pobjegni(t().recnik)}: ${pobjegni(nazivRecnika)} (${pobjegni(t().recnikAuto)})</p>`);
+    }
 
     if (rezultat.pogodjene.length) {
         elementi.push('<div class="cipovi">' + rezultat.pogodjene.map(stavka => {
@@ -935,7 +940,7 @@ function pokreniAnalizu() {
 
     window.setTimeout(async () => {
         try {
-            const rezultat = await izracunajRezultat(tekst, nacinRecnika);
+            const rezultat = await izracunajRezultat(tekst);
             prikaziRezultat(rezultat, { animiraj: true });
             dodajUIstoriju(
                 tekst,
@@ -973,7 +978,7 @@ async function izaberiUzorak(kljuc) {
         const uzorak = grupa[Math.floor(Math.random() * grupa.length)];
         popuniPolja(uzorak);
 
-        const rezultat = await izracunajRezultat(uzorak.tekst, nacinRecnika);
+        const rezultat = await izracunajRezultat(uzorak.tekst);
         prikaziRezultat(rezultat, { animiraj: true });
         dodajUIstoriju(uzorak.tekst, uzorak.posaljilac, uzorak.tema, rezultat);
     } catch (greska) {
@@ -989,31 +994,11 @@ async function izaberiRandom() {
         const uzorak = lista[Math.floor(Math.random() * lista.length)];
         popuniPolja(uzorak);
 
-        const rezultat = await izracunajRezultat(uzorak.tekst, nacinRecnika);
+        const rezultat = await izracunajRezultat(uzorak.tekst);
         prikaziRezultat(rezultat, { animiraj: true });
         dodajUIstoriju(uzorak.tekst, uzorak.posaljilac, uzorak.tema, rezultat);
     } catch (greska) {
         prikaziGresku(greska.message || t().greskaMreza);
-    }
-}
-
-function postaviRecnik(nacin) {
-    nacinRecnika = nacin;
-    sacuvajLokalno('fg-prototip-recnik', nacin);
-
-    document.querySelectorAll('[data-recnik]').forEach(dugme => {
-        dugme.setAttribute('aria-pressed', dugme.dataset.recnik === nacin ? 'true' : 'false');
-        dugme.classList.toggle('aktivan', dugme.dataset.recnik === nacin);
-    });
-
-    const tekst = document.getElementById('tekst').value.trim();
-    if (tekst && trenutniRezultat) {
-        izracunajRezultat(tekst, nacin).then(rezultat => {
-            prikaziRezultat(rezultat, { animiraj: false });
-            azurirajUIstoriji(tekst, rezultat);
-        }).catch(greska => {
-            prikaziGresku(greska.message || t().greskaMreza);
-        });
     }
 }
 
@@ -1055,6 +1040,9 @@ async function kopirajRezultat() {
         `${recnik.signali.interpunkcija}: ${formatirajBroj(rezultat.vrednosti.interpunkcija)}%`
     ];
 
+    if (rezultat.recnik) {
+        linije.push(`${recnik.recnik}: ${recnik[rezultat.recnik] || rezultat.recnik} (${recnik.recnikAuto})`);
+    }
     if (rezultat.pogodjene.length) {
         linije.push(`${recnik.prepoznate}: ${rezultat.pogodjene.map(stavka => stavka.rec).join(', ')}`);
     }
@@ -1176,10 +1164,6 @@ function poveziDogadjaje() {
 
     document.getElementById('dugme-random').addEventListener('click', izaberiRandom);
 
-    document.querySelectorAll('[data-recnik]').forEach(dugme => {
-        dugme.addEventListener('click', () => postaviRecnik(dugme.dataset.recnik));
-    });
-
     document.querySelectorAll('[data-pogled]').forEach(dugme => {
         dugme.addEventListener('click', () => postaviPogled(dugme.dataset.pogled));
     });
@@ -1230,17 +1214,11 @@ function poveziDogadjaje() {
 }
 
 async function inicijalizuj() {
-    if (!['en', 'sr', 'kombinovano'].includes(nacinRecnika)) nacinRecnika = 'kombinovano';
     if (!['en', 'sr'].includes(jezik)) jezik = 'en';
     if (!['dark', 'light'].includes(tema)) tema = 'dark';
 
     try { await ucitajSkupove(); } catch (greska) { /* spektar ostaje prazan */ }
     nacrtajSpektar(document.getElementById('spektar-prazno'), null, { priguseno: true });
-
-    document.querySelectorAll('[data-recnik]').forEach(dugme => {
-        dugme.setAttribute('aria-pressed', dugme.dataset.recnik === nacinRecnika ? 'true' : 'false');
-        dugme.classList.toggle('aktivan', dugme.dataset.recnik === nacinRecnika);
-    });
 
     poveziDogadjaje();
     primeniJezik();
@@ -1251,9 +1229,9 @@ async function inicijalizuj() {
 
     try {
         const [rezultatLegitiman, rezultatSumnjiv, rezultatPrevara] = await Promise.all([
-            izracunajRezultat(uzorakLegitiman.tekst, nacinRecnika),
-            izracunajRezultat(uzorakSumnjiv.tekst, nacinRecnika),
-            izracunajRezultat(uzorakPrevara.tekst, nacinRecnika)
+            izracunajRezultat(uzorakLegitiman.tekst),
+            izracunajRezultat(uzorakSumnjiv.tekst),
+            izracunajRezultat(uzorakPrevara.tekst)
         ]);
 
         istorija = [

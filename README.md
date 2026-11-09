@@ -231,7 +231,7 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
 ```json
 {
   "tekst": "DEAR SIR, YOUR MORTGAGE SETTLEMENT IS GUARANTEED! CLICK LINK http://a.com http://b.com http://c.com NOW!!!",
-  "recnik": "kombinovano"   // optional: en | sr | kombinovano
+  "recnik": "auto"          // optional: auto | en | sr | kombinovano
 }
 ```
 
@@ -240,6 +240,7 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
 {
   "tekst": "DEAR SIR, YOUR MORTGAGE SETTLEMENT IS GUARANTEED! ...",
   "skraceno": false,       // true if the body exceeded the analysis cap
+  "recnik": "en",          // lexicon used, resolved from auto
   "kljucne_reci": 6.61,    // Weighted lexicon matches
   "broj_linkova": 3,       // Link count
   "caps_procenat": 100.0,  // Caps percentage
@@ -333,9 +334,10 @@ can be reproduced; the application never imports it.
 
 | Mode | Meaning | Coverage |
 |---|---|---|
+| `auto` | detects the message language; falls back to both | UI default |
 | `en` | learned English lexicon only | English |
 | `sr` | learned Serbian lexicon only | Serbian |
-| `kombinovano` | both (default) | both |
+| `kombinovano` | both | both |
 | `legacy` | old hand dictionary — **evaluation only** | legacy baseline |
 
 The Serbian lexicon is trained on `podaci/sr_spamassassin.tsv`. The free
