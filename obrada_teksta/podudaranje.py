@@ -49,6 +49,12 @@ class Token(NamedTuple):
 
 def normalizuj_token(token: str) -> str:
     token = token.lower()
+
+    # Brza putanja: ogromna većina tokena je čist ASCII. Tada nema homoglifa
+    # ni mešanih pisama, pa su tri prolaza kroz znakove nepotrebna.
+    if token.isascii():
+        return token if token.isalpha() else token.translate(_LEET)
+
     ima_latinicu = any("a" <= znak <= "z" for znak in token)
     ima_cirilicu = any("\u0400" <= znak <= "\u04ff" for znak in token)
 
@@ -80,14 +86,35 @@ def _terminski_indeks(termini: Iterable) -> dict:
     return indeks
 
 
-def pronadji_poklapanja(tekst: str, termini: Iterable) -> tuple:
+_INDEKS_KEŠ = {}
+_MAKS_INDEKS_KEŠ = 8
+
+
+def _indeks_za(termini: Iterable, keš_kljuc) -> dict:
+    if keš_kljuc is None:
+        return _terminski_indeks(termini)
+
+    indeks = _INDEKS_KEŠ.get(keš_kljuc)
+    if indeks is not None:
+        return indeks
+
+    indeks = _terminski_indeks(termini)
+    if len(_INDEKS_KEŠ) >= _MAKS_INDEKS_KEŠ:
+        _INDEKS_KEŠ.clear()
+    _INDEKS_KEŠ[keš_kljuc] = indeks
+    return indeks
+
+
+def pronadji_poklapanja(tekst: str, termini: Iterable, keš_kljuc=None) -> tuple:
     """Vraća (evidencija 0-10, lista pogodaka za objašnjenje).
 
     ``termini`` je iterabil od (termin, tezina, izvor). Evidencija je zbir
-    težina prihvaćenih, nepoklopljenih poklapanja.
+    težina prihvaćenih, nepoklopljenih poklapanja. Kada je ``keš_kljuc``
+    zadat, terminski indeks se pamti između zahteva; ključ mora da se promeni
+    kada se promeni rečnik.
     """
     tokeni = tokenizuj(tekst)
-    indeks = _terminski_indeks(termini)
+    indeks = _indeks_za(termini, keš_kljuc)
     if not tokeni or not indeks:
         return 0.0, []
 

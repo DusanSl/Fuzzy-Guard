@@ -174,6 +174,7 @@ function pripadnost(tip, params, x) {
 const UZORAK_LINKA = /\b(?:https?:\/\/|hxxps?:\/\/|www\.)[^\s<>"']+/gi;
 const UZORAK_CAPS = /\b[A-ZČĆŠŽĐ]{3,}\b/g;
 const UZORAK_INTERPUNKCIJA = /[!?]+/g;
+const UZORAK_RAZMAKA = /\s/;
 async function izracunajRezultat(tekst) {
     await ucitajSkupove();
 
@@ -238,7 +239,7 @@ async function izracunajRezultat(tekst) {
         broj_linkova: podaci.broj_linkova,
         caps_procenat: podaci.caps_procenat,
         interpunkcija: podaci.interpunkcija,
-        nn_pouzdanje: podaci.nn_pouzdanje
+        nn_pouzdanje: podaci.nn_pouzdanje ?? 50
     };
 
     const aktivnaPravila = (objasnjenje.aktivna_pravila || []).map(pravilo => ({
@@ -513,20 +514,30 @@ function napraviDoprinose(rezultat) {
     }).join('') + '</div>';
 }
 
-function kljucOznake(skup) {
-    return ['keyword', 'link', 'caps', 'interpunkcija'].filter(tip => skup.has(tip)).join('+');
+const OZNAKA_BIT = { keyword: 1, link: 2, caps: 4, interpunkcija: 8 };
+const OZNAKA_REDOSLED = ['keyword', 'link', 'caps', 'interpunkcija'];
+const KES_KLJUCA_OZNAKA = new Map();
+
+function kljucOznake(maska) {
+    const zapamcen = KES_KLJUCA_OZNAKA.get(maska);
+    if (zapamcen !== undefined) return zapamcen;
+    const kljuc = OZNAKA_REDOSLED.filter(tip => maska & OZNAKA_BIT[tip]).join('+');
+    KES_KLJUCA_OZNAKA.set(maska, kljuc);
+    return kljuc;
 }
 
 function izracunajOznake(rezultat) {
     const tekst = rezultat.vidljivi || '';
-    const oznake = Array.from({ length: tekst.length }, () => null);
+    // Uint8Array umesto niza Set-ova: dug email ne pravi po jednu alokaciju
+    // za svaki obeleženi znak. Redosled bitova je isti kao u legendi.
+    const oznake = new Uint8Array(tekst.length);
     const dodaj = (od, do_, tip) => {
+        const bit = OZNAKA_BIT[tip];
         const pocetak = Math.max(0, od);
         const kraj = Math.min(tekst.length, do_);
         for (let indeks = pocetak; indeks < kraj; indeks += 1) {
-            if (/\s/.test(tekst[indeks])) continue;
-            if (!oznake[indeks]) oznake[indeks] = new Set();
-            oznake[indeks].add(tip);
+            if (UZORAK_RAZMAKA.test(tekst[indeks])) continue;
+            oznake[indeks] |= bit;
         }
     };
 
@@ -535,16 +546,18 @@ function izracunajOznake(rezultat) {
     });
 
     [['link', UZORAK_LINKA], ['caps', UZORAK_CAPS], ['interpunkcija', UZORAK_INTERPUNKCIJA]].forEach(([tip, uzorak]) => {
-        Array.from(tekst.matchAll(uzorak)).slice(0, 50).forEach(poklapanje => {
+        let broj = 0;
+        for (const poklapanje of tekst.matchAll(uzorak)) {
             dodaj(poklapanje.index, poklapanje.index + poklapanje[0].length, tip);
-        });
+            broj += 1;
+            if (broj >= 50) break;
+        }
     });
 
     const kombinacije = new Set();
-    oznake.forEach(skup => {
-        if (!skup || !skup.size) return;
-        kombinacije.add(kljucOznake(skup));
-    });
+    for (let indeks = 0; indeks < oznake.length; indeks += 1) {
+        if (oznake[indeks]) kombinacije.add(kljucOznake(oznake[indeks]));
+    }
 
     return { tekst, oznake, kombinacije };
 }
@@ -555,16 +568,16 @@ function napraviPregled(rezultat) {
     let indeks = 0;
 
     while (indeks < tekst.length) {
-        const skup = oznake[indeks];
-        if (!skup || !skup.size) {
+        const maska = oznake[indeks];
+        if (!maska) {
             let kraj = indeks + 1;
-            while (kraj < tekst.length && (!oznake[kraj] || !oznake[kraj].size)) kraj += 1;
+            while (kraj < tekst.length && !oznake[kraj]) kraj += 1;
             html += pobjegni(tekst.slice(indeks, kraj));
             indeks = kraj;
             continue;
         }
 
-        const kljuc = kljucOznake(skup);
+        const kljuc = kljucOznake(maska);
         let kraj = indeks + 1;
         while (kraj < tekst.length && oznake[kraj] && kljucOznake(oznake[kraj]) === kljuc) kraj += 1;
 
@@ -846,7 +859,7 @@ async function kopirajRezultat() {
         `${recnik.signali.broj_linkova}: ${rezultat.vrednosti.broj_linkova}/10 | ` +
         `${recnik.signali.caps_procenat}: ${formatirajBroj(rezultat.vrednosti.caps_procenat)}% | ` +
         `${recnik.signali.interpunkcija}: ${formatirajBroj(rezultat.vrednosti.interpunkcija)}% | ` +
-        `${recnik.signali.nn_pouzdanje}: ${formatirajBroj(rezultat.vrednosti.nn_pouzdanje)}%`
+        `${recnik.signali.nn_pouzdanje}: ${formatirajBroj(rezultat.vrednosti.nn_pouzdanje ?? 50)}%`
     ];
 
     if (rezultat.recnik) {

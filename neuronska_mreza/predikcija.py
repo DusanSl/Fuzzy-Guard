@@ -3,7 +3,8 @@
 Mreža (MLP ``(16, 8)``) se trenira na iste četiri interpretabilne
 karakteristike koje dobija i fazi sistem. U runtime-u se **ne** koristi za
 odluku: njen izlaz je samo peti ulaz ``nn_pouzdanje`` (0-100), koji pravila
-``n01``-``n03`` tretiraju kao potvrdu. Konačna ocena ostaje Mamdani + centroid.
+``n01``/``n02`` tretiraju kao potvrdu ili ublažavanje. Konačna ocena ostaje
+Mamdani + centroid.
 
 Modeli se čuvaju po rečniku (``en``, ``sr``, ``kombinovano``) jer se ulaz
 ``kljucne_reci`` menja sa rečnikom. Ako model ne postoji, ako je oštećen ili
@@ -15,6 +16,7 @@ sistem. Greška u mreži nikad ne obara zahtev.
 import hashlib
 import logging
 from pathlib import Path
+from threading import RLock
 
 import joblib
 import sklearn
@@ -41,6 +43,9 @@ _log = logging.getLogger(__name__)
 _MODELI_KEŠ = {}
 _HASH_KEŠ = {}
 _Upozoreno = set()
+# Model se učitava jednom; brava sprečava da dva prva zahteva učitaju isti
+# fajl dvaput. RLock je potreban jer ucitaj_model poziva recnik_hash.
+_KEŠ_LOCK = RLock()
 
 
 def recnik_hash(nacin: str):
@@ -52,28 +57,29 @@ def recnik_hash(nacin: str):
     if nacin not in PUTANJE_MODELA:
         return None
 
-    jezici = ("en", "sr") if nacin == "kombinovano" else (nacin,)
-    heš = hashlib.sha256()
-    for jezik in jezici:
-        putanja = PUTANJE_RECNIKA[jezik]
-        try:
-            vreme = putanja.stat().st_mtime
-        except OSError:
-            return None
+    with _KEŠ_LOCK:
+        jezici = ("en", "sr") if nacin == "kombinovano" else (nacin,)
+        heš = hashlib.sha256()
+        for jezik in jezici:
+            putanja = PUTANJE_RECNIKA[jezik]
+            try:
+                vreme = putanja.stat().st_mtime
+            except OSError:
+                return None
 
-        keširan = _HASH_KEŠ.get(putanja)
-        if keširan and keširan[0] == vreme:
-            heš.update(keširan[1])
-            continue
+            keširan = _HASH_KEŠ.get(putanja)
+            if keširan and keširan[0] == vreme:
+                heš.update(keširan[1])
+                continue
 
-        try:
-            sadrzaj = putanja.read_bytes()
-        except OSError:
-            return None
-        _HASH_KEŠ[putanja] = (vreme, sadrzaj)
-        heš.update(sadrzaj)
+            try:
+                sadrzaj = putanja.read_bytes()
+            except OSError:
+                return None
+            _HASH_KEŠ[putanja] = (vreme, sadrzaj)
+            heš.update(sadrzaj)
 
-    return heš.hexdigest()
+        return heš.hexdigest()
 
 
 def _upozori_jednom(kljuc: str, poruka: str) -> None:
@@ -81,6 +87,23 @@ def _upozori_jednom(kljuc: str, poruka: str) -> None:
         return
     _Upozoreno.add(kljuc)
     _log.warning(poruka)
+
+
+def _meta_odgovara(mreza, meta: dict) -> tuple:
+    """Proverava da li je model sačuvan istom verzijom biblioteke i arhitekturom."""
+    ocekivana_verzija = meta.get("sklearn")
+    if ocekivana_verzija and ocekivana_verzija != sklearn.__version__:
+        return False, (
+            f"scikit-learn {ocekivana_verzija} != {sklearn.__version__}"
+        )
+
+    ocekivana_arhitektura = meta.get("arhitektura")
+    if ocekivana_arhitektura is not None:
+        stvarna = list(getattr(mreza, "hidden_layer_sizes", ()))
+        if list(ocekivana_arhitektura) != stvarna:
+            return False, f"arhitektura {ocekivana_arhitektura} != {stvarna}"
+
+    return True, ""
 
 
 def ucitaj_model(nacin: str):
@@ -92,40 +115,52 @@ def ucitaj_model(nacin: str):
     try:
         vreme = putanja.stat().st_mtime
     except OSError:
-        _MODELI_KEŠ.pop(nacin, None)
+        with _KEŠ_LOCK:
+            _MODELI_KEŠ.pop(nacin, None)
         return None
 
-    keširan = _MODELI_KEŠ.get(nacin)
-    if keširan and keširan[0] == vreme:
-        return keširan[1]
+    with _KEŠ_LOCK:
+        keširan = _MODELI_KEŠ.get(nacin)
+        if keširan and keširan[0] == vreme:
+            return keširan[1]
 
-    try:
-        podaci = joblib.load(putanja)
-        mreza = podaci["mreza"]
-        skaliraj = podaci["skaliraj"]
-        meta = podaci.get("meta", {})
-    except Exception:
-        _upozori_jednom(
-            f"ostecen:{nacin}",
-            f"Model {putanja.name} ne može da se učita; koristi se neutralno 50.",
-        )
-        _MODELI_KEŠ[nacin] = (vreme, None)
-        return None
+        try:
+            podaci = joblib.load(putanja)
+            mreza = podaci["mreza"]
+            skaliraj = podaci["skaliraj"]
+            meta = podaci.get("meta", {})
+        except Exception:
+            _upozori_jednom(
+                f"ostecen:{nacin}",
+                f"Model {putanja.name} ne može da se učita; koristi se neutralno 50.",
+            )
+            _MODELI_KEŠ[nacin] = (vreme, None)
+            return None
 
-    ocekivani = meta.get("recnik_hash")
-    trenutni = recnik_hash(nacin)
-    if ocekivani is None or trenutni is None or ocekivani != trenutni:
-        _upozori_jednom(
-            f"hash:{nacin}",
-            f"Model {putanja.name} ne odgovara trenutnom rečniku; "
-            "koristi se neutralno 50. Ponovo pokrenite treniranje.",
-        )
-        _MODELI_KEŠ[nacin] = (vreme, None)
-        return None
+        ispravan, razlog = _meta_odgovara(mreza, meta)
+        if not ispravan:
+            _upozori_jednom(
+                f"meta:{nacin}",
+                f"Model {putanja.name} ne odgovara okruženju ({razlog}); "
+                "koristi se neutralno 50. Ponovo pokrenite treniranje.",
+            )
+            _MODELI_KEŠ[nacin] = (vreme, None)
+            return None
 
-    model = {"mreza": mreza, "skaliraj": skaliraj, "meta": meta}
-    _MODELI_KEŠ[nacin] = (vreme, model)
-    return model
+        ocekivani = meta.get("recnik_hash")
+        trenutni = recnik_hash(nacin)
+        if ocekivani is None or trenutni is None or ocekivani != trenutni:
+            _upozori_jednom(
+                f"hash:{nacin}",
+                f"Model {putanja.name} ne odgovara trenutnom rečniku; "
+                "koristi se neutralno 50. Ponovo pokrenite treniranje.",
+            )
+            _MODELI_KEŠ[nacin] = (vreme, None)
+            return None
+
+        model = {"mreza": mreza, "skaliraj": skaliraj, "meta": meta}
+        _MODELI_KEŠ[nacin] = (vreme, model)
+        return model
 
 
 def pouzdanje_nn(ulazi: dict, nacin: str) -> float:
@@ -173,5 +208,6 @@ def sacuvaj_model(nacin: str, skaliraj, mreza) -> Path:
         },
         putanja,
     )
-    _MODELI_KEŠ.pop(nacin, None)
+    with _KEŠ_LOCK:
+        _MODELI_KEŠ.pop(nacin, None)
     return putanja

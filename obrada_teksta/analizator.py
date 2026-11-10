@@ -2,6 +2,7 @@ import html
 import json
 import os
 import re
+from itertools import chain, islice
 from pathlib import Path
 from typing import Optional
 
@@ -131,9 +132,17 @@ def _ocisti_html(tekst: str) -> str:
 
 
 def _izvuci_linkove(tekst: str) -> list:
-    """Vraća jedinstvene linkove iz teksta i iz href atributa."""
-    kandidati = _UZORAK_HREF.findall(tekst) + _UZORAK_LINKA.findall(tekst)
+    """Vraća najviše 10 jedinstvenih linkova iz teksta i href atributa.
+
+    Broj linkova se ionako ograničava na 10, pa nema smisla materializovati
+    sve pogotke u tekstu od 50.000 znakova.
+    """
     ocisceni = []
+    vidjeni = set()
+    kandidati = chain(
+        (poklapanje.group(1) for poklapanje in _UZORAK_HREF.finditer(tekst)),
+        (poklapanje.group(0) for poklapanje in _UZORAK_LINKA.finditer(tekst)),
+    )
     for link in kandidati:
         link = html.unescape(link).strip().rstrip(".,;:!?)]}>\"'")
         if not link:
@@ -141,8 +150,14 @@ def _izvuci_linkove(tekst: str) -> list:
         link = re.sub(r"(?i)^hxxp", "http", link)
         if link.lower().startswith("www."):
             link = "http://" + link
-        ocisceni.append(link.lower())
-    return list(dict.fromkeys(ocisceni))
+        link = link.lower()
+        if link in vidjeni:
+            continue
+        vidjeni.add(link)
+        ocisceni.append(link)
+        if len(ocisceni) >= 10:
+            break
+    return ocisceni
 
 
 # --- naučeni rečnici ------------------------------------------------------
@@ -201,8 +216,33 @@ def _termini_za_nacin(nacin_recnik: str, legacy_recnik=None) -> list:
 def _izracunaj_kljucne_reci(tekst: str, nacin_recnik: str, legacy_recnik=None):
     """Vraća (evidencija 0-10, lista najjačih pogodaka za objašnjenje)."""
     return pronadji_poklapanja(
-        tekst, _termini_za_nacin(nacin_recnik, legacy_recnik)
+        tekst,
+        _termini_za_nacin(nacin_recnik, legacy_recnik),
+        keš_kljuc=_kljuc_indeksa(nacin_recnik, legacy_recnik),
     )
+
+
+def _kljuc_indeksa(nacin_recnik: str, legacy_recnik=None):
+    """Ključ keša terminskog indeksa; menja se kada se rečnik promeni.
+
+    ``legacy`` rečnik može da bude proizvoljan dict, pa se za njega indeks ne
+    kešira. Za naučene rečnike mtime je dovoljan: fajl se menja samo pri
+    ponovnom treniranju.
+    """
+    if nacin_recnik == "legacy" or legacy_recnik is not None:
+        return None
+
+    jezici = ("en", "sr") if nacin_recnik == "kombinovano" else (nacin_recnik,)
+    delovi = []
+    for jezik in jezici:
+        putanja = RECNICI_PO_JEZIKU.get(jezik)
+        if putanja is None:
+            return None
+        try:
+            delovi.append((jezik, putanja.stat().st_mtime))
+        except OSError:
+            return None
+    return (nacin_recnik, tuple(delovi))
 
 
 # --- analiza --------------------------------------------------------------
@@ -248,22 +288,22 @@ def analiziraj_email(
             "tip": "link",
             "pozicije": [
                 list(poklapanje.span())
-                for poklapanje in _UZORAK_LINKA.finditer(vidljivi_tekst)
-            ][:50],
+                for poklapanje in islice(_UZORAK_LINKA.finditer(vidljivi_tekst), 50)
+            ],
         },
         {
             "tip": "caps",
             "pozicije": [
                 list(poklapanje.span())
-                for poklapanje in _UZORAK_CAPS.finditer(vidljivi_tekst)
-            ][:50],
+                for poklapanje in islice(_UZORAK_CAPS.finditer(vidljivi_tekst), 50)
+            ],
         },
         {
             "tip": "interpunkcija",
             "pozicije": [
                 list(poklapanje.span())
-                for poklapanje in _UZORAK_INTERPUNKCIJA.finditer(vidljivi_tekst)
-            ][:50],
+                for poklapanje in islice(_UZORAK_INTERPUNKCIJA.finditer(vidljivi_tekst), 50)
+            ],
         },
     ]
 

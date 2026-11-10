@@ -431,6 +431,85 @@ def test_rate_limit_vraca_429(monkeypatch):
         _zahtevi_po_ip.clear()
 
 
+def test_rate_limit_ogranicava_broj_ip_korpi(monkeypatch):
+    from main import _dozvoli_zahtev, _zahtevi_po_ip
+
+    _zahtevi_po_ip.clear()
+    monkeypatch.setattr("main.MAKS_IP_KORPI", 3)
+
+    try:
+        for indeks in range(10):
+            assert _dozvoli_zahtev(f"ip-{indeks}")
+        assert len(_zahtevi_po_ip) == 3
+        # Najnoviji klijent ostaje, najstariji se brišu.
+        assert "ip-9" in _zahtevi_po_ip
+        assert "ip-0" not in _zahtevi_po_ip
+    finally:
+        _zahtevi_po_ip.clear()
+
+
+def test_bezbednosna_zaglavlja_i_kesiranje_statike():
+    from main import app
+
+    klijent = app.test_client()
+    stranica = klijent.get("/")
+    assert stranica.headers["X-Content-Type-Options"] == "nosniff"
+    assert stranica.headers["X-Frame-Options"] == "DENY"
+    assert "camera=()" in stranica.headers["Permissions-Policy"]
+    assert stranica.headers["Cross-Origin-Opener-Policy"] == "same-origin"
+    assert stranica.headers["Cache-Control"] == "no-store"
+
+    statika = klijent.get("/static/izgled.css")
+    assert statika.status_code == 200
+    assert "immutable" in statika.headers["Cache-Control"]
+
+
+def test_indeks_recnika_se_kesira():
+    from obrada_teksta import podudaranje
+
+    podudaranje._INDEKS_KEŠ.clear()
+    try:
+        prvi = podudaranje.pronadji_poklapanja(
+            "free prize", [("free prize", 1.0, "en")], keš_kljuc=("test", 1)
+        )
+        assert prvi[0] == 1.0
+        assert ("test", 1) in podudaranje._INDEKS_KEŠ
+
+        # Isti ključ vraća isti indeks, i kada se prosledi drugi iterabil.
+        drugi = podudaranje.pronadji_poklapanja(
+            "free prize", [("nesto drugo", 2.0, "en")], keš_kljuc=("test", 1)
+        )
+        assert drugi[0] == 1.0
+    finally:
+        podudaranje._INDEKS_KEŠ.clear()
+
+
+def test_kljuc_indeksa_zavisi_od_recnika():
+    from obrada_teksta.analizator import _kljuc_indeksa
+
+    assert _kljuc_indeksa("legacy") is None
+    assert _kljuc_indeksa("en") != _kljuc_indeksa("kombinovano")
+
+
+def test_nn_meta_provera():
+    import sklearn
+
+    from neuronska_mreza.predikcija import _meta_odgovara
+
+    class LaznaMreza:
+        hidden_layer_sizes = (16, 8)
+
+    assert _meta_odgovara(
+        LaznaMreza(), {"sklearn": sklearn.__version__, "arhitektura": [16, 8]}
+    )[0]
+    assert not _meta_odgovara(
+        LaznaMreza(), {"sklearn": "0.0", "arhitektura": [16, 8]}
+    )[0]
+    assert not _meta_odgovara(
+        LaznaMreza(), {"sklearn": sklearn.__version__, "arhitektura": [8, 8]}
+    )[0]
+
+
 def test_skupovi_endpoint_vraca_ulaze_i_izlaze():
     from main import app
     podaci = app.test_client().get("/skupovi").get_json()
@@ -468,6 +547,15 @@ def test_analiziraj_odbija_neispravan_ulaz():
     assert klijent.post("/analiziraj", json={"tekst": None}).status_code == 400
     assert klijent.post("/analiziraj", json={"tekst": 123}).status_code == 400
     assert klijent.post("/analiziraj", json={"tekst": "   "}).status_code == 400
+
+
+def test_analiziraj_odbija_json_koji_nije_objekat():
+    from main import app
+    klijent = app.test_client()
+
+    assert klijent.post("/analiziraj", json=["tekst"]).status_code == 400
+    assert klijent.post("/analiziraj", json="tekst").status_code == 400
+    assert klijent.post("/analiziraj", json=42).status_code == 400
 
 
 

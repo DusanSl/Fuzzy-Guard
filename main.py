@@ -1,4 +1,5 @@
-from collections import defaultdict, deque
+import os
+from collections import OrderedDict, deque
 from pathlib import Path
 from threading import Lock
 from time import monotonic
@@ -27,6 +28,11 @@ BEZBEDNOSNA_ZAGLAVLJA = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "X-Frame-Options": "DENY",
+    # Aplikacija ne koristi kameru, mikrofon, lokaciju ni plaćanje.
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    # Sprečava da druga strana otvori aplikaciju u prozoru i komunicira sa njom.
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
     "Content-Security-Policy": (
         "default-src 'self'; base-uri 'none'; object-src 'none'; "
         "frame-ancestors 'none'; form-action 'self'; connect-src 'self'; "
@@ -46,25 +52,39 @@ app.config["MAX_CONTENT_LENGTH"] = MAKS_DUŽINA_ZAHTEVA
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = KEŠIRANJE_STATIKE_SEKUNDI
 
 # Jednostavan klizni prozor po IP adresi. Dovoljno za javni demo i zaštitu od
-# slučajnog ili namernog spamovanja skupog /analiziraj endpointa.
-GRANICA_ZAHTEVA = 120
-PROZOR_ZAHTEVA = 60.0
-_zahtevi_po_ip = defaultdict(deque)
+# slučajnog ili namernog spamovanja skupog /analiziraj endpointa. Granice se
+# mogu podesiti bez izmene koda:
+#
+#     FUZZY_GUARD_GRANICA_ZAHTEVA=120
+#     FUZZY_GUARD_PROZOR_ZAHTEVA=60
+GRANICA_ZAHTEVA = int(os.environ.get("FUZZY_GUARD_GRANICA_ZAHTEVA", "120"))
+PROZOR_ZAHTEVA = float(os.environ.get("FUZZY_GUARD_PROZOR_ZAHTEVA", "60"))
+# Gornja granica broja IP korpi. Bez nje bi mreža jednokratnih klijenata
+# trajno punila rečnik, jer se prazne korpe brišu samo kad ista IP ponovo dođe.
+MAKS_IP_KORPI = 2000
+_zahtevi_po_ip = OrderedDict()
 _zahtevi_lock = Lock()
 
 
 def _dozvoli_zahtev(ip_adresa: str) -> bool:
     sada = monotonic()
     with _zahtevi_lock:
-        red = _zahtevi_po_ip[ip_adresa]
+        red = _zahtevi_po_ip.get(ip_adresa)
+        if red is None:
+            red = deque()
+            _zahtevi_po_ip[ip_adresa] = red
+        else:
+            # LRU: aktivan klijent ide na kraj, pa se najstariji brišu prvi.
+            _zahtevi_po_ip.move_to_end(ip_adresa)
+
         while red and sada - red[0] > PROZOR_ZAHTEVA:
             red.popleft()
         if len(red) >= GRANICA_ZAHTEVA:
             return False
+
         red.append(sada)
-        if len(_zahtevi_po_ip) > 2000:
-            for kljuc in [k for k, v in _zahtevi_po_ip.items() if not v]:
-                _zahtevi_po_ip.pop(kljuc, None)
+        while len(_zahtevi_po_ip) > MAKS_IP_KORPI:
+            _zahtevi_po_ip.popitem(last=False)
         return True
 
 
@@ -72,7 +92,14 @@ def _dozvoli_zahtev(ip_adresa: str) -> bool:
 def bezbednosna_zaglavlja(odgovor):
     for ime, vrednost in BEZBEDNOSNA_ZAGLAVLJA.items():
         odgovor.headers.setdefault(ime, vrednost)
-    if request.endpoint != "static":
+    if request.is_secure:
+        odgovor.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+    if request.endpoint == "static":
+        # Šabloni dodaju ?v=<mtime>, pa se ime fajla menja sa sadržajem.
+        odgovor.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    else:
         # Odgovor može da sadrži tekst emaila, pa ga posrednici ne smeju da
         # čuvaju u kešu.
         odgovor.headers["Cache-Control"] = "no-store"
@@ -149,9 +176,10 @@ def analiziraj():
         odgovor.headers["Retry-After"] = str(int(PROZOR_ZAHTEVA))
         return odgovor
 
-    nacin_recnika = "auto"
     if request.is_json:
-        podaci = request.get_json(silent=True) or {}
+        podaci = request.get_json(silent=True)
+        if not isinstance(podaci, dict):
+            return jsonify({"greska": "Telo zahteva mora biti JSON objekat."}), 400
     else:
         podaci = request.form
 
@@ -210,7 +238,5 @@ def analiziraj():
 
 
 if __name__ == "__main__":
-    import os
-
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host="127.0.0.1", port=port)

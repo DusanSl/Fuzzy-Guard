@@ -80,7 +80,15 @@ The defuzzified `spam_score` (0-100%) is then interpreted linguistically: each o
 - Only the message body is scored. The From and Subject fields are context only.
 - Analysis runs on this Flask server. The text is not sent to third-party services.
 - Responses containing message text are marked `Cache-Control: no-store`.
-- The app sends security headers including CSP, `X-Content-Type-Options` and `X-Frame-Options`.
+- The app sends security headers including CSP, `X-Content-Type-Options`,
+  `X-Frame-Options`, `Permissions-Policy`, COOP and CORP. HSTS is added only on
+  HTTPS responses.
+- `/analiziraj` is rate-limited per client address (120 requests per 60 seconds
+  by default). Set `FUZZY_GUARD_GRANICA_ZAHTEVA` and
+  `FUZZY_GUARD_PROZOR_ZAHTEVA` to change it.
+- The limiter uses the address reported by the WSGI server (`REMOTE_ADDR`).
+  Behind a reverse proxy, configure the proxy to pass the real client address.
+  Do not trust `X-Forwarded-For` from arbitrary clients.
 
 ## Project Structure
 
