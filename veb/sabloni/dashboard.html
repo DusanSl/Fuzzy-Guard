@@ -194,14 +194,14 @@ A traceable score.</h1>
                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
             </button>
         </div>
-        <p class="dijalog-uvod" data-i18n="metodUvod">The fuzzy rules calculate the score. The neural network does not. The system cleans the message, finds keywords, measures four signals, fuzzifies them, applies 19 rules, and calculates one number. The result view shows each step.</p>
+        <p class="dijalog-uvod" data-i18n="metodUvod">The fuzzy rules calculate the score. The neural network supplies one of the five signals, never the decision. The system cleans the message, finds keywords, measures four text signals plus the network confidence, fuzzifies them, applies 21 rules, and calculates one number. The result view shows each step.</p>
 
         <ol class="koraci">
             <li class="korak"><span class="korak-indeks">01</span><h3 data-i18n="korak1Naslov">Clean the text</h3><p data-i18n="korak1Opis">The system decodes HTML entities and removes scripts and tags. It analyses only the visible body.</p></li>
             <li class="korak"><span class="korak-indeks">02</span><h3 data-i18n="korak2Naslov">Find keywords</h3><p data-i18n="korak2Opis">The system compares the body with the learned English and Serbian word lists. It calculates a keyword score from 0 to 10.</p></li>
-            <li class="korak"><span class="korak-indeks">03</span><h3 data-i18n="korak3Naslov">Measure signals</h3><p data-i18n="korak3Opis">The system measures the keyword score, the number of links, the percentage of capital letters, and the punctuation rate.</p></li>
-            <li class="korak"><span class="korak-indeks">04</span><h3 data-i18n="korak4Naslov">Fuzzify the signals</h3><p data-i18n="korak4Opis">Each signal receives a degree of membership in triangular or trapezoidal sets.</p></li>
-            <li class="korak"><span class="korak-indeks">05</span><h3 data-i18n="korak5Naslov">Apply the rules</h3><p data-i18n="korak5Opis">Nineteen Mamdani rules combine the memberships with min and max. Each active rule limits its output set to its activation strength.</p></li>
+            <li class="korak"><span class="korak-indeks">03</span><h3 data-i18n="korak3Naslov">Measure signals</h3><p data-i18n="korak3Opis">The system measures the keyword score, the number of links, the percentage of capital letters, and the punctuation rate. A small neural network maps the same four values to a fifth signal: its confidence that the message is spam.</p></li>
+            <li class="korak"><span class="korak-indeks">04</span><h3 data-i18n="korak4Naslov">Fuzzify the signals</h3><p data-i18n="korak4Opis">Each signal, including the network confidence, receives a degree of membership in triangular or trapezoidal sets.</p></li>
+            <li class="korak"><span class="korak-indeks">05</span><h3 data-i18n="korak5Naslov">Apply the rules</h3><p data-i18n="korak5Opis">Twenty-one Mamdani rules combine the memberships with min and max. Nineteen use the four text signals; two neuro-fuzzy rules use the network confidence as confirmation. Each active rule limits its output set to its activation strength.</p></li>
             <li class="korak"><span class="korak-indeks">06</span><h3 data-i18n="korak6Naslov">Defuzzify and explain</h3><p data-i18n="korak6Opis">The system aggregates the limited sets with max. The centroid from 0 to 100 is the score. The category comes from the same value.</p></li>
         </ol>
 
@@ -237,6 +237,11 @@ A traceable score.</h1>
                         <td data-i18n="metodInterpunkcijaOpis">Exclamation marks and question marks divided by non-space characters. The result is multiplied by 100.</td>
                         <td>0–100%</td>
                     </tr>
+                    <tr>
+                        <td data-i18n="signaliNnPouzdanje">Network confidence</td>
+                        <td data-i18n="metodNnOpis">Spam probability from an MLP classifier, trained on the same four signals and scaled to 0–100. It is neutral (50) when no model is available, and it never decides SPAM alone.</td>
+                        <td>0–100</td>
+                    </tr>
                 </tbody>
             </table>
         </section>
@@ -249,8 +254,8 @@ A traceable score.</h1>
         <section class="metod-blok">
             <h3 class="metod-podnaslov" data-i18n="metodMrezaNaslov">Function of the neural network</h3>
             <p class="metod-tekst" data-i18n="metodMrezaTekst1">A neural network (NN) is a model with an input layer, hidden layers and an output layer. Each layer contains neurons. Each connection between neurons has a weight. A perceptron is a simple artificial neuron: it multiplies each input by a weight, adds the results, and passes the sum through an activation function.</p>
-            <p class="metod-tekst" data-i18n="metodMrezaTekst2">The network learns these weights from labelled examples. It is trained offline on SpamAssassin data. It produces only the keyword lexicon: the weights in the two learned word lists.</p>
-            <p class="metod-tekst" data-i18n="metodMrezaTekst3">The network does not see the four signals. It does not calculate the spam score. The fuzzy rules make the decision.</p>
+            <p class="metod-tekst" data-i18n="metodMrezaTekst2">The network learns its weights from labelled examples. It is trained offline on SpamAssassin data. A single-neuron model learns the keyword lexicons. A separate MLP (16, 8) is trained on the same four signals and returns a spam probability for each message.</p>
+            <p class="metod-tekst" data-i18n="metodMrezaTekst3">That probability becomes the fifth fuzzy input, nn_pouzdanje (0–100). Two rules use it only as confirmation: high confidence can raise suspicion when text evidence agrees, and low confidence can soften a "links only" pattern. The network never decides SPAM on its own; the final score is still Mamdani inference plus centroid defuzzification.</p>
             <table class="metod-tabela metod-tabela-metrike">
                 <thead>
                     <tr>
@@ -262,23 +267,33 @@ A traceable score.</h1>
                 <tbody>
                     <tr>
                         <td data-i18n="metodModelFaziEn">Fuzzy + EN lexicon</td>
-                        <td data-i18n="metodTacnostFaziEn">90.3%</td>
-                        <td data-i18n="metodF1FaziEn">0.697</td>
+                        <td data-i18n="metodTacnostFaziEn">90.4%</td>
+                        <td data-i18n="metodF1FaziEn">0.702</td>
                     </tr>
                     <tr>
                         <td data-i18n="metodModelFaziOba">Fuzzy + both lexicons</td>
-                        <td data-i18n="metodTacnostFaziOba">90.0%</td>
-                        <td data-i18n="metodF1FaziOba">0.704</td>
+                        <td data-i18n="metodTacnostFaziOba">90.1%</td>
+                        <td data-i18n="metodF1FaziOba">0.709</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelHibridEn">Neuro-fuzzy + EN lexicon</td>
+                        <td data-i18n="metodTacnostHibridEn">92.8%</td>
+                        <td data-i18n="metodF1HibridEn">0.759</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelHibridOba">Neuro-fuzzy + both lexicons</td>
+                        <td data-i18n="metodTacnostHibridOba">92.3%</td>
+                        <td data-i18n="metodF1HibridOba">0.754</td>
                     </tr>
                     <tr>
                         <td data-i18n="metodModelMrezaEn">NN standalone, EN</td>
-                        <td data-i18n="metodTacnostMrezaEn">93.5%</td>
-                        <td data-i18n="metodF1MrezaEn">0.770</td>
+                        <td data-i18n="metodTacnostMrezaEn">93.6%</td>
+                        <td data-i18n="metodF1MrezaEn">0.784</td>
                     </tr>
                     <tr>
                         <td data-i18n="metodModelMrezaOba">NN standalone, both</td>
-                        <td data-i18n="metodTacnostMrezaOba">92.9%</td>
-                        <td data-i18n="metodF1MrezaOba">0.736</td>
+                        <td data-i18n="metodTacnostMrezaOba">93.1%</td>
+                        <td data-i18n="metodF1MrezaOba">0.743</td>
                     </tr>
                 </tbody>
             </table>
@@ -287,9 +302,9 @@ A traceable score.</h1>
 
         <section class="metod-blok">
             <h3 class="metod-podnaslov" data-i18n="metodPravilaNaslov">Rules and limitations</h3>
-            <p class="metod-tekst" data-i18n="metodPravilaTekst">The system has 19 rules: 4 legitimate, 11 suspicious, and 4 spam. Each rule limits its output set to its activation strength. The system keeps the largest value at each point.</p>
+            <p class="metod-tekst" data-i18n="metodPravilaTekst">The system has 21 rules: 4 legitimate, 13 suspicious, and 4 spam. Nineteen use the four text signals; n01 and n02 add the network confidence. Each rule limits its output set to its activation strength. The system keeps the largest value at each point.</p>
             <ul class="metod-lista">
-                <li data-i18n="metodOgranicenje1">The four signals are designed for email. Scores for SMS and chat messages are not reliable.</li>
+                <li data-i18n="metodOgranicenje1">The four text signals are designed for email. Scores for SMS and chat messages are not reliable.</li>
                 <li data-i18n="metodOgranicenje2">Different emails can receive the same score when the fuzzy sets cannot separate them.</li>
                 <li data-i18n="metodOgranicenje3">The boundaries of the fuzzy sets were calibrated on hand-labelled examples. All reported metrics come from held-out data.</li>
                 <li data-i18n="metodOgranicenje4">The Serbian test set is partly machine-translated and partly synthetic.</li>
@@ -297,7 +312,7 @@ A traceable score.</h1>
         </section>
 
         <div class="dijalog-cipovi">
-            <span class="dijalog-cip" data-i18n="cipPravila">19 rules</span>
+            <span class="dijalog-cip" data-i18n="cipPravila">21 rules</span>
             <span class="dijalog-cip" data-i18n="cipSkupovi">trimf / trapmf</span>
             <span class="pomoc">
                 <button class="pomoc-dugme" type="button" aria-expanded="false" aria-controls="pomoc-trimf" aria-label="About membership functions" data-i18n-aria="pomocTrimfNaslov">?</button>
@@ -307,7 +322,7 @@ A traceable score.</h1>
                 </span>
             </span>
             <span class="dijalog-cip" data-i18n="cipTeziste">centroid</span>
-            <span class="dijalog-cip" data-i18n="cipMreza">Neural network supplies the lexicon only</span>
+            <span class="dijalog-cip" data-i18n="cipMreza">Neural network is the fifth signal</span>
         </div>
 
         <p class="dijalog-napomena"><span>◐</span><span data-i18n="metodNapomena">The category comes from the same defuzzified value that the screen shows. The score and the category cannot disagree.</span></p>

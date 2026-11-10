@@ -14,7 +14,7 @@ Thumbs.db
 
 *.log
 
-# istrenirani model neuronske mreze (generise se ponovo)
+# stari istrenirani model (zamenjen sa podaci/model_nn_*.joblib)
 neuronska_mreza/model.joblib
 
 # keš mašinskog prevođenja (finalni TSV se commit-uje)

@@ -38,7 +38,7 @@ The application features a responsive web interface with full bilingual support 
 Traditional spam filters use rigid rules (e.g., "if email contains *FREE*, mark as spam"). The fuzzy approach maps features to **degrees of membership** in fuzzy sets, combines them using rules through Mamdani inference, and defuzzifies the result using the **centroid method** to produce a final score.
 
 ### Input Variables (0-10 or 0-100%)
-The system extracts and analyzes four input features from the email text:
+The system extracts four text features and derives a fifth signal from the neural network:
 
 | Input | Description | Range |
 |---|---|---|
@@ -46,6 +46,13 @@ The system extracts and analyzes four input features from the email text:
 | `broj_linkova` (Links) | Total URL links found in the body | 0-10 |
 | `caps_procenat` (Caps %) | Percentage of uppercase letters in the text | 0-100% |
 | `interpunkcija` (Punctuation) | Density of exclamation marks and question marks | 0-100% |
+| `nn_pouzdanje` (NN confidence) | Spam probability from an MLP trained on the same four features | 0-100 |
+
+`nn_pouzdanje` is fed to the rule base as a genuine fifth fuzzy input; the
+network never overrides the fuzzy decision. If no trained model is available or
+the model does not match the current lexicon, the value is the neutral `50`, so
+the neuro-fuzzy rules cannot fire and the system behaves exactly like the pure
+fuzzy system.
 
 Keyword matches are **non-overlapping**: the longest phrase wins, so `"free prize"` counts once with its phrase weight instead of also counting `free` and `prize` separately. Match positions are tracked on the original text, so the highlighted preview is exact even for characters whose lowercase form changes length.
 
@@ -88,10 +95,14 @@ Fuzzy-Guard/
 │   ├── nauci_recnik.py     # learns the EN/SR spam lexicon and exports JSON
 │   ├── izgradi_sr_korpus.py# builds the Serbian corpus by machine translation
 │   ├── legacy_recnik.py    # old hand dictionary, evaluation only
-│   └── treniraj.py         # MLP comparison + lexicon ablation
+│   ├── predikcija.py       # loads the runtime MLP, returns nn_pouzdanje
+│   └── treniraj.py         # MLP vs fuzzy vs neuro-fuzzy comparison
 ├── podaci/
 │   ├── recnik_naucen_en.json  # learned English spam words with weights
 │   ├── recnik_naucen_sr.json  # learned Serbian spam words with weights
+│   ├── model_nn_en.joblib     # runtime MLP for the EN lexicon
+│   ├── model_nn_sr.joblib     # runtime MLP for the SR lexicon
+│   ├── model_nn_kombinovano.joblib  # runtime MLP for both lexicons
 │   ├── spamassassin.tsv       # 3,000 labelled emails (500 spam)
 │   ├── sr_spamassassin.tsv    # Serbian corpus (MT + synthetic spam fallback)
 │   └── SMSSpamCollection.tsv
@@ -150,6 +161,11 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
   - `umerena` (Moderate): `trimf [6, 12, 25]`
   - `agresivna` (Aggressive): `trapmf [14, 40, 100, 100]`
 
+* **NN confidence** `[0-100]`
+  - `nn_nisko` (Low): `trapmf [0, 0, 30, 50]`
+  - `nn_srednje` (Medium): `trimf [30, 50, 70]`
+  - `nn_visoko` (High): `trapmf [55, 75, 100, 100]`
+
 * **Spam Score (Output)** `[0-100]`
   - `score_legitiman` (Legitimate): `trapmf [0, 0, 8, 20]`
   - `score_legitiman_energicno` (Energetically Legitimate): `trimf [10, 13, 22]`
@@ -199,13 +215,20 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | **p15** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p16** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p17** | (`zastupljene` OR `dominantne`) keywords AND (`umereni` OR `brojni`) links AND (`poviseni` OR `blago_povisen` OR `agresivan`) caps | **SPAM** |
+| **n01** | `nn_visoko` (NN confident) AND (`zastupljene` OR `dominantne`) keywords | **HIGH SUSPICION** |
+| **n02** | `nn_nisko` (NN not confident) AND `brojni` (numerous) links | **MILDLY SUSPICIOUS** |
 
-Rules are numbered in one continuous run `p01 → p17`. A letter suffix is used
-only for a close variant of the rule directly before it (`p03`/`p03a`,
-`p06`/`p06a`). `p03a` and `p06a` close coverage holes: without them there were
-input combinations where **no rule fired at all** and the score fell back to a
-constant. A standalone "dominant keywords → SPAM" rule was removed because
-`p14` already covers it through `max(dominantne, brojni)`.
+Rules are numbered in one continuous run `p01 → p17` for the text-only base.
+The `n` prefix marks the two neuro-fuzzy rules: `n01` lets a confident network
+raise suspicion when visible keywords agree, and `n02` lets an unconfident
+network soften a links-only pattern. **No `n` rule outputs SPAM**, so the network
+can never decide SPAM on its own. The rule base therefore has 21 rules: 4
+legitimate, 13 suspicious and 4 spam. A letter suffix is used only for a close
+variant of the rule directly before it (`p03`/`p03a`, `p06`/`p06a`). `p03a` and
+`p06a` close coverage holes: without them there were input combinations where
+**no rule fired at all** and the score fell back to a constant. A standalone
+"dominant keywords → SPAM" rule was removed because `p14` already covers it
+through `max(dominantne, brojni)`.
 
 
 ## Installation & Running Locally
@@ -261,6 +284,7 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
   "broj_linkova": 3,       // Link count
   "caps_procenat": 100.0,  // Caps percentage
   "interpunkcija": 6.9,    // Punctuation
+  "nn_pouzdanje": 52.3,    // MLP spam confidence (0-100)
   "spam_score": 86.0,      // Spam score
   "kategorija": "SPAM",    // Category
   "objasnjenje": {
@@ -275,7 +299,8 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
       { "pravilo": "p14", "jacina": 0.667, "kategorija": "SPAM" }
     ],
     "ulazi": {             // values + membership degrees
-      "kljucne_reci": { "vrednost": 7.0, "pripadnosti": { "dominantne": 0.667 } }
+      "kljucne_reci": { "vrednost": 7.0, "pripadnosti": { "dominantne": 0.667 } },
+      "nn_pouzdanje": { "vrednost": 52.3, "pripadnosti": { "nn_srednje": 1.0 } }
     }
   }
 }
@@ -312,24 +337,42 @@ from this endpoint, so the curves can never drift from the backend.
 ## Neural Network Component
 
 The course covers neural networks, so the project includes a neural part in
-`neuronska_mreza/`. The network does **not** compute `spam_score` — the fuzzy
-system stays the only decision maker. Instead the network **learns the spam
-lexicons**: it discovers which words and phrases are characteristic of spam and
-exports them with weights.
+`neuronska_mreza/`. The network has two roles, and neither of them replaces the
+fuzzy decision:
+
+1. **It learns the spam lexicons.** A single-neuron classifier discovers which
+   words and phrases are characteristic of spam and exports them with weights.
+2. **It supplies the fifth fuzzy input.** A separate MLP classifier is trained on
+   the same four features the fuzzy system sees, and its spam probability becomes
+   `nn_pouzdanje` (0–100). Two neuro-fuzzy rules use that signal as confirmation,
+   but the final score is still Mamdani inference plus centroid defuzzification.
 
 ```text
+role 1 — lexicon learning
 labelled emails → TF-IDF (1-2 grams) → single-neuron classifier
                 → coefficients → podaci/recnik_naucen_en.json
                                → podaci/recnik_naucen_sr.json
+
+role 2 — runtime signal
+four features → MLP (16, 8) → spam probability → nn_pouzdanje
+              → nn_nisko / nn_srednje / nn_visoko → rules n01, n02
+              → Mamdani + centroid (unchanged)
 ```
 
-At runtime those weights feed the first fuzzy input, `kljucne_reci`, exactly as
-any other evidence would:
+At runtime the learned lexicon weights feed the first fuzzy input,
+`kljucne_reci`, exactly as any other evidence would:
 
 ```text
 kljucne_reci = non-overlapping lexicon hits (learned weight per term)
-             → normalised to 0-10 → Mamdani FIS (unchanged)
+             → normalised to 0-10 → Mamdani FIS
 ```
+
+The runtime models live in `podaci/model_nn_{en,sr,kombinovano}.joblib`, one per
+lexicon mode because `kljucne_reci` changes with the lexicon. Each model stores
+a hash of the lexicon it was trained on. If the model is missing, fails to load,
+or no longer matches the current lexicon, `nn_pouzdanje` falls back to the
+neutral `50`, the `n` rules cannot fire, and the system behaves exactly like the
+pure fuzzy system. A network error never fails a request.
 
 Terms are only kept if they appear in at least 10 spam emails and are **at least
 2x more frequent in spam than in ham**, which filters out generic words. HTML
@@ -339,8 +382,12 @@ and MIME artifacts ("font", "href", "nbsp") are rejected explicitly.
 python -m neuronska_mreza.izgradi_sr_korpus   # MT corpus (resumable, cached)
 python -m neuronska_mreza.nauci_recnik --jezik en
 python -m neuronska_mreza.nauci_recnik --jezik sr
-python -m neuronska_mreza.treniraj            # compare models
+python -m neuronska_mreza.treniraj --korpus email --recnik svi
 ```
+
+The last command compares three models per lexicon and writes the runtime
+`podaci/model_nn_*.joblib` artifacts. Re-run it whenever a lexicon changes;
+otherwise the lexicon-hash guard makes the runtime use the neutral fallback.
 
 ### The two learned lexicons
 
@@ -374,23 +421,43 @@ is reported separately and is small.
 ### Results (held-out test set)
 
 Corpus: **SpamAssassin** (3,000 emails, 500 spam), 750 test emails, 125 spam.
+The split is stratified and fixed (`random_state=42`).
 
 | Model | Lexicon | Accuracy | Precision | Recall | F1 |
 |---|---|---|---|---|---|
-| Neural network (MLP) | `legacy` | 0.897 | 0.853 | 0.464 | 0.601 |
+| Neural network (MLP) | `legacy` | 0.899 | 0.866 | 0.464 | 0.604 |
 | Fuzzy system (Mamdani) | `legacy` | 0.868 | 0.655 | 0.440 | 0.526 |
-| Neural network (MLP) | `en` | 0.935 | 0.932 | 0.656 | 0.770 |
-| Fuzzy system (Mamdani) | `en` | 0.903 | 0.724 | 0.672 | 0.697 |
-| Neural network (MLP) | `sr` | 0.892 | 0.824 | 0.448 | 0.580 |
+| Neuro-fuzzy (5 inputs) | `legacy` | 0.868 | 0.655 | 0.440 | 0.526 |
+| Neural network (MLP) | `en` | 0.936 | 0.897 | 0.696 | 0.784 |
+| Fuzzy system (Mamdani) | `en` | 0.904 | 0.726 | 0.680 | 0.702 |
+| Neuro-fuzzy (5 inputs) | `en` | 0.928 | 0.859 | 0.680 | 0.759 |
+| Neural network (MLP) | `sr` | 0.888 | 0.815 | 0.424 | 0.558 |
 | Fuzzy system (Mamdani) | `sr` | 0.849 | 0.607 | 0.272 | 0.376 |
-| Neural network (MLP) | `kombinovano` | 0.929 | 0.974 | 0.592 | 0.736 |
-| Fuzzy system (Mamdani) | `kombinovano` | 0.900 | 0.695 | 0.712 | 0.704 |
+| Neuro-fuzzy (5 inputs) | `sr` | 0.865 | 0.816 | 0.248 | 0.380 |
+| Neural network (MLP) | `kombinovano` | 0.931 | 0.974 | 0.600 | 0.743 |
+| Fuzzy system (Mamdani) | `kombinovano` | 0.901 | 0.698 | 0.720 | 0.709 |
+| Neuro-fuzzy (5 inputs) | `kombinovano` | 0.923 | 0.802 | 0.712 | 0.754 |
 
-The learned lexicons raise the fuzzy system's F1 from **0.526** to **0.697**
-with the English lexicon and to **0.704** with both, while recall rises from
-**0.440** to **0.672** and **0.712** respectively, without changing the rule
-base or the fuzzy inference. The Serbian lexicon is weaker on English text (as
-expected) and exists to cover Serbian input.
+The learned lexicons raise the pure fuzzy system's F1 from **0.526** to **0.702**
+with the English lexicon and to **0.709** with both, without changing the rule
+base. Adding the neural input lifts both modes further: F1 **0.759** with `en`
+and **0.754** with `kombinovano`, mostly through a large precision gain
+(+13.3 points for `en`, +10.4 for `kombinovano`). The Serbian lexicon is weaker
+on English text (as expected) and exists to cover Serbian input; there the hybrid
+does **not** improve recall, which is honest evidence that the network helps only
+when its inputs separate the classes.
+
+On the `kombinovano` test split the score-level metrics behave the same way:
+
+| System | AUC | PR-AUC | F1 | Precision | Recall |
+|---|---|---|---|---|---|
+| Fuzzy | 0.9220 | 0.7491 | 0.7087 | 0.6977 | 0.7200 |
+| Neuro-fuzzy | 0.9321 | 0.8397 | 0.7542 | 0.8018 | 0.7120 |
+
+The gain comes mainly from `n02`: a confident "not spam" network reading softens
+patterns where links alone would have pushed the score into the spam band. On
+this test split `n01` fired 44 times and `n02` 61 times. `legacy` has no runtime
+model, so its hybrid row is identical to the pure fuzzy system by design.
 
 The fuzzy system trades precision for interpretability: every score can be
 traced back to a membership function and a rule. On the **SMS Spam Collection**
@@ -419,7 +486,9 @@ component:
 |---|---|---|---|---|---|
 | Neural network (MLP) | `sr` | 0.994 | 1.000 | 0.980 | 0.990 |
 | Fuzzy system (Mamdani) | `sr` | 0.975 | 0.927 | 0.993 | 0.959 |
+| Neuro-fuzzy (5 inputs) | `sr` | 0.989 | 0.980 | 0.980 | 0.980 |
 | Fuzzy system (Mamdani) | `kombinovano` | 0.975 | 0.927 | 0.993 | 0.959 |
+| Neuro-fuzzy (5 inputs) | `kombinovano` | 0.989 | 0.980 | 0.980 | 0.980 |
 
 On the real hand-labelled `primeri.txt` spam examples (4 Serbian, 4 English) the
 fuzzy system catches all of them, but the sample is far too small to be a
@@ -437,6 +506,10 @@ Dataset sources:
 - The membership-function boundaries were calibrated on a small set of sample
   emails (`primeri.txt`). All reported model metrics come from held-out test
   data, never from the tuning set.
+- The `n01`/`n02` rules and their output sets were selected on an **inner
+  validation split of the training data** (20%, `random_state=7`). The 750-email
+  test set was used only for the final report, so the rule choice is not fitted
+  to the test labels.
 - `primeri.txt` carries `From:`, `Subject:` and `Category:` metadata. Categories
   were auto-assigned by the filter and then **manually corrected for obvious
   misclassifications**; they are not a benchmark.
@@ -447,8 +520,8 @@ Dataset sources:
 - Serbian coverage comes from a **hybrid machine-translated + synthetic** corpus,
   not a real Serbian benchmark. Translation preserves labels but not formatting,
   and the synthetic spam inflates the Serbian metrics.
-- SMS recall is near zero because the four features are email-shaped. This is
-  documented rather than hidden; a real SMS model would need SMS features.
+- SMS recall is near zero because the four text features are email-shaped. This
+  is documented rather than hidden; a real SMS model would need SMS features.
 - The manual dictionary was removed because generic words ("account", "update",
   "confirm") caused false positives. The old list remains only as the `legacy`
   evaluation baseline.

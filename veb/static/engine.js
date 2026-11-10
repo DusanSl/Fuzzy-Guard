@@ -213,6 +213,11 @@ async function izracunajRezultat(tekst) {
             blago: 'interpunkcija_blago',
             umerena: 'interpunkcija_umerena',
             agresivna: 'interpunkcija_agresivna'
+        },
+        nn_pouzdanje: {
+            nisko: 'nn_nisko',
+            srednje: 'nn_srednje',
+            visoko: 'nn_visoko'
         }
     };
 
@@ -232,7 +237,8 @@ async function izracunajRezultat(tekst) {
         kljucne_reci: podaci.kljucne_reci,
         broj_linkova: podaci.broj_linkova,
         caps_procenat: podaci.caps_procenat,
-        interpunkcija: podaci.interpunkcija
+        interpunkcija: podaci.interpunkcija,
+        nn_pouzdanje: podaci.nn_pouzdanje
     };
 
     const aktivnaPravila = (objasnjenje.aktivna_pravila || []).map(pravilo => ({
@@ -387,7 +393,7 @@ function prikaziRezultat(rezultat, opcije) {
 }
 
 function renderSignali(rezultat) {
-    const redosled = ['kljucne_reci', 'broj_linkova', 'caps_procenat', 'interpunkcija'];
+    const redosled = ['kljucne_reci', 'broj_linkova', 'caps_procenat', 'interpunkcija', 'nn_pouzdanje'];
 
     document.getElementById('signali').innerHTML = redosled.map(kljuc => {
         const vrednost = rezultat.vrednosti[kljuc];
@@ -487,7 +493,7 @@ function napraviZasto(rezultat) {
 }
 
 function napraviDoprinose(rezultat) {
-    const redosled = ['kljucne_reci', 'broj_linkova', 'caps_procenat', 'interpunkcija'];
+    const redosled = ['kljucne_reci', 'broj_linkova', 'caps_procenat', 'interpunkcija', 'nn_pouzdanje'];
 
     return '<div class="doprinosi">' + redosled.map(kljuc => {
         const vrednost = rezultat.vrednosti[kljuc];
@@ -573,7 +579,7 @@ function napraviPregled(rezultat) {
 }
 
 function napraviUlaze(rezultat) {
-    const redosled = ['kljucne_reci', 'broj_linkova', 'caps_procenat', 'interpunkcija'];
+    const redosled = ['kljucne_reci', 'broj_linkova', 'caps_procenat', 'interpunkcija', 'nn_pouzdanje'];
 
     const redovi = redosled.map(kljuc => {
         const vrednost = rezultat.vrednosti[kljuc];
@@ -839,7 +845,8 @@ async function kopirajRezultat() {
         `${recnik.signali.kljucne_reci}: ${formatirajBroj(rezultat.vrednosti.kljucne_reci)}/10 | ` +
         `${recnik.signali.broj_linkova}: ${rezultat.vrednosti.broj_linkova}/10 | ` +
         `${recnik.signali.caps_procenat}: ${formatirajBroj(rezultat.vrednosti.caps_procenat)}% | ` +
-        `${recnik.signali.interpunkcija}: ${formatirajBroj(rezultat.vrednosti.interpunkcija)}%`
+        `${recnik.signali.interpunkcija}: ${formatirajBroj(rezultat.vrednosti.interpunkcija)}% | ` +
+        `${recnik.signali.nn_pouzdanje}: ${formatirajBroj(rezultat.vrednosti.nn_pouzdanje)}%`
     ];
 
     if (rezultat.recnik) {

@@ -15,9 +15,11 @@ Pokretanje::
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
 from fazi.zakljucivanje import pokreni_fis
+from neuronska_mreza.predikcija import pouzdanje_nn
 from obrada_teksta.analizator import analiziraj_email, ucitaj_sve_primere
 
 REZIMI = ("en", "sr", "kombinovano")
+NEUTRALNO_NN = 50.0
 
 
 def main():
@@ -36,24 +38,30 @@ def main():
               f"{sum(istinite)} spama ===")
 
         for nacin in REZIMI:
-            predvidjene = []
+            pred_fazi, pred_hibrid = [], []
             for primer, _ in oznaceni:
                 ulazi = analiziraj_email(primer["tekst"], nacin_recnik=nacin)
-                rezultat = pokreni_fis(
-                    ulazi["kljucne_reci"],
-                    ulazi["broj_linkova"],
-                    ulazi["caps_procenat"],
-                    ulazi["interpunkcija"],
-                )
-                predvidjene.append(1 if rezultat["kategorija"] == "SPAM" else 0)
+                nn = pouzdanje_nn(ulazi, nacin)
+                # Čist fazi baseline: nn je neutralan, pa se n pravila ne
+                # aktiviraju. Hibrid koristi stvarni izlaz mreže.
+                for vrednost, lista in ((NEUTRALNO_NN, pred_fazi), (nn, pred_hibrid)):
+                    rezultat = pokreni_fis(
+                        ulazi["kljucne_reci"],
+                        ulazi["broj_linkova"],
+                        ulazi["caps_procenat"],
+                        ulazi["interpunkcija"],
+                        vrednost,
+                    )
+                    lista.append(1 if rezultat["kategorija"] == "SPAM" else 0)
 
-            print(
-                f"  {nacin:13s} tacnost={accuracy_score(istinite, predvidjene):.3f} "
-                f"preciznost={precision_score(istinite, predvidjene, zero_division=0):.3f} "
-                f"odziv={recall_score(istinite, predvidjene, zero_division=0):.3f} "
-                f"F1={f1_score(istinite, predvidjene, zero_division=0):.3f}"
-            )
-            print(f"  {'':13s} matrica={confusion_matrix(istinite, predvidjene).tolist()}")
+            for naziv, predvidjene in (("fazi", pred_fazi), ("hibrid", pred_hibrid)):
+                print(
+                    f"  {nacin:13s} {naziv:6s} tacnost={accuracy_score(istinite, predvidjene):.3f} "
+                    f"preciznost={precision_score(istinite, predvidjene, zero_division=0):.3f} "
+                    f"odziv={recall_score(istinite, predvidjene, zero_division=0):.3f} "
+                    f"F1={f1_score(istinite, predvidjene, zero_division=0):.3f}"
+                )
+                print(f"  {'':13s} {'':6s} matrica={confusion_matrix(istinite, predvidjene).tolist()}")
 
 
 if __name__ == "__main__":

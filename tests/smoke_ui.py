@@ -35,7 +35,7 @@ def main():
         assert page.locator("#spektar path").count() >= 6
 
         page.click('[data-pogled="ulazi"]')
-        assert page.locator("#pogled-sadrzaj .ulaz").count() == 4
+        assert page.locator("#pogled-sadrzaj .ulaz").count() == 5
 
         page.click('[data-pogled="pravila"]')
         assert page.locator("#pogled-sadrzaj .pravilo").count() >= 1

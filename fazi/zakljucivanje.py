@@ -15,9 +15,10 @@ def pokreni_fis(
     val_linkova:       float,
     val_caps:          float,
     val_interpunkcija: float,
+    val_nn:            float,
 ) -> dict:
 
-    mu = fuzzifikuj(val_kljucne, val_linkova, val_caps, val_interpunkcija)
+    mu = fuzzifikuj(val_kljucne, val_linkova, val_caps, val_interpunkcija, val_nn)
 
     ulazi_objasnjenje = {
         "kljucne_reci": {
@@ -35,6 +36,10 @@ def pokreni_fis(
         "interpunkcija": {
             "vrednost": round(float(val_interpunkcija), 2),
             "pripadnosti": {ime: round(w, 3) for ime, w in mu["interpunkcija"].items()},
+        },
+        "nn_pouzdanje": {
+            "vrednost": round(float(val_nn), 2),
+            "pripadnosti": {ime: round(w, 3) for ime, w in mu["nn_pouzdanje"].items()},
         },
     }
 

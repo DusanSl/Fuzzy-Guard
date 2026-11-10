@@ -733,6 +733,9 @@ button:disabled { cursor: progress; }
 
 .signal { min-width: 0; }
 
+/* With five signals the last one would leave an empty half-row. */
+.signali > .signal:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
 .signal-vrh {
     display: flex;
     align-items: baseline;

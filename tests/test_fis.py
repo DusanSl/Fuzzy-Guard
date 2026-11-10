@@ -14,6 +14,7 @@ from obrada_teksta import analizator
 from obrada_teksta.analizator import _izracunaj_kljucne_reci
 from obrada_teksta.podudaranje import pronadji_poklapanja
 from neuronska_mreza.legacy_recnik import SPAM_RECNIK_RECI, termini as legacy_termini
+from neuronska_mreza.predikcija import NEUTRALNO, pouzdanje_nn
 from fazi.pravila import fuzzifikuj, sastavi_pravila
 from fazi.zakljucivanje import pokreni_fis
 from fazi.skupovi import x_spam_score, izlazni_skupovi, KATEGORIJA_PO_SKUPU
@@ -29,11 +30,13 @@ def ucitaj_primere() -> list:
 
 def analiziraj_tekst(tekst: str) -> dict:
     ulazi = analiziraj_email(tekst)
+    nn = pouzdanje_nn(ulazi, "kombinovano")
     return pokreni_fis(
         ulazi["kljucne_reci"],
         ulazi["broj_linkova"],
         ulazi["caps_procenat"],
         ulazi["interpunkcija"],
+        nn,
     )
 
 
@@ -53,12 +56,17 @@ def test_pokrivenost_celog_univerzuma():
         for broj_linkova in range(0, 11):
             for caps_procenat in range(0, 101, 10):
                 for interpunkcija in range(0, 101, 10):
-                    mu = fuzzifikuj(kljucne_reci, broj_linkova, caps_procenat, interpunkcija)
-                    jacine = [jacina for _, jacina, _, _ in sastavi_pravila(mu)]
-                    assert max(jacine) > 0.0, (
-                        "nijedno pravilo nije aktivno za",
-                        kljucne_reci, broj_linkova, caps_procenat, interpunkcija,
-                    )
+                    for nn in (0, 50, 100):
+                        mu = fuzzifikuj(
+                            kljucne_reci, broj_linkova, caps_procenat,
+                            interpunkcija, nn,
+                        )
+                        jacine = [jacina for _, jacina, _, _ in sastavi_pravila(mu)]
+                        assert max(jacine) > 0.0, (
+                            "nijedno pravilo nije aktivno za",
+                            kljucne_reci, broj_linkova, caps_procenat,
+                            interpunkcija, nn,
+                        )
 
 
 def test_kategorija_je_saglasna_sa_skorom():
@@ -75,8 +83,8 @@ def test_skor_ostaje_u_opsegu():
 
 def test_rupa_izmedju_35_i_45_procenata_velikih_slova():
     """Nekad je skok sa 30% na 40% velikih slova obarao skor sa ~87 na 47."""
-    na_trideset = pokreni_fis(3, 1, 30, 0)
-    na_cetrdeset = pokreni_fis(3, 1, 40, 0)
+    na_trideset = pokreni_fis(3, 1, 30, 0, 50)
+    na_cetrdeset = pokreni_fis(3, 1, 40, 0, 50)
     assert abs(na_trideset["spam_score"] - na_cetrdeset["spam_score"]) < 10
 
 
@@ -100,7 +108,7 @@ def test_obican_email_je_legitiman():
 
 def test_interpunkcija_ne_okida_agresivno_previse_rano():
     """12% interpunkcije nekad je davalo 'agresivnu' pripadnost 0.67."""
-    rezultat = pokreni_fis(0, 0, 30, 12)
+    rezultat = pokreni_fis(0, 0, 30, 12, 50)
     assert rezultat["kategorija"] == "LEGITIMAN"
     assert rezultat["spam_score"] < 25
 
@@ -233,7 +241,8 @@ def test_objasnjenje_sadrzi_ulaze_pozicije_i_uslove():
 
     assert objasnjenje["tekst"]
     assert set(objasnjenje["ulazi"]) == {
-        "kljucne_reci", "broj_linkova", "caps_procenat", "interpunkcija"
+        "kljucne_reci", "broj_linkova", "caps_procenat", "interpunkcija",
+        "nn_pouzdanje",
     }
     assert objasnjenje["pokrivene_reci"]
     prvo = objasnjenje["pokrivene_reci"][0]
@@ -272,11 +281,57 @@ def test_oznake_za_link_caps_i_interpunkciju():
 
 def test_svako_pravilo_ima_opis():
     from fazi.pravila import OPISI_PRAVILA, sastavi_pravila
-    mu = fuzzifikuj(5, 1, 20, 10)
+    mu = fuzzifikuj(5, 1, 20, 10, 50)
     for naziv, _, _, _ in sastavi_pravila(mu):
         assert naziv in OPISI_PRAVILA
         assert OPISI_PRAVILA[naziv]["sr"]
         assert OPISI_PRAVILA[naziv]["en"]
+
+
+def test_nn_ne_odlucuje_sam():
+    """Visoko pouzdanje mreže samo po sebi nikad ne daje SPAM."""
+    for nn in (55, 75, 99, 100):
+        rezultat = pokreni_fis(0, 0, 5, 0, nn)
+        assert rezultat["kategorija"] != "SPAM"
+
+    # Umeren dokaz iz teksta (tri linka) i dalje nije dovoljan za SPAM.
+    assert pokreni_fis(0, 3, 5, 0, 100)["kategorija"] != "SPAM"
+
+
+def test_n_pravila_traze_dokaz_iz_teksta():
+    """Bez reči i linkova nijedno n pravilo se ne aktivira."""
+    mu = fuzzifikuj(0, 0, 0, 0, 100)
+    aktivna = {naziv for naziv, jacina, _, _ in sastavi_pravila(mu) if jacina > 0}
+    assert not ({"n01", "n02"} & aktivna)
+
+
+def test_nisko_pouzdanje_ublazava_samo_linkove():
+    """Isti linkovi, niže pouzdanje mreže -> niža ocena (n02)."""
+    nisko = pokreni_fis(0, 9, 5, 0, 10)
+    visoko = pokreni_fis(0, 9, 5, 0, 90)
+    assert nisko["spam_score"] < visoko["spam_score"]
+
+
+def test_nn_pouzdanje_je_u_opsegu_i_neutralno_bez_modela():
+    ulazi = {
+        "kljucne_reci": 0.0,
+        "broj_linkova": 0.0,
+        "caps_procenat": 5.0,
+        "interpunkcija": 0.0,
+    }
+    for nacin in ("en", "sr", "kombinovano"):
+        assert 0.0 <= pouzdanje_nn(ulazi, nacin) <= 100.0
+    # legacy nema model: uvek neutralno, pa se n pravila ne aktiviraju.
+    assert pouzdanje_nn(ulazi, "legacy") == NEUTRALNO
+
+
+def test_nn_polje_u_api_odgovoru():
+    from main import app
+    odgovor = app.test_client().post(
+        "/analiziraj", json={"tekst": "Dear sir, this mortgage settlement is guaranteed."}
+    ).get_json()
+    assert 0.0 <= odgovor["nn_pouzdanje"] <= 100.0
+    assert "nn_pouzdanje" in odgovor["objasnjenje"]["ulazi"]
 
 
 def test_skupovi_endpoint_vraca_sest_skupova():
@@ -380,7 +435,8 @@ def test_skupovi_endpoint_vraca_ulaze_i_izlaze():
     from main import app
     podaci = app.test_client().get("/skupovi").get_json()
     assert set(podaci["ulazi"]) == {
-        "kljucne_reci", "broj_linkova", "caps_procenat", "interpunkcija"
+        "kljucne_reci", "broj_linkova", "caps_procenat", "interpunkcija",
+        "nn_pouzdanje",
     }
     assert len(podaci["izlazi"]) == 6
     assert len(podaci["skupovi"]) == 6

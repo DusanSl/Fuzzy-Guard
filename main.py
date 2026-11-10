@@ -13,6 +13,7 @@ from obrada_teksta.analizator import (
 )
 from fazi.skupovi import IZLAZNI_SKUPOVI_DEFINICIJE, ULAZNI_SKUPOVI_DEFINICIJE
 from fazi.zakljucivanje import pokreni_fis
+from neuronska_mreza.predikcija import pouzdanje_nn
 
 KOREN = Path(__file__).parent
 MAKS_DUŽINA_ZAHTEVA = 256 * 1024
@@ -171,11 +172,17 @@ def analiziraj():
 
     ulazi = analiziraj_email(analizirani_tekst, nacin_recnik=nacin_recnika)
 
+    # Mreža dobija iste četiri karakteristike i vraća samo peti ulaz. Ako
+    # model ne postoji ili ne odgovara rečniku, vrednost je neutralna 50 i
+    # sistem se ponaša kao čist fazi sistem.
+    nn_pouzdanje = pouzdanje_nn(ulazi, ulazi.get("recnik", nacin_recnika))
+
     rezultat_fis = pokreni_fis(
         ulazi["kljucne_reci"],
         ulazi["broj_linkova"],
         ulazi["caps_procenat"],
         ulazi["interpunkcija"],
+        nn_pouzdanje,
     )
 
     rezultat = {
@@ -187,6 +194,7 @@ def analiziraj():
         "broj_linkova":  ulazi["broj_linkova"],
         "caps_procenat": ulazi["caps_procenat"],
         "interpunkcija": ulazi["interpunkcija"],
+        "nn_pouzdanje":  round(nn_pouzdanje, 2),
         "spam_score":    round(rezultat_fis["spam_score"], 2),
         "kategorija":    rezultat_fis["kategorija"],
         "objasnjenje": {
