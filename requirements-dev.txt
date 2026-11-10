@@ -1,5 +1,8 @@
 -r requirements.txt
 
+pytest==9.2.0
+ruff==0.17.4
+
 # UI smoke test (tests/smoke_ui.py). Install the browser once with:
 #   playwright install chromium
 playwright==1.64.1

@@ -358,6 +358,24 @@ def test_analiziraj_auto_bi_vraca_izabrani_recnik():
     assert odgovor["recnik"] == "sr"
 
 
+def test_rate_limit_vraca_429(monkeypatch):
+    from main import _zahtevi_po_ip, app
+
+    _zahtevi_po_ip.clear()
+    monkeypatch.setattr("main.GRANICA_ZAHTEVA", 2)
+    klijent = app.test_client()
+    tekst = "Dear sir, this mortgage settlement is guaranteed."
+
+    try:
+        assert klijent.post("/analiziraj", json={"tekst": tekst}).status_code == 200
+        assert klijent.post("/analiziraj", json={"tekst": tekst}).status_code == 200
+        odgovor = klijent.post("/analiziraj", json={"tekst": tekst})
+        assert odgovor.status_code == 429
+        assert odgovor.headers["Retry-After"] == "60"
+    finally:
+        _zahtevi_po_ip.clear()
+
+
 def test_skupovi_endpoint_vraca_ulaze_i_izlaze():
     from main import app
     podaci = app.test_client().get("/skupovi").get_json()

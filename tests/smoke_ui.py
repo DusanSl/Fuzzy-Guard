@@ -20,6 +20,8 @@ def main():
         page = browser.new_page()
         page.goto(URL, wait_until="networkidle")
 
+        assert page.get_by_role("textbox", name="Message").count() == 1
+
         page.click('[data-uzorak="prevara"]')
         page.click('#pokreni-dugme')
         page.wait_for_function(
@@ -37,6 +39,11 @@ def main():
 
         page.click('[data-pogled="pravila"]')
         assert page.locator("#pogled-sadrzaj .pravilo").count() >= 1
+
+        page.click('[data-pogled="zasto"]')
+        assert page.locator(".leksikon-status").count() == 1
+        assert "(auto)" in page.locator(".leksikon-status").inner_text()
+        assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
 
         page.click('[data-otvori-metod]')
         assert page.locator("#metod").is_visible()

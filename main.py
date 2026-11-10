@@ -1,4 +1,7 @@
+from collections import defaultdict, deque
 from pathlib import Path
+from threading import Lock
+from time import monotonic
 
 from flask import Flask, jsonify, render_template, request
 from werkzeug.exceptions import HTTPException
@@ -40,6 +43,28 @@ app = Flask(
 )
 app.config["MAX_CONTENT_LENGTH"] = MAKS_DUŽINA_ZAHTEVA
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = KEŠIRANJE_STATIKE_SEKUNDI
+
+# Jednostavan klizni prozor po IP adresi. Dovoljno za javni demo i zaštitu od
+# slučajnog ili namernog spamovanja skupog /analiziraj endpointa.
+GRANICA_ZAHTEVA = 120
+PROZOR_ZAHTEVA = 60.0
+_zahtevi_po_ip = defaultdict(deque)
+_zahtevi_lock = Lock()
+
+
+def _dozvoli_zahtev(ip_adresa: str) -> bool:
+    sada = monotonic()
+    with _zahtevi_lock:
+        red = _zahtevi_po_ip[ip_adresa]
+        while red and sada - red[0] > PROZOR_ZAHTEVA:
+            red.popleft()
+        if len(red) >= GRANICA_ZAHTEVA:
+            return False
+        red.append(sada)
+        if len(_zahtevi_po_ip) > 2000:
+            for kljuc in [k for k, v in _zahtevi_po_ip.items() if not v]:
+                _zahtevi_po_ip.pop(kljuc, None)
+        return True
 
 
 @app.after_request
@@ -117,6 +142,12 @@ def skupovi():
 
 @app.route("/analiziraj", methods=["POST"])
 def analiziraj():
+    if not _dozvoli_zahtev(request.remote_addr or "nepoznat"):
+        odgovor = jsonify({"greska": "Previše zahteva. Pokušajte ponovo kasnije."})
+        odgovor.status_code = 429
+        odgovor.headers["Retry-After"] = str(int(PROZOR_ZAHTEVA))
+        return odgovor
+
     nacin_recnika = "auto"
     if request.is_json:
         podaci = request.get_json(silent=True) or {}

@@ -23,7 +23,7 @@
         </a>
 
         <div class="traka-alati">
-            <nav class="traka-nav" aria-label="Primary">
+            <nav class="traka-nav" aria-label="Primary" data-i18n-aria="navPrimarna">
                 <button class="nav-dugme" aria-current="page" data-i18n="navProvera">Check</button>
                 <button class="nav-dugme" data-otvori-metod data-i18n="navMetod">Method</button>
             </nav>
@@ -67,11 +67,12 @@ A traceable score.</h1>
 
             <div class="pisac-telo">
                 <textarea class="pisac-unos" id="tekst" spellcheck="false"
+                          aria-labelledby="naslov-poruke"
                           data-i18n-placeholder="placeholder"
                           placeholder="Paste the email text here…"></textarea>
                 <div class="pisac-podnozje">
                     <span class="znakovi"><span id="broj-znakova">0</span> <span data-i18n="znakova">characters</span></span>
-                    <div class="uzorci" role="group" aria-label="Samples">
+                    <div class="uzorci" role="group" aria-label="Samples" data-i18n-aria="uzorci">
                         <button class="cip-dugme" type="button" data-uzorak="legitiman" data-i18n="uzorakLegitiman">Legitimate</button>
                         <button class="cip-dugme" type="button" data-uzorak="sumnjiv" data-i18n="uzorakSumnjiv">Suspicious</button>
                         <button class="cip-dugme" type="button" data-uzorak="prevara" data-i18n="uzorakPrevara">Spam</button>
@@ -84,8 +85,8 @@ A traceable score.</h1>
                 <span id="pokreni-tekst" data-i18n="pokreni">Run analysis</span>
                 <kbd id="precica">⌘↵</kbd>
             </button>
-            <p class="sitno" data-i18n="sitno">Only the body is scored · nothing leaves this page.</p>
-            <p class="greska" id="greska" hidden></p>
+            <p class="sitno" data-i18n="sitno">Only the body is scored · processed on this server, with no third-party requests.</p>
+            <p class="greska" id="greska" role="alert" aria-live="assertive" aria-atomic="true" hidden></p>
         </section>
 
         <section class="kartica presuda" aria-labelledby="naslov-presude">
@@ -112,7 +113,16 @@ A traceable score.</h1>
                     <span class="skor-broj" id="skor-broj">0</span>
                     <span class="skor-procenat">%</span>
                 </div>
-                <p class="skor-natpis" data-i18n="skorNatpis">Spam suspicion · 0–100</p>
+                <p class="skor-natpis">
+                    <span data-i18n="skorNatpis">Spam suspicion · 0–100</span>
+                    <span class="pomoc">
+                        <button class="pomoc-dugme" type="button" aria-expanded="false" aria-controls="pomoc-skor" aria-label="About the score" data-i18n-aria="pomocSkorNaslov">?</button>
+                        <span class="pomoc-panel" id="pomoc-skor" role="tooltip" hidden>
+                            <b data-i18n="pomocSkorNaslov">About the score</b>
+                            <span data-i18n="pomocSkor">This is a fuzzy suspicion score from 0 to 100. It is not a probability and not a percentage of confidence.</span>
+                        </span>
+                    </span>
+                </p>
                 <p class="skor-opis" id="skor-opis"></p>
 
                 <figure class="spektar" style="margin-left:0;margin-right:0;">
@@ -146,12 +156,12 @@ A traceable score.</h1>
                 <div class="signali" id="signali"></div>
                 <hr class="razdjelnik">
 
-                <div class="segment segment-pogled" role="tablist" aria-label="Explanation">
-                    <button class="segment-stavka" type="button" role="tab" data-pogled="zasto" aria-selected="true" data-i18n="tabZasto">Why</button>
-                    <button class="segment-stavka" type="button" role="tab" data-pogled="ulazi" aria-selected="false" data-i18n="tabUlazi">Inputs</button>
-                    <button class="segment-stavka" type="button" role="tab" data-pogled="pravila" aria-selected="false" data-i18n="tabPravila">Rules</button>
+                <div class="segment segment-pogled" role="tablist" aria-label="Explanation" data-i18n-aria="objasnjenjeTabovi">
+                    <button class="segment-stavka" type="button" role="tab" id="tab-zasto" data-pogled="zasto" aria-selected="true" aria-controls="pogled-sadrzaj" tabindex="0" data-i18n="tabZasto">Why</button>
+                    <button class="segment-stavka" type="button" role="tab" id="tab-ulazi" data-pogled="ulazi" aria-selected="false" aria-controls="pogled-sadrzaj" tabindex="-1" data-i18n="tabUlazi">Inputs</button>
+                    <button class="segment-stavka" type="button" role="tab" id="tab-pravila" data-pogled="pravila" aria-selected="false" aria-controls="pogled-sadrzaj" tabindex="-1" data-i18n="tabPravila">Rules</button>
                 </div>
-                <div class="pogled" id="pogled-sadrzaj" role="tabpanel"></div>
+                <div class="pogled" id="pogled-sadrzaj" role="tabpanel" aria-labelledby="tab-zasto" tabindex="0"></div>
             </div>
         </section>
     </div>
@@ -289,6 +299,13 @@ A traceable score.</h1>
         <div class="dijalog-cipovi">
             <span class="dijalog-cip" data-i18n="cipPravila">19 rules</span>
             <span class="dijalog-cip" data-i18n="cipSkupovi">trimf / trapmf</span>
+            <span class="pomoc">
+                <button class="pomoc-dugme" type="button" aria-expanded="false" aria-controls="pomoc-trimf" aria-label="About membership functions" data-i18n-aria="pomocTrimfNaslov">?</button>
+                <span class="pomoc-panel" id="pomoc-trimf" role="tooltip" hidden>
+                    <b data-i18n="pomocTrimfNaslov">Membership functions</b>
+                    <span data-i18n="pomocTrimf">trimf is a triangular membership function. trapmf is a trapezoidal one. Both are defined by the points shown in the method.</span>
+                </span>
+            </span>
             <span class="dijalog-cip" data-i18n="cipTeziste">centroid</span>
             <span class="dijalog-cip" data-i18n="cipMreza">Neural network supplies the lexicon only</span>
         </div>
@@ -302,7 +319,8 @@ A traceable score.</h1>
     <span id="obavestenje-tekst">Copied</span>
 </div>
 
-    <script src="{{ url_for('static', filename='engine.js') }}?v={{ verzija_fajla('engine.js') }}"></script>
+    <script src="{{ url_for('static', filename='prevodi.js') }}?v={{ verzija_fajla('prevodi.js') }}"></script>
+<script src="{{ url_for('static', filename='engine.js') }}?v={{ verzija_fajla('engine.js') }}"></script>
 
 </body>
 </html>

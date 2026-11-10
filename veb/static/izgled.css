@@ -45,8 +45,8 @@
     --povrsina-2: #f5f5f7;
     --povrsina-3: #e8e8ed;
     --tekst: #1d1d1f;
-    --tekst-2: #6e6e73;
-    --tekst-3: #86868b;
+    --tekst-2: #5f5f64;
+    --tekst-3: #6e6e73;
     --linija: rgba(0, 0, 0, 0.09);
     --linija-jaka: rgba(0, 0, 0, 0.18);
     --dugme-pozadina: #1d1d1f;
@@ -611,6 +611,10 @@ button:disabled { cursor: progress; }
 }
 
 .skor-natpis {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
     margin: 12px 0 0;
     font-size: 11px;
     font-weight: 500;
@@ -1040,6 +1044,9 @@ button:disabled { cursor: progress; }
 .cip-tezina { margin-left: 1px; }
 
 .leksikon-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     margin: 0 0 7px;
     color: var(--tekst-3);
     font-size: 11px;
@@ -1628,7 +1635,13 @@ dialog[open] { animation: pojavljivanje 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .istorija-meta { display: none; }
     .signali { gap: 14px 16px; }
     .signal-skup { display: none; }
-    .segment-stavka { padding: 0 9px; }
+    .segment-stavka { min-height: 36px; padding: 0 9px; }
+    .segment-pogled .segment-stavka { min-height: 36px; }
+    .jezik-dugme, .ikona-dugme { height: 36px; }
+    .jezik-dugme { min-width: 40px; }
+    .ikona-dugme { width: 36px; }
+    .cip-dugme { min-height: 36px; padding: 6px 11px; }
+    .pomoc-dugme { width: 24px; height: 24px; }
     .skor-broj { font-size: 68px; }
     .koraci { grid-template-columns: 1fr; }
     .metod-tabela { font-size: 11px; }

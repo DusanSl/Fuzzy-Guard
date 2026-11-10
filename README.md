@@ -15,7 +15,7 @@ The application features a responsive web interface with full bilingual support 
 - **Bilingual Interface:** Real-time translation toggle between English and Serbian.
 - **History Tracking:** View and recall previous checks performed during the active session.
 - **Sample Loader:** Load a legitimate, suspicious or spam example (English or Serbian) at random, or pick a random example across all categories.
-- **Explainable verdict:** a fuzzy spectrum drawn from the actual output sets, plus **Why / Inputs / Rules** tabs showing matched words in context, membership degrees and the rules that fired. Matches are colour-coded (keywords, links, capitals, punctuation).
+- **Explainable verdict:** a fuzzy spectrum drawn from the actual output sets, plus **Why / Inputs / Rules** tabs showing matched words in context, membership degrees and the rules that fired. Matches use a calm monochrome highlight system with distinct patterns for keywords, links, capitals and punctuation.
 - **Modern UI:** clean, Apple-inspired layout with a sticky top bar. Dark by default with a light theme; bilingual, responsive and keyboard-friendly.
 - **Method dialog:** a short walkthrough of the pipeline (extract → fuzzify → infer → defuzzify) with the output spectrum.
 
@@ -60,6 +60,21 @@ The defuzzified `spam_score` (0-100%) is then interpreted linguistically: each o
 
 ---
 
+## Accessibility
+
+- The interface supports keyboard navigation, including arrow-key movement between the **Why / Inputs / Rules** tabs.
+- The message box has an accessible name, and form errors are announced with `role="alert"`.
+- Focus outlines follow `:focus-visible`; reduced-motion preferences disable animations.
+- Secondary text sizes have an 11px floor, and the light theme uses contrast-checked text colours.
+- The score card explains that the value is a fuzzy suspicion score, not a probability.
+
+## Privacy
+
+- Only the message body is scored. The From and Subject fields are context only.
+- Analysis runs on this Flask server. The text is not sent to third-party services.
+- Responses containing message text are marked `Cache-Control: no-store`.
+- The app sends security headers including CSP, `X-Content-Type-Options` and `X-Frame-Options`.
+
 ## Project Structure
 
 ```text
@@ -85,7 +100,9 @@ Fuzzy-Guard/
 │   │   ├── fonts/
 │   │   │   └── MonaSansVF[wght,opsz].woff2
 │   │   ├── izgled.css      # Styling (Dark mode, responsive grid layout)
-│   │   ├── engine.js       # Client-side logic: i18n, fetch calls, history rendering
+│   │   ├── inicijalizacija.js  # Applies saved theme and language before first paint
+│   │   ├── prevodi.js      # English/Serbian UI copy
+│   │   ├── engine.js       # Client-side logic: fetch calls, history rendering, explanations
 │   │   └── ikona.svg       # Application logo
 │   └── sabloni/
 │       └── dashboard.html  # Main GUI markup (forms, history panel, results grid)
@@ -444,6 +461,7 @@ Dataset sources:
 
 ```bash
 python -m pytest
+python -m ruff check --select E9,F63,F7,F82 .
 ```
 
 The test suite checks rule-base completeness (no input may leave every rule at
@@ -462,8 +480,9 @@ python tests/smoke_ui.py
 
 ### Continuous integration
 
-`.github/workflows/tests.yml` runs `pytest` on every push to `master` / `razvoj`
-and on every pull request. It does **not** deploy: PythonAnywhere still needs
+`.github/workflows/tests.yml` runs `pytest` and the Playwright UI smoke test on
+every push to `master` / `razvoj` and on every pull request. It does **not**
+deploy: PythonAnywhere still needs
 
 ```bash
 cd ~/fuzzy-guard && git pull
