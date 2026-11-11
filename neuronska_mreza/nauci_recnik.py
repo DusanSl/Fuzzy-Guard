@@ -4,14 +4,14 @@ Neuronska mreza (jedan neuron / linearni klasifikator) se trenira na TF-IDF
 predstavkama teksta, a njeni koeficijenti se izvoze kao tezine reci i fraza.
 Dobijeni recnik se posle koristi pri izracunavanju ulaza ``kljucne_reci``.
 
-Recnik naucen na engleskom se NE mesa sa rucnim srpskim recnikom u ovom fajlu;
-spajanje se radi u ``obrada_teksta/analizator.py``.
+Recnici se cuvaju odvojeno po jeziku (``recnik_naucen_en.json`` i
+``recnik_naucen_sr.json``); spajanje se radi u ``obrada_teksta/analizator.py``.
 
 Pokretanje:
 
-    python -m neuronska_mreza.nauci_recnik
-    python -m neuronska_mreza.nauci_recnik --top 40
-    python -m neuronska_mreza.nauci_recnik --korpus podaci/SMSSpamCollection.tsv
+    python -m neuronska_mreza.nauci_recnik --jezik en
+    python -m neuronska_mreza.nauci_recnik --jezik sr
+    python -m neuronska_mreza.nauci_recnik --jezik en --top 40
 """
 
 import argparse
@@ -25,19 +25,33 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, f1_score
 from sklearn.model_selection import train_test_split
 
-from obrada_teksta.analizator import SPAM_RECNIK_RECI, SPAM_RECNIK_FRAZE
-
 KOREN = Path(__file__).parent.parent
 PUTANJA_PODACI = KOREN / "podaci" / "spamassassin.tsv"
-PUTANJA_RECNIK = KOREN / "podaci" / "recnik_naucen.json"
+PUTANJA_SR_PODACI = KOREN / "podaci" / "sr_spamassassin.tsv"
+RECNICI_PO_JEZIKU = {
+    "en": KOREN / "podaci" / "recnik_naucen_en.json",
+    "sr": KOREN / "podaci" / "recnik_naucen_sr.json",
+}
 
-# Tezine se skaliraju u ovaj opseg da budu uporedive sa rucnim recnikom,
-# gde svaka pogodjena rec nosi tezinu 1.0.
+# Težine se skaliraju u ovaj opseg da budu uporedive sa starim ručnim
+# rečnikom, gde je svaka pogođena reč nosila težinu 1.0.
 TEZINA_MIN = 0.5
 TEZINA_MAX = 2.0
 BROJ_TERMINA = 400
+# Termin mora biti bar 2x češći u spamu nego u hamu. Prag je izabran na
+# validacionom delu trening skupa (75/25 unutar treninga), ne na testu.
+MIN_ODNOS = 2.0
+MIN_SPAM_DOKUMENATA = 10
 
-DOZVOLJEN_TERMIN = re.compile(r"^[A-Za-z][A-Za-z' -]*$")
+DOZVOLJEN_TERMIN = re.compile(r"^[A-Za-zČĆŠŽĐčćšžđ][A-Za-zČĆŠŽĐčćšžđ' -]*$")
+
+# Opšte poslovne reči koje u SpamAssassin korpusu nekad prođu 2x filter, ali
+# same po sebi nisu spam signal. Bez ovoga "Thanks for your reply, I will
+# visit the office" dobija dva pogotka i ulazi u SUMNJIVO.
+GENERICNE_RECI = {
+    "visit", "reply", "contact", "receive", "center", "information",
+    "business", "service", "message", "please", "thanks", "regards",
+}
 
 # HTML/MIME i strukturni artefakti korpusa. Bez ovoga bi mreza naucila da su
 # "font", "href" i "align" spam reci, sto je posledica toga kako je korpus
@@ -94,7 +108,7 @@ def skaliraj_tezine(koeficijenti: np.ndarray) -> np.ndarray:
     return TEZINA_MIN + (koeficijenti - najmanji) * (TEZINA_MAX - TEZINA_MIN) / (najveci - najmanji)
 
 
-def nauci(korpus: Path, broj_termina: int, top: int) -> dict:
+def nauci(korpus: Path, broj_termina: int, top: int, jezik: str = "en") -> dict:
     tekstovi, oznake = ucitaj_podatke(korpus)
     X_train, X_test, y_train, y_test = train_test_split(
         tekstovi, oznake, test_size=0.25, random_state=42, stratify=oznake
@@ -105,9 +119,9 @@ def nauci(korpus: Path, broj_termina: int, top: int) -> dict:
         min_df=3,
         max_features=20_000,
         sublinear_tf=True,
-        strip_accents="unicode",
+        strip_accents="unicode" if jezik == "en" else None,
         lowercase=True,
-        stop_words="english",
+        stop_words="english" if jezik == "en" else None,
     )
     X_train_tfidf = vektorizator.fit_transform(X_train)
     X_test_tfidf = vektorizator.transform(X_test)
@@ -134,8 +148,10 @@ def nauci(korpus: Path, broj_termina: int, top: int) -> dict:
     for i, (ime, koef) in enumerate(zip(imena, koeficijenti)):
         if koef <= 0 or not je_koristan_termin(ime):
             continue
-        # termin mora biti bar 3x cesci u spamu i pojaviti se u bar 10 spamova
-        if df_spam[i] < 10 or (df_spam[i] + 1) / (df_ham[i] + 1) < 3.0:
+        if ime in GENERICNE_RECI:
+            continue
+        # termin mora biti bar 2x cesci u spamu i pojaviti se u bar 10 spamova
+        if df_spam[i] < MIN_SPAM_DOKUMENATA or (df_spam[i] + 1) / (df_ham[i] + 1) < MIN_ODNOS:
             continue
         pozitivni.append((ime, koef))
 
@@ -149,7 +165,8 @@ def nauci(korpus: Path, broj_termina: int, top: int) -> dict:
     tezine = skaliraj_tezine(np.array([koef for _, koef in pozitivni]))
 
     recnik = {
-        "verzija": 1,
+        "verzija": 2,
+        "jezik": jezik,
         "izvor": korpus.name,
         "broj_termina": len(termini),
         "tezine": {termin: round(float(tezina), 4) for termin, tezina in zip(termini, tezine)},
@@ -160,29 +177,38 @@ def nauci(korpus: Path, broj_termina: int, top: int) -> dict:
     for termin, tezina in list(recnik["tezine"].items())[:top]:
         print(f"  {tezina:4.2f}  {termin}")
 
-    rucni = set(SPAM_RECNIK_RECI) | set(SPAM_RECNIK_FRAZE)
-    nauceni_jednorecni = {t for t in termini if " " not in t}
-    presek = sorted(nauceni_jednorecni & rucni)
-    print(f"\nPreklapanje sa rucnim recnikom: {len(presek)} / {len(nauceni_jednorecni)}")
-    print("  zajednicki:", ", ".join(presek[:20]) if presek else "(nema)")
-    novi = sorted(nauceni_jednorecni - rucni)
-    print("  novi kod mreze:", ", ".join(novi[:20]) if novi else "(nema)")
+    if jezik == "en":
+        from neuronska_mreza.legacy_recnik import SPAM_RECNIK_FRAZE, SPAM_RECNIK_RECI
+
+        rucni = set(SPAM_RECNIK_RECI) | set(SPAM_RECNIK_FRAZE)
+        nauceni_jednorecni = {t for t in termini if " " not in t}
+        presek = sorted(nauceni_jednorecni & rucni)
+        print(f"\nPreklapanje sa starim rucnim recnikom: {len(presek)} / {len(nauceni_jednorecni)}")
+        print("  zajednicki:", ", ".join(presek[:20]) if presek else "(nema)")
+        novi = sorted(nauceni_jednorecni - rucni)
+        print("  novi kod mreze:", ", ".join(novi[:20]) if novi else "(nema)")
 
     return recnik
 
 
 def main():
     parser = argparse.ArgumentParser(description="Uci spam recnik iz oznacenih podataka.")
-    parser.add_argument("--korpus", type=Path, default=PUTANJA_PODACI)
+    parser.add_argument("--korpus", type=Path)
+    parser.add_argument("--jezik", choices=("en", "sr"), default="en")
     parser.add_argument("--broj-termina", type=int, default=BROJ_TERMINA)
     parser.add_argument("--top", type=int, default=30)
     argumenti = parser.parse_args()
 
-    recnik = nauci(argumenti.korpus, argumenti.broj_termina, argumenti.top)
-    PUTANJA_RECNIK.write_text(
+    korpus = argumenti.korpus
+    if korpus is None:
+        korpus = PUTANJA_PODACI if argumenti.jezik == "en" else PUTANJA_SR_PODACI
+
+    izlaz = RECNICI_PO_JEZIKU[argumenti.jezik]
+    recnik = nauci(korpus, argumenti.broj_termina, argumenti.top, argumenti.jezik)
+    izlaz.write_text(
         json.dumps(recnik, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    print(f"\nSacuvano u {PUTANJA_RECNIK}")
+    print(f"\nSacuvano u {izlaz}")
 
 
 if __name__ == "__main__":

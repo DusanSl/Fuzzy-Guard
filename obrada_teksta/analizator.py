@@ -1,146 +1,148 @@
-import re
-import random
+import html
 import json
 import os
-import html
+import re
+from itertools import chain, islice
 from pathlib import Path
 from typing import Optional
 
-SPAM_RECNIK_RECI = [
-    # Engleski
-    "win", "winner", "won", "free", "click", "offer", "prize",
-    "congratulations", "claim", "cash", "bonus", "reward", "rewards",
-    "urgent", "limited", "exclusive", "guarantee", "guaranteed", "deal",
-    "cheap", "discount", "income", "profit", "rich", "million", "dollar",
-    "dollars", "money", "selected", "opportunity",
-    "account", "verify", "unusual", "eligible", "refund", "confirm",
-    "update", "settings", "subscription", "expire", "expires", "renew",
-    "approved", "loan", "jackpot", "unlimited", "access",
-
-    # Srpski
-    "pobedi", "pobednik", "pobedniku", "pobednika",
-    "osvojio", "osvojili", "osvojite", "osvoji",
-    "besplatno", "besplatnu", "besplatni", "besplatna", "besplatne", "besplatan",
-    "klikni", "kliknite", "kliknete",
-    "ponuda", "ponude", "ponudu",
-    "nagrada", "nagradu", "nagrade", "nagradi",
-    "čestitamo", "čestitam",
-    "preuzmi", "preuzmite", "preuzmete", "preuzimite",
-    "gotovina", "gotovinu", "gotovine",
-    "hitno", "hitna", "hitni", "hitne",
-    "ograničeno", "ograničena", "ograničenu", "ograničene", "ograničeni",
-    "neograničeno", "neograničena", "neograničenu", "neograničene", "neograničeni",
-    "ekskluzivno", "ekskluzivna", "ekskluzivnu", "ekskluzivne", "ekskluzivni",
-    "garantovano", "garantovana", "garantujemo", "garantovanu",
-    "jeftino", "jeftina", "jeftine", "jeftini", "jeftinu",
-    "popust", "popusta", "popustu", "popustom",
-    "novac", "novca", "novcem", "novcu",
-    "prihod", "prihoda", "prihode", "prihodom",
-    "zarada", "zaradu", "zarade", "zaradite", "zaraditi",
-    "bogat", "bogata", "bogati", "bogatstvo",
-    "milion", "miliona", "milione", "milionima",
-    "dolar", "dolara", "dolare", "dolarima",
-    "dinar", "dinara", "dinare", "dinarima",
-    "izabran", "izabrana", "izabrani", "izabrano", "izabrane",
-    "prilika", "prilike", "priliku", "prilikama",
-    "pogodba", "pogodbe", "pogodbu",
-    "nalog", "naloga", "nalogu",
-    "verifikuj", "verifikujte", "verifikuje",
-    "aktivnost", "aktivnosti",
-    "potvrdite", "potvrdi", "potvrdite",
-    "povraćaj", "povraćaja",
-    "ažuriranje", "ažurirajte", "ažurirate",
-    "podešavanja", "podešavanje",
-    "pretplata", "pretplatu", "pretplate",
-    "ističe", "ističu",
-    "obnovite", "obnovi", "obnova",
-    "pristup", "pristupa",
-    "kredit", "kredita",
-    "odobren", "odobrena", "odobreno",
-    "keš",
-    "naplatite", "naplati",
-    "dobitnik", "dobitnica", "dobitnika",
-    "džekpot", "džekpota",
-]
-
-SPAM_RECNIK_FRAZE = [
-    "buy now", "act now", "order now", "click here", "limited time",
-    "limited offer", "free prize", "you won", "you have won",
-    "claim now", "claim your", "get rich", "make money",
-    "gift card", "get paid", "lose access",
-
-    "kupi sad", "deluj odmah", "naruči odmah", "klikni ovde",
-    "ograničena ponuda", "besplatna nagrada", "osvojio si", "preuzmi nagradu",
-    "reaguj odmah",
-]
+from obrada_teksta.podudaranje import pronadji_poklapanja
 
 PUTANJA_PRIMERI = Path(__file__).parent.parent / "primeri.txt"
-PUTANJA_RECNIK = Path(__file__).parent.parent / "podaci" / "recnik_naucen.json"
+PUTANJA_RECNICI = Path(__file__).parent.parent / "podaci"
 
-# rucni     - samo lista odrzavana rukom (ponasanje pre uvodjenja mreze)
-# nauceni   - samo recnik koji je naucila neuronska mreza
-# kombinovano - rucni + nauceni (podrazumevano)
+# Naučeni rečnici po jeziku. Runtime koristi njih; ručni rečnik postoji samo
+# u neuronska_mreza/legacy_recnik.py za evaluacioni baseline.
+RECNICI_PO_JEZIKU = {
+    "en": PUTANJA_RECNICI / "recnik_naucen_en.json",
+    "sr": PUTANJA_RECNICI / "recnik_naucen_sr.json",
+}
+
+# en         - samo engleski naučeni rečnik
+# sr         - samo srpski naučeni rečnik
+# kombinovano - oba
+# auto       - jezik se određuje iz same poruke; kratak/mešovit tekst koristi oba
+VALIDNI_RECNICI = ("en", "sr", "kombinovano", "auto")
 NACIN_RECNIKA = os.environ.get("FUZZY_GUARD_RECNIK", "kombinovano").strip().lower()
 
-_NAUCENI_RECNIK = None
+_RECNICI_KEŠ = {}
+
+# --- detekcija jezika poruke ---------------------------------------------
+
+_SRPSKA_SLOVA = frozenset("čćšžđ")
+_SRPSKE_RECI = frozenset("""
+    i je na za da se ne su u sa od do koji koja koje ovo ovaj ova vas vaš
+    vasa vaša vase vaše molimo postovani poštovani dragi gospodine gospodjo
+    obavestenje obaveštenje paket isporuka uplata racun račun kliknite ponuda
+    nagrada besplatno hitno proverite proveriti obavezno rok danas sutra poruka
+    adresa podaci nalog novac isplata zarada dobitak potvrdite posaljite
+    pošaljite otvorite kupite jeftino tablete sada ograniceno ograničeno
+    dobitnik gotovina garancija investicija kredit prihod odobreno primite
+    kontaktirajte cena porucite poručite bezbednost banka poklon
+""".split())
+
+_ENGLESKE_RECI = frozenset("""
+    the and you your to of is are this that with for from click link offer
+    free prize urgent account verify payment today limited dear sir guarantee
+    guaranteed investment mortgage loan credit profit reward approved income
+    dollars receive contact buy cheap pills now winner cash bonus message
+    please here will can not have price order shipping delivery confirm
+    update security bank pay money gift
+""".split())
+
+
+def detektuj_jezik(tekst: str) -> str:
+    """Vraća ``en``, ``sr`` ili ``kombinovano`` za dati tekst.
+
+    Kratak ili nejasan tekst pada na oba rečnika, da se ne izgubi pogodak
+    samo zato što detekcija nije sigurna.
+    """
+    tekst = (tekst or "").lower()
+    slova = [karakter for karakter in tekst if karakter.isalpha()]
+    if len(slova) < 20:
+        return "kombinovano"
+
+    reci = re.findall(r"[a-zčćšžđ]+", tekst)
+    srpski_poeni = 3 * sum(1 for karakter in tekst if karakter in _SRPSKA_SLOVA)
+    srpski_poeni += sum(1 for rec in reci if rec in _SRPSKE_RECI)
+    engleski_poeni = sum(1 for rec in reci if rec in _ENGLESKE_RECI)
+
+    if srpski_poeni >= engleski_poeni + 2 and srpski_poeni >= 2:
+        return "sr"
+    if engleski_poeni >= srpski_poeni + 2 and engleski_poeni >= 2:
+        return "en"
+    return "kombinovano"
 
 # --- normalizacija teksta -------------------------------------------------
 
-# Cirilica koja izgleda kao latinica (homoglifi) menja se samo u tokenima koji
-# mesaju pisma. Tako "frее" (sa cirilicnim e) postaje "free", a pravi cirilicni
-# tekst ostaje netaknut.
-_CIRILICA_U_LATINICU = str.maketrans({
-    "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x",
-    "у": "y", "к": "k", "м": "m", "т": "t", "н": "h", "в": "b",
-    "А": "a", "Е": "e", "О": "o", "Р": "p", "С": "c", "Х": "x",
-    "У": "y", "К": "k", "М": "m", "Т": "t", "Н": "h", "В": "b",
-})
-
-# Leetspeak: "fr33", "v1agra", "c0ngratulat10ns". Primenjuje se samo na tokene
-# koji sadrze bar jedno latinicno slovo, da se cisti brojevi ne bi kvarili.
-_LEET = str.maketrans({
-    "0": "o", "1": "i", "3": "e", "4": "a", "5": "s",
-    "7": "t", "8": "b", "9": "g", "@": "a", "$": "s",
-})
-
 _UZORAK_LINKA = re.compile(r"(?i)\b(?:https?://|hxxps?://|www\.)[^\s<>\"']+")
 _UZORAK_HREF = re.compile(r"(?i)href\s*=\s*[\"']([^\"']+)[\"']")
-_UZORAK_SKRIPT = re.compile(r"(?is)<(script|style)\b.*?</\1>")
-_UZORAK_TAG = re.compile(r"(?s)<[^>]+>")
+# Oznaka koja otvara ``<script>`` ili ``<style>``. ``[^<>]`` ne prelazi preko
+# druge otvorene zagrade, pa se na ulazu punom znakova "<" ne skenira do kraja
+# teksta za svaku poziciju. Sa ``[^>]*`` je 50.000 znakova "<script>" trošilo
+# preko sekunde procesora po zahtevu, a ``/analiziraj`` je javni endpoint.
+_UZORAK_SKRIPT_OTVARANJE = re.compile(r"(?i)<(script|style)\b[^<>]*>")
+_UZORAK_TAG = re.compile(r"(?s)<[^<>]*>")
+_UZORAK_PREKIDA = re.compile(r"(?i)<br\s*/?>|</p>|</div>|</li>|</tr>|</h[1-6]>")
+_UZORAK_CAPS = re.compile(r"\b[A-Z\u010c\u0106\u0160\u017d\u0110]{3,}\b")
+_UZORAK_INTERPUNKCIJA = re.compile(r"[!?]+")
+
+
+def _ukloni_skriptove(tekst: str) -> str:
+    """Uklanja sadržaj ``<script>`` i ``<style>`` blokova u jednom prolazu.
+
+    ``str.find`` pomera poziciju napred posle svakog bloka, pa je ukupan rad
+    linearan. Lenji ``.*?`` regularni izraz je na nezatvorenom bloku skenirao
+    do kraja teksta za svako otvaranje.
+    """
+    tekst_mali = tekst.lower()
+    if "</script" not in tekst_mali and "</style" not in tekst_mali:
+        # Nema nijedne zatvarajuće oznake, pa nema šta da se ukloni.
+        return tekst
+
+    delovi = []
+    pozicija = 0
+    for poklapanje in _UZORAK_SKRIPT_OTVARANJE.finditer(tekst):
+        if poklapanje.start() < pozicija:
+            # Ovo otvaranje je već uklonjeno zajedno sa svojim blokom.
+            continue
+        ime_oznake = poklapanje.group(1).lower()
+        pocetak_zatvaranja = tekst_mali.find("</" + ime_oznake, poklapanje.end())
+        if pocetak_zatvaranja == -1:
+            # Blok nije zatvoren: oznaka se briše kao obična oznaka, a tekst
+            # posle nje ostaje vidljiv.
+            continue
+        kraj_zatvaranja = tekst_mali.find(">", pocetak_zatvaranja)
+        if kraj_zatvaranja == -1:
+            kraj_zatvaranja = len(tekst) - 1
+        delovi.append(tekst[pozicija:poklapanje.start()])
+        pozicija = kraj_zatvaranja + 1
+
+    delovi.append(tekst[pozicija:])
+    return " ".join(delovi)
 
 
 def _ocisti_html(tekst: str) -> str:
-    """Dekodira entitete i uklanja HTML, ostavljajuci vidljivi tekst."""
+    """Dekodira entitete i uklanja HTML, ostavljajući vidljivi tekst."""
     tekst = html.unescape(tekst)
-    tekst = _UZORAK_SKRIPT.sub(" ", tekst)
-    tekst = re.sub(r"(?i)<br\s*/?>|</p>|</div>|</li>|</tr>|</h[1-6]>", " ", tekst)
+    tekst = _ukloni_skriptove(tekst)
+    tekst = _UZORAK_PREKIDA.sub(" ", tekst)
     tekst = _UZORAK_TAG.sub(" ", tekst)
     return re.sub(r"\s+", " ", tekst).strip()
 
 
-def _normalizuj_za_mecovanje(tekst: str) -> str:
-    delovi = []
-    for token in re.split(r"(\W+)", tekst.lower()):
-        if not token or not any(znak.isalnum() for znak in token):
-            delovi.append(token)
-            continue
-
-        ima_latinicu = any("a" <= znak <= "z" for znak in token)
-        ima_cirilicu = any("\u0400" <= znak <= "\u04ff" for znak in token)
-
-        if ima_latinicu and ima_cirilicu:
-            token = token.translate(_CIRILICA_U_LATINICU)
-        if any("a" <= znak <= "z" for znak in token):
-            token = token.translate(_LEET)
-
-        delovi.append(token)
-    return "".join(delovi)
-
-
 def _izvuci_linkove(tekst: str) -> list:
-    """Vraca jedinstvene linkove iz teksta i iz href atributa."""
-    kandidati = _UZORAK_HREF.findall(tekst) + _UZORAK_LINKA.findall(tekst)
+    """Vraća najviše 10 jedinstvenih linkova iz teksta i href atributa.
+
+    Broj linkova se ionako ograničava na 10, pa nema smisla materializovati
+    sve pogotke u tekstu od 50.000 znakova.
+    """
     ocisceni = []
+    vidjeni = set()
+    kandidati = chain(
+        (poklapanje.group(1) for poklapanje in _UZORAK_HREF.finditer(tekst)),
+        (poklapanje.group(0) for poklapanje in _UZORAK_LINKA.finditer(tekst)),
+    )
     for link in kandidati:
         link = html.unescape(link).strip().rstrip(".,;:!?)]}>\"'")
         if not link:
@@ -148,92 +150,117 @@ def _izvuci_linkove(tekst: str) -> list:
         link = re.sub(r"(?i)^hxxp", "http", link)
         if link.lower().startswith("www."):
             link = "http://" + link
-        ocisceni.append(link.lower())
-    return list(dict.fromkeys(ocisceni))
+        link = link.lower()
+        if link in vidjeni:
+            continue
+        vidjeni.add(link)
+        ocisceni.append(link)
+        if len(ocisceni) >= 10:
+            break
+    return ocisceni
 
 
-# Uzorci se kompajliraju jednom; ranije se 271 nauceni izraz ponovo kompajlirao
-# pri svakom zahtevu.
-_RUCNI_UZORCI = [
-    (re.compile(r"\b" + re.escape(rec) + r"\b"), rec, 1.0)
-    for rec in SPAM_RECNIK_RECI
-] + [
-    (re.compile(re.escape(fraza)), fraza, 1.0)
-    for fraza in SPAM_RECNIK_FRAZE
-]
-_RUCNI_TERMINI = set(SPAM_RECNIK_RECI) | set(SPAM_RECNIK_FRAZE)
+# --- naučeni rečnici ------------------------------------------------------
 
-_NAUCENI_UZORCI = None
-_NAUCENI_IZVOR = None
+def ucitaj_nauceni_recnik(jezik: str = "en") -> dict:
+    """Učitava naučeni rečnik za jezik. Vraća {} ako ga nema.
 
+    Keš se osvežava kada se fajl promeni (mtime), pa retreniranje rečnika ne
+    zahteva restart servera.
+    """
+    putanja = RECNICI_PO_JEZIKU.get(jezik)
+    if putanja is None:
+        return {}
 
-def _nauceni_uzorci() -> list:
-    global _NAUCENI_UZORCI, _NAUCENI_IZVOR
-    recnik = ucitaj_nauceni_recnik()
-    if _NAUCENI_IZVOR is not recnik:
-        uzorci = []
-        for termin, tezina in recnik.items():
-            if " " in termin:
-                uzorak = re.compile(re.escape(termin))
-            else:
-                uzorak = re.compile(r"\b" + re.escape(termin) + r"\b")
-            uzorci.append((uzorak, termin, tezina))
-        _NAUCENI_UZORCI = uzorci
-        _NAUCENI_IZVOR = recnik
-    return _NAUCENI_UZORCI
-
-
-
-def ucitaj_nauceni_recnik() -> dict:
-    """Ucitava recnik koji je izvozila neuronska mreza. Vraca {} ako ga nema."""
-    global _NAUCENI_RECNIK
-    if _NAUCENI_RECNIK is not None:
-        return _NAUCENI_RECNIK
     try:
-        podaci = json.loads(PUTANJA_RECNIK.read_text(encoding="utf-8"))
-        _NAUCENI_RECNIK = {
-            termin: float(tezina) for termin, tezina in podaci.get("tezine", {}).items()
+        vreme = putanja.stat().st_mtime
+    except OSError:
+        _RECNICI_KEŠ.pop(jezik, None)
+        return {}
+
+    keširan = _RECNICI_KEŠ.get(jezik)
+    if keširan and keširan[0] == vreme:
+        return keširan[1]
+
+    try:
+        podaci = json.loads(putanja.read_text(encoding="utf-8"))
+        recnik = {
+            termin: float(tezina)
+            for termin, tezina in podaci.get("tezine", {}).items()
         }
-    except (OSError, ValueError):
-        _NAUCENI_RECNIK = {}
-    return _NAUCENI_RECNIK
+    except (OSError, ValueError, AttributeError):
+        recnik = {}
+
+    _RECNICI_KEŠ[jezik] = (vreme, recnik)
+    return recnik
 
 
-def _izracunaj_kljucne_reci(tekst_za_mecovanje: str, nacin_recnik: str):
-    """Vraca (evidencija 0-10, lista najjacih pogodaka za objasnjenje)."""
-    evidencija = 0.0
-    pogodjene = []
+def _termini_za_nacin(nacin_recnik: str, legacy_recnik=None) -> list:
+    """Vraća listu (termin, tezina, izvor) za izabrani rečnik."""
+    if nacin_recnik == "legacy":
+        if legacy_recnik is None:
+            from neuronska_mreza.legacy_recnik import termini as legacy_termini
+            legacy_recnik = dict(
+                (termin, tezina) for termin, tezina, _ in legacy_termini()
+            )
+        return [(termin, tezina, "rucni") for termin, tezina in legacy_recnik.items()]
 
-    if nacin_recnik in ("rucni", "kombinovano"):
-        for uzorak, termin, tezina in _RUCNI_UZORCI:
-            broj = len(uzorak.findall(tekst_za_mecovanje))
-            if broj:
-                evidencija += broj * tezina
-                pogodjene.append(
-                    {"rec": termin, "broj": broj, "tezina": tezina, "izvor": "rucni"}
-                )
-
-    if nacin_recnik in ("nauceni", "kombinovano"):
-        for uzorak, termin, tezina in _nauceni_uzorci():
-            if nacin_recnik == "kombinovano" and termin in _RUCNI_TERMINI:
-                continue  # ne broji dvaput isti termin
-            broj = len(uzorak.findall(tekst_za_mecovanje))
-            if broj:
-                evidencija += broj * tezina
-                pogodjene.append(
-                    {"rec": termin, "broj": broj, "tezina": tezina, "izvor": "nauceni"}
-                )
-
-    pogodjene.sort(key=lambda stavka: stavka["broj"] * stavka["tezina"], reverse=True)
-    return min(evidencija, 10.0), pogodjene[:8]
+    jezici = ("en", "sr") if nacin_recnik == "kombinovano" else (nacin_recnik,)
+    termini = []
+    for jezik in jezici:
+        for termin, tezina in ucitaj_nauceni_recnik(jezik).items():
+            termini.append((termin, tezina, jezik))
+    return termini
 
 
-def analiziraj_email(tekst: str, nacin_recnik: Optional[str] = None) -> dict:
+def _izracunaj_kljucne_reci(tekst: str, nacin_recnik: str, legacy_recnik=None):
+    """Vraća (evidencija 0-10, lista najjačih pogodaka za objašnjenje)."""
+    return pronadji_poklapanja(
+        tekst,
+        _termini_za_nacin(nacin_recnik, legacy_recnik),
+        keš_kljuc=_kljuc_indeksa(nacin_recnik, legacy_recnik),
+    )
+
+
+def _kljuc_indeksa(nacin_recnik: str, legacy_recnik=None):
+    """Ključ keša terminskog indeksa; menja se kada se rečnik promeni.
+
+    ``legacy`` rečnik može da bude proizvoljan dict, pa se za njega indeks ne
+    kešira. Za naučene rečnike mtime je dovoljan: fajl se menja samo pri
+    ponovnom treniranju.
+    """
+    if nacin_recnik == "legacy" or legacy_recnik is not None:
+        return None
+
+    jezici = ("en", "sr") if nacin_recnik == "kombinovano" else (nacin_recnik,)
+    delovi = []
+    for jezik in jezici:
+        putanja = RECNICI_PO_JEZIKU.get(jezik)
+        if putanja is None:
+            return None
+        try:
+            delovi.append((jezik, putanja.stat().st_mtime))
+        except OSError:
+            return None
+    return (nacin_recnik, tuple(delovi))
+
+
+# --- analiza --------------------------------------------------------------
+
+def analiziraj_email(
+    tekst: str,
+    nacin_recnik: Optional[str] = None,
+    legacy_recnik=None,
+) -> dict:
     vidljivi_tekst = _ocisti_html(tekst)
-    tekst_za_mecovanje = _normalizuj_za_mecovanje(vidljivi_tekst)
+    izabrani_recnik = (nacin_recnik or NACIN_RECNIKA).strip().lower()
+    if izabrani_recnik == "auto":
+        izabrani_recnik = detektuj_jezik(vidljivi_tekst)
 
     broj_kljucnih_reci, pogodjene_reci = _izracunaj_kljucne_reci(
-        tekst_za_mecovanje, (nacin_recnik or NACIN_RECNIKA)
+        vidljivi_tekst,
+        izabrani_recnik,
+        legacy_recnik=legacy_recnik,
     )
 
     pronadjeni_linkovi = _izvuci_linkove(tekst)
@@ -256,16 +283,63 @@ def analiziraj_email(tekst: str, nacin_recnik: Optional[str] = None) -> dict:
     else:
         interpunkcija = 0.0
 
+    oznake = [
+        {
+            "tip": "link",
+            "pozicije": [
+                list(poklapanje.span())
+                for poklapanje in islice(_UZORAK_LINKA.finditer(vidljivi_tekst), 50)
+            ],
+        },
+        {
+            "tip": "caps",
+            "pozicije": [
+                list(poklapanje.span())
+                for poklapanje in islice(_UZORAK_CAPS.finditer(vidljivi_tekst), 50)
+            ],
+        },
+        {
+            "tip": "interpunkcija",
+            "pozicije": [
+                list(poklapanje.span())
+                for poklapanje in islice(_UZORAK_INTERPUNKCIJA.finditer(vidljivi_tekst), 50)
+            ],
+        },
+    ]
+
     return {
+        "recnik":        izabrani_recnik,
         "kljucne_reci":  float(broj_kljucnih_reci),
         "broj_linkova":  float(broj_linkova),
         "caps_procenat": round(caps_procenat, 2),
         "interpunkcija": float(interpunkcija),
         "pokrivene_reci": pogodjene_reci,
+        "oznake": oznake,
+        "vidljivi_tekst": vidljivi_tekst,
     }
 
 
-def ucitaj_sve_primere(jezik: str = "en") -> list:
+def _izdvoji_metapodatke(linije: list) -> tuple:
+    posaljilac = tema = kategorija = ""
+    ostatak = []
+
+    for linija in linije:
+        if not ostatak:
+            if linija.startswith("From:"):
+                posaljilac = linija[5:].strip()
+                continue
+            if linija.startswith("Subject:"):
+                tema = linija[8:].strip()
+                continue
+            if linija.startswith("Category:"):
+                kategorija = linija[9:].strip()
+                continue
+        ostatak.append(linija)
+
+    return posaljilac, tema, kategorija, "\n".join(ostatak).strip()
+
+
+def _ucitaj_primere(jezik: str = "en") -> list:
     if not PUTANJA_PRIMERI.exists():
         return []
 
@@ -277,17 +351,31 @@ def ucitaj_sve_primere(jezik: str = "en") -> list:
         primeri_sr = []
 
         for blok in blokovi:
-            linije = blok.split("\n", 1)
+            linije = blok.split("\n")
             if len(linije) < 2:
                 continue
             tag = linije[0].strip().lower()
-            tekst = linije[1].strip()
 
-            if tag == "[en]":
-                primeri_en.append(tekst)
-            elif tag == "[sr]":
-                primeri_sr.append(tekst)
+            posaljilac, tema, kategorija, tekst = _izdvoji_metapodatke(linije[1:])
+            if not tekst:
+                continue
+
+            zapis = {
+                "posaljilac": posaljilac,
+                "tema": tema,
+                "kategorija": kategorija,
+                "tekst": tekst,
+            }
+
+            if tag.startswith("[en]"):
+                primeri_en.append(zapis)
+            elif tag.startswith("[sr]"):
+                primeri_sr.append(zapis)
 
         return primeri_sr if jezik == "sr" else primeri_en
     except Exception:
         return []
+
+
+def ucitaj_sve_primere(jezik: str = "en") -> list:
+    return _ucitaj_primere(jezik)

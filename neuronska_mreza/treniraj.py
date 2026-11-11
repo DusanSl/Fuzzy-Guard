@@ -1,26 +1,36 @@
-"""Poredjenje neuronske mreze i fazi sistema.
+"""Poređenje neuronske mreže i neuro-fazi sistema.
 
-Mreza NE ucestvuje u izracunavanju ``spam_score`` — sluzi kao drugo misljenje i
-kao poredjenje za odbranu projekta. Oba modela dobijaju iste cetiri ulazne
-karakteristike, tako da je poredjenje fer:
+Mreža ima dve uloge:
+
+1. **Runtime:** njen izlaz je peti fazi ulaz ``nn_pouzdanje`` (0-100).
+   Pravila ``n01``-``n03`` koriste ga kao potvrdu; konačnu ocenu i dalje daje
+   Mamdani + centroid. Nijedno ``n`` pravilo ne vodi u SPAM samo na osnovu
+   mreže.
+2. **Evaluacija:** isti MLP se poredi sa čistim fazi sistemom (bez ``n``
+   pravila) i sa hibridom. Oba modela dobijaju iste četiri karakteristike:
 
     kljucne_reci, broj_linkova, caps_procenat, interpunkcija
 
-Za ``kljucne_reci`` postoje tri rezima (vidi ``obrada_teksta/analizator.py``):
+Rečnici:
 
-    rucni        - samo lista odrzavana rukom
-    nauceni      - samo recnik koji je naucila mreza
-    kombinovano  - rucni + nauceni (podrazumevano)
+    legacy       - stari ručni rečnik (samo za tabelu "pre / posle mreže")
+    en           - naučeni engleski rečnik
+    sr           - naučeni srpski rečnik (korpus preveden mašinski)
+    kombinovano  - en + sr (podrazumevano u aplikaciji)
 
 Korpusi:
-- ``podaci/spamassassin.tsv`` — 3000 emailova (500 spama). Primarni korpus.
-- ``podaci/SMSSpamCollection.tsv`` — 5574 SMS poruka (747 spama). Sekundarni
-  korpus; pokazuje da iste karakteristike slabije rade van email domena.
+- ``podaci/spamassassin.tsv`` — 3000 engleskih emailova (500 spama).
+- ``podaci/sr_spamassassin.tsv`` — isti korpus mašinski preveden na srpski.
+- ``podaci/SMSSpamCollection.tsv`` — 5574 SMS poruka (747 spama).
 
-Pokretanje:
+Modeli za runtime se čuvaju u ``podaci/model_nn_<recnik>.joblib``. Model se
+odbija ako se rečnik promeni (hash u metapodacima).
+
+Pokretanje::
 
     python -m neuronska_mreza.treniraj
     python -m neuronska_mreza.treniraj --recnik svi
+    python -m neuronska_mreza.treniraj --korpus sr --recnik sr
 """
 
 import argparse
@@ -39,22 +49,26 @@ from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 
-from obrada_teksta.analizator import analiziraj_email
 from fazi.zakljucivanje import pokreni_fis
+from neuronska_mreza.legacy_recnik import termini as legacy_termini
+from neuronska_mreza.predikcija import KARAKTERISTIKE, sacuvaj_model as sacuvaj_model_na_disk
+from obrada_teksta.analizator import analiziraj_email
 
 KOREN = Path(__file__).parent.parent
-KORPUSI = (
-    ("SpamAssassin (emailovi)", KOREN / "podaci" / "spamassassin.tsv"),
-    ("SMS Spam Collection", KOREN / "podaci" / "SMSSpamCollection.tsv"),
-)
-PUTANJA_MODEL = Path(__file__).parent / "model.joblib"
+KORPUSI = {
+    "email": ("SpamAssassin (emailovi)", KOREN / "podaci" / "spamassassin.tsv"),
+    "sr": ("SpamAssassin na srpskom (hibridni korpus)", KOREN / "podaci" / "sr_spamassassin.tsv"),
+    "sms": ("SMS Spam Collection", KOREN / "podaci" / "SMSSpamCollection.tsv"),
+}
 
-KARAKTERISTIKE = ("kljucne_reci", "broj_linkova", "caps_procenat", "interpunkcija")
-REZIMI = ("rucni", "nauceni", "kombinovano")
+REZIMI = ("legacy", "en", "sr", "kombinovano")
+NEUTRALNO_NN = 50.0
+
+_LEGACY_RECNIK = dict((termin, tezina) for termin, tezina, _ in legacy_termini())
 
 
 def ucitaj_podatke(putanja: Path):
-    """Vraca (tekstovi, oznake) gde je oznaka 1 za spam, 0 za ham."""
+    """Vraća (tekstovi, oznake) gde je oznaka 1 za spam, 0 za ham."""
     tekstovi, oznake = [], []
     for linija in putanja.read_text(encoding="utf-8").splitlines():
         if "\t" not in linija:
@@ -68,19 +82,23 @@ def ucitaj_podatke(putanja: Path):
 def izvuci_karakteristike(tekstovi: list, nacin_recnik: str) -> np.ndarray:
     redovi = []
     for tekst in tekstovi:
-        ulazi = analiziraj_email(tekst, nacin_recnik=nacin_recnik)
+        ulazi = analiziraj_email(
+            tekst,
+            nacin_recnik=nacin_recnik,
+            legacy_recnik=_LEGACY_RECNIK if nacin_recnik == "legacy" else None,
+        )
         redovi.append([ulazi[ime] for ime in KARAKTERISTIKE])
     return np.array(redovi, dtype=float)
 
 
-def fazi_predikcija(tekst: str, nacin_recnik: str) -> int:
-    """1 ako fazi sistem kaze SPAM, inace 0 (SUMNJIVO se racuna kao ham)."""
-    ulazi = analiziraj_email(tekst, nacin_recnik=nacin_recnik)
+def fazi_predikcija(red: np.ndarray, val_nn: float) -> int:
+    """1 ako fazi sistem kaže SPAM, inače 0 (SUMNJIVO se računa kao ham)."""
     rezultat = pokreni_fis(
-        ulazi["kljucne_reci"],
-        ulazi["broj_linkova"],
-        ulazi["caps_procenat"],
-        ulazi["interpunkcija"],
+        float(red[0]),
+        float(red[1]),
+        float(red[2]),
+        float(red[3]),
+        float(val_nn),
     )
     return 1 if rezultat["kategorija"] == "SPAM" else 0
 
@@ -114,6 +132,7 @@ def obradi_korpus(naziv: str, putanja: Path, rezimi: tuple, sacuvaj_model: bool 
           f"spam u testu: {int(y_test.sum())}")
 
     rezultati = {}
+    sacuvani = []
     for nacin in rezimi:
         X_train = izvuci_karakteristike(tekst_train, nacin)
         X_test = izvuci_karakteristike(tekst_test, nacin)
@@ -127,59 +146,79 @@ def obradi_korpus(naziv: str, putanja: Path, rezimi: tuple, sacuvaj_model: bool 
             random_state=42,
         )
         mreza.fit(skaliraj.transform(X_train), y_train)
-        metrike_mreze = metrike(y_test, mreza.predict(skaliraj.transform(X_test)))
 
-        fazi_pred = np.array([fazi_predikcija(tekst, nacin) for tekst in tekst_test])
-        metrike_fazi = metrike(y_test, fazi_pred)
+        verovatnoce = mreza.predict_proba(skaliraj.transform(X_test))[:, 1] * 100.0
+        pred_mreze = (verovatnoce >= 50.0).astype(int)
 
-        rezultati[nacin] = (metrike_mreze, metrike_fazi, fazi_pred)
+        # Čist fazi sistem: nn ulaz je neutralan, pa se n pravila ne aktiviraju.
+        pred_fazi = np.array([fazi_predikcija(red, NEUTRALNO_NN) for red in X_test])
+        # Hibrid: mrežin izlaz je peti fazi ulaz. Za ``legacy`` nema runtime
+        # modela, pa hibrid ostaje neutralan i jednak čistom fazi sistemu.
+        verovatnoce_hibrid = (
+            np.full_like(verovatnoce, NEUTRALNO_NN)
+            if nacin == "legacy" else verovatnoce
+        )
+        pred_hibrid = np.array([
+            fazi_predikcija(red, verovatnoca)
+            for red, verovatnoca in zip(X_test, verovatnoce_hibrid)
+        ])
 
-        if sacuvaj_model and nacin == "kombinovano":
-            import joblib
-            joblib.dump({"skaliraj": skaliraj, "mreza": mreza}, PUTANJA_MODEL)
+        rezultati[nacin] = {
+            "mreza": metrike(y_test, pred_mreze),
+            "fazi": metrike(y_test, pred_fazi),
+            "hibrid": metrike(y_test, pred_hibrid),
+            "pred_fazi": pred_fazi,
+            "pred_hibrid": pred_hibrid,
+        }
+
+        if sacuvaj_model and nacin in ("en", "sr", "kombinovano"):
+            sacuvani.append(sacuvaj_model_na_disk(nacin, skaliraj, mreza))
 
     print(f"\n{'model':26s} {'recnik':13s} {'tacnost':>8s} {'preciznost':>11s} "
           f"{'odziv':>7s} {'F1':>7s}")
     for nacin in rezimi:
-        metrike_mreze, metrike_fazi, _ = rezultati[nacin]
-        for naziv_modela, m in (("Neuronska mreza (MLP)", metrike_mreze),
-                                ("Fazi sistem (Mamdani)", metrike_fazi)):
+        for naziv_modela, kljuc in (
+            ("Neuronska mreza (MLP)", "mreza"),
+            ("Fazi (4 ulaza)", "fazi"),
+            ("Neuro-fazi (5 ulaza)", "hibrid"),
+        ):
+            m = rezultati[nacin][kljuc]
             print(f"{naziv_modela:26s} {nacin:13s} {m['tacnost']:8.3f} "
                   f"{m['preciznost']:11.3f} {m['odziv']:7.3f} {m['f1']:7.3f}")
 
     if "kombinovano" in rezultati:
-        _, _, fazi_pred = rezultati["kombinovano"]
-        print("\nMatrica konfuzije fazi sistema (kombinovano):")
-        print(confusion_matrix(y_test, fazi_pred))
-        print(classification_report(y_test, fazi_pred, target_names=["ham", "spam"], digits=3))
+        for naziv, kljuc in (("fazi", "fazi"), ("neuro-fazi", "hibrid")):
+            pred = rezultati["kombinovano"][f"pred_{kljuc}"]
+            print(f"\nMatrica konfuzije {naziv} sistema (kombinovano):")
+            print(confusion_matrix(y_test, pred))
+            print(classification_report(y_test, pred, target_names=["ham", "spam"], digits=3))
 
-    if sacuvaj_model:
-        print(f"Model sacuvan u {PUTANJA_MODEL}")
+    if sacuvani:
+        for putanja in sacuvani:
+            print(f"Model sacuvan u {putanja}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Poredjenje MLP i fazi sistema.")
+    parser = argparse.ArgumentParser(description="Poređenje MLP i fazi sistema.")
     parser.add_argument(
         "--recnik", choices=(*REZIMI, "svi"), default="kombinovano",
-        help="koji recnik koristi ulaz 'kljucne_reci'",
+        help="koji rečnik koristi ulaz 'kljucne_reci'",
     )
     parser.add_argument(
-        "--korpus", choices=("svi", "email", "sms"), default="svi",
+        "--korpus", choices=(*KORPUSI, "svi"), default="svi",
         help="koji korpus evaluirati",
     )
     argumenti = parser.parse_args()
 
     rezimi = REZIMI if argumenti.recnik == "svi" else (argumenti.recnik,)
-    korpusi = KORPUSI
-    if argumenti.korpus == "email":
-        korpusi = KORPUSI[:1]
-    elif argumenti.korpus == "sms":
-        korpusi = KORPUSI[1:]
+    if argumenti.korpus == "svi":
+        korpusi = list(KORPUSI.items())
+    else:
+        korpusi = [(argumenti.korpus, KORPUSI[argumenti.korpus])]
 
-    for naziv, putanja in korpusi:
-        # model se cuva samo za primarni (email) korpus, da --korpus sms
-        # ne bi pregazio istrenirani email model
-        obradi_korpus(naziv, putanja, rezimi, sacuvaj_model=(putanja == KORPUSI[0][1]))
+    for kljuc, (naziv, putanja) in korpusi:
+        # model se cuva samo za primarni (engleski email) korpus
+        obradi_korpus(naziv, putanja, rezimi, sacuvaj_model=(kljuc == "email"))
 
 
 if __name__ == "__main__":

@@ -1,98 +1,341 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fuzzy Guard</title>
-    <link rel="icon" href="{{ url_for('static', filename='ikona.svg') }}?" type="image/svg+xml">
-    <link rel="stylesheet" href="{{ url_for('static', filename='izgled.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='ikona.svg') }}" type="image/svg+xml">
+    <script src="{{ url_for('static', filename='inicijalizacija.js') }}?v={{ verzija_fajla('inicijalizacija.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='izgled.css') }}?v={{ verzija_fajla('izgled.css') }}">
 </head>
 <body>
 
-    <aside class="sidebar">
-        <div class="sidebar-zaglavlje">
-            <div class="logo">Fuzzy Guard</div>
-            <div class="zaglavlje-dugmad">
-                <button class="jezik-dugme" id="jezik-dugme" onclick="promeniJezik()">Srpski</button>
-                <button class="meni-dugme" id="meni-dugme" onclick="toggleMeni()" aria-label="Menu" aria-expanded="false">☰</button>
+<header class="traka">
+    <div class="traka-unutrasnjost">
+        <a class="marka" id="marka" href="#" aria-label="Fuzzy Guard">
+            <span class="marka-znak" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#ffffff" stroke="#000000" stroke-width="0.2" d="M2 2a2 2 0 0 0-2 2v8.01A2 2 0 0 0 2 14h5.5a.5.5 0 0 0 0-1H2a1 1 0 0 1-.966-.741l5.64-3.471L8 9.583l7-4.2V8.5a.5.5 0 0 0 1 0V4a2 2 0 0 0-2-2zm3.708 6.208L1 11.105V5.383zM1 4.217V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v.217l-7 4.2z"/>
+                    <path fill="#ef4444" d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1.5a.5.5 0 0 1-1 0V11a.5.5 0 0 1 1 0m0 3a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/>
+                </svg>
+            </span>
+            <span class="marka-tekst">Fuzzy Guard</span>
+        </a>
+
+        <div class="traka-alati">
+            <nav class="traka-nav" aria-label="Primary" data-i18n-aria="navPrimarna">
+                <button class="nav-dugme" aria-current="page" data-i18n="navProvera">Check</button>
+                <button class="nav-dugme" data-otvori-metod data-i18n="navMetod">Method</button>
+            </nav>
+            <button class="jezik-dugme" id="jezik-dugme" aria-label="Switch language">SR</button>
+            <button class="ikona-dugme" id="tema-dugme" aria-label="Switch theme">
+                <svg class="ikona-sunce" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="4"/>
+                    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+                </svg>
+                <svg class="ikona-mesec" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="stranica">
+    <section class="uvod">
+        <h1 data-i18n="naslov">Not a guess.
+A traceable score.</h1>
+    </section>
+
+    <div class="mreza">
+        <section class="kartica pisac" aria-labelledby="naslov-poruke">
+            <div class="kartica-vrh">
+                <h2 class="kartica-naslov" id="naslov-poruke" data-i18n="poruka">Message</h2>
+                <button class="tih-dugme" id="ocisti-dugme" data-i18n="ocisti">Clear</button>
             </div>
+
+            <div class="polja">
+                <label class="polje">
+                    <span class="polje-naziv" data-i18n="od">From</span>
+                    <input class="polje-unos" id="polje-posaljilac" type="text" autocomplete="off" spellcheck="false">
+                </label>
+                <label class="polje">
+                    <span class="polje-naziv" data-i18n="tema">Subject</span>
+                    <input class="polje-unos" id="polje-tema" type="text" autocomplete="off" spellcheck="false">
+                </label>
+            </div>
+
+            <div class="pisac-telo">
+                <textarea class="pisac-unos" id="tekst" spellcheck="false"
+                          aria-labelledby="naslov-poruke"
+                          data-i18n-placeholder="placeholder"
+                          placeholder="Paste the email text here…"></textarea>
+                <div class="pisac-podnozje">
+                    <span class="znakovi"><span id="broj-znakova">0</span> <span data-i18n="znakova">characters</span></span>
+                    <div class="uzorci" role="group" aria-label="Samples" data-i18n-aria="uzorci">
+                        <button class="cip-dugme" type="button" data-uzorak="legitiman" data-i18n="uzorakLegitiman">Legitimate</button>
+                        <button class="cip-dugme" type="button" data-uzorak="sumnjiv" data-i18n="uzorakSumnjiv">Suspicious</button>
+                        <button class="cip-dugme" type="button" data-uzorak="prevara" data-i18n="uzorakPrevara">Spam</button>
+                        <button class="cip-dugme" type="button" id="dugme-random" data-i18n="uzorakRandom">Random</button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="glavno-dugme" id="pokreni-dugme" type="button">
+                <span id="pokreni-tekst" data-i18n="pokreni">Run analysis</span>
+                <kbd id="precica">⌘↵</kbd>
+            </button>
+            <p class="sitno" data-i18n="sitno">Only the body is scored · processed on this server, with no third-party requests.</p>
+            <p class="greska" id="greska" role="alert" aria-live="assertive" aria-atomic="true" hidden></p>
+        </section>
+
+        <section class="kartica presuda" aria-labelledby="naslov-presude">
+            <div class="kartica-vrh">
+                <h2 class="kartica-naslov" id="naslov-presude" data-i18n="procena">Assessment</h2>
+                <div class="presuda-alati">
+                    <span class="status" id="status" hidden aria-live="polite"><i></i><span id="status-tekst"></span></span>
+                    <button class="ikona-dugme" id="kopiraj-dugme" aria-label="Copy result" title="Copy result" hidden>
+                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round">
+                            <rect x="5.3" y="5.3" width="8" height="8" rx="1.8"/>
+                            <path d="M10.7 5.3V3.9A1.9 1.9 0 0 0 8.8 2H3.9A1.9 1.9 0 0 0 2 3.9v4.9a1.9 1.9 0 0 0 1.9 1.9h1.4"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="prazno" id="prazno">
+                <svg class="prazno-spektar" id="spektar-prazno" viewBox="0 0 420 92" aria-hidden="true"></svg>
+                <p class="prazno-tekst" data-i18n="prazno">Run an analysis to see the score, the active fuzzy sets and the rules that produced it.</p>
+            </div>
+
+            <div class="rezultat" id="rezultat" hidden>
+                <div class="skor-blok">
+                    <span class="skor-broj" id="skor-broj">0</span>
+                    <span class="skor-procenat">%</span>
+                </div>
+                <p class="skor-natpis">
+                    <span data-i18n="skorNatpis">Spam suspicion · 0–100</span>
+                    <span class="pomoc">
+                        <button class="pomoc-dugme" type="button" aria-expanded="false" aria-controls="pomoc-skor" aria-label="About the score" data-i18n-aria="pomocSkorNaslov">?</button>
+                        <span class="pomoc-panel" id="pomoc-skor" role="tooltip" hidden>
+                            <b data-i18n="pomocSkorNaslov">About the score</b>
+                            <span data-i18n="pomocSkor">This is a fuzzy suspicion score from 0 to 100. It is not a probability and not a percentage of confidence.</span>
+                        </span>
+                    </span>
+                </p>
+                <p class="skor-opis" id="skor-opis"></p>
+
+                <figure class="spektar" style="margin-left:0;margin-right:0;">
+                    <svg id="spektar" viewBox="0 0 420 92" role="img" aria-label="Fuzzy output spectrum" data-i18n-aria="spektarAria"></svg>
+                    <div class="spektar-skupovi" aria-hidden="true">
+                        <div class="spektar-grupa" style="--boja: var(--legit)">
+                            <span class="spektar-grupa-naziv" data-i18n="osaLegitiman">Legitimate</span>
+                            <span class="spektar-skupovi-lista">
+                                <span data-i18n="skupLegitiman">legitimate</span>
+                                <span data-i18n="skupEnergicno">strongly legitimate</span>
+                            </span>
+                        </div>
+                        <div class="spektar-grupa" style="--boja: var(--sumnjivo)">
+                            <span class="spektar-grupa-naziv" data-i18n="osaSumnjivo">Suspicious</span>
+                            <span class="spektar-skupovi-lista">
+                                <span data-i18n="skupBlagoSumnjiv">mildly suspicious</span>
+                                <span data-i18n="skupSumnjiv">suspicious</span>
+                                <span data-i18n="skupVisokoSumnjiv">highly suspicious</span>
+                            </span>
+                        </div>
+                        <div class="spektar-grupa" style="--boja: var(--spam)">
+                            <span class="spektar-grupa-naziv" data-i18n="osaSpam">Spam</span>
+                            <span class="spektar-skupovi-lista">
+                                <span data-i18n="skupSpam">spam</span>
+                            </span>
+                        </div>
+                    </div>
+                </figure>
+
+                <hr class="razdjelnik">
+                <div class="signali" id="signali"></div>
+                <hr class="razdjelnik">
+
+                <div class="segment segment-pogled" role="tablist" aria-label="Explanation" data-i18n-aria="objasnjenjeTabovi">
+                    <button class="segment-stavka" type="button" role="tab" id="tab-zasto" data-pogled="zasto" aria-selected="true" aria-controls="pogled-sadrzaj" tabindex="0" data-i18n="tabZasto">Why</button>
+                    <button class="segment-stavka" type="button" role="tab" id="tab-ulazi" data-pogled="ulazi" aria-selected="false" aria-controls="pogled-sadrzaj" tabindex="-1" data-i18n="tabUlazi">Inputs</button>
+                    <button class="segment-stavka" type="button" role="tab" id="tab-pravila" data-pogled="pravila" aria-selected="false" aria-controls="pogled-sadrzaj" tabindex="-1" data-i18n="tabPravila">Rules</button>
+                </div>
+                <div class="pogled" id="pogled-sadrzaj" role="tabpanel" aria-labelledby="tab-zasto" tabindex="0"></div>
+            </div>
+        </section>
+    </div>
+
+    <section class="kartica istorija" aria-labelledby="naslov-istorije">
+        <div class="kartica-vrh">
+            <h2 class="kartica-naslov" id="naslov-istorije" data-i18n="prethodne">Recent checks</h2>
+            <button class="tih-dugme" id="ocisti-istoriju" data-i18n="ocistiSve">Clear all</button>
+        </div>
+        <div class="istorija-lista" id="istorija-lista"></div>
+    </section>
+
+    <footer class="podnozje">
+        <div class="podnozje-levo">
+            <span data-i18n="podnozjeMetod">Mamdani inference · min/max · centroid defuzzification</span>
+            <span class="podnozje-razdjelnik">·</span>
+            <button class="link-dugme" data-otvori-metod data-i18n="kakoRadi">How it works</button>
+        </div>
+    </footer>
+</main>
+
+<dialog id="metod" aria-labelledby="metod-naslov">
+    <div class="dijalog-sadrzaj">
+        <div class="dijalog-zaglavlje">
+            <div>
+                <p class="dijalog-natpis" data-i18n="metodNatpis">Method</p>
+                <h2 id="metod-naslov" data-i18n="metodNaslov">A score you can verify.</h2>
+            </div>
+            <button class="ikona-dugme" type="button" data-zatvori-metod data-i18n-aria="zatvori" aria-label="Close">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+            </button>
+        </div>
+        <p class="dijalog-uvod" data-i18n="metodUvod">The fuzzy rules calculate the score. The neural network supplies one of the five signals, never the decision. The system cleans the message, finds keywords, measures four text signals plus the network confidence, fuzzifies them, applies 21 rules, and calculates one number. The result view shows each step.</p>
+
+        <ol class="koraci">
+            <li class="korak"><span class="korak-indeks">01</span><h3 data-i18n="korak1Naslov">Clean the text</h3><p data-i18n="korak1Opis">The system decodes HTML entities and removes scripts and tags. It analyses only the visible body.</p></li>
+            <li class="korak"><span class="korak-indeks">02</span><h3 data-i18n="korak2Naslov">Find keywords</h3><p data-i18n="korak2Opis">The system compares the body with the learned English and Serbian word lists. It calculates a keyword score from 0 to 10.</p></li>
+            <li class="korak"><span class="korak-indeks">03</span><h3 data-i18n="korak3Naslov">Measure signals</h3><p data-i18n="korak3Opis">The system measures the keyword score, the number of links, the percentage of capital letters, and the punctuation rate. A small neural network maps the same four values to a fifth signal: its confidence that the message is spam.</p></li>
+            <li class="korak"><span class="korak-indeks">04</span><h3 data-i18n="korak4Naslov">Fuzzify the signals</h3><p data-i18n="korak4Opis">Each signal, including the network confidence, receives a degree of membership in triangular or trapezoidal sets.</p></li>
+            <li class="korak"><span class="korak-indeks">05</span><h3 data-i18n="korak5Naslov">Apply the rules</h3><p data-i18n="korak5Opis">Twenty-one Mamdani rules combine the memberships with min and max. Nineteen use the four text signals; two neuro-fuzzy rules use the network confidence as confirmation. Each active rule limits its output set to its activation strength.</p></li>
+            <li class="korak"><span class="korak-indeks">06</span><h3 data-i18n="korak6Naslov">Defuzzify and explain</h3><p data-i18n="korak6Opis">The system aggregates the limited sets with max. The centroid from 0 to 100 is the score. The category comes from the same value.</p></li>
+        </ol>
+
+        <section class="metod-blok">
+            <h3 class="metod-podnaslov" data-i18n="metodSignaliNaslov">Measured signals</h3>
+            <p class="metod-tekst" data-i18n="metodSignaliUvod">The system scores only the message body. The From and Subject fields give context. They do not go to the classifier.</p>
+            <table class="metod-tabela">
+                <thead>
+                    <tr>
+                        <th data-i18n="metodTabelaSignal">Signal</th>
+                        <th data-i18n="metodTabelaNacin">Definition</th>
+                        <th data-i18n="metodTabelaSkala">Scale</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td data-i18n="signaliKljucneReci">Keywords</td>
+                        <td data-i18n="metodKljucneOpis">The system looks for words in the selected learned word list. Each word has a weight. The system adds the weights of matched words and limits the sum to 10.</td>
+                        <td>0–10</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="signaliLinkovi">Links</td>
+                        <td data-i18n="metodLinkoviOpis">Unique URLs in the text or in href attributes. The count is limited to 10.</td>
+                        <td>0–10</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="signaliCaps">Capitals</td>
+                        <td data-i18n="metodCapsOpis">Uppercase letters divided by all letters. The system removes links first.</td>
+                        <td>0–100%</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="signaliInterpunkcija">Punctuation</td>
+                        <td data-i18n="metodInterpunkcijaOpis">Exclamation marks and question marks divided by non-space characters. The result is multiplied by 100.</td>
+                        <td>0–100%</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="signaliNnPouzdanje">Network confidence</td>
+                        <td data-i18n="metodNnOpis">Spam probability from an MLP classifier, trained on the same four signals and scaled to 0–100. It is neutral (50) when no model is available, and it never decides SPAM alone.</td>
+                        <td>0–100</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <div class="dijalog-spektar">
+            <svg id="spektar-metod" viewBox="0 0 420 92" aria-hidden="true"></svg>
+            <p data-i18n="metodSpektarOpis">Six output sets in three bands: 2 legitimate (0–22), 3 suspicious (22–72), 1 spam (72–100).</p>
         </div>
 
-        <div class="sidebar-sadrzaj" id="sidebar-sadrzaj">
-            <div class="sidebar-dugmad">
-                <button class="sb-dugme sb-dugme-primarno" data-i18n="novaProvera" onclick="novaProvera()">New check</button>
-                <button class="sb-dugme sb-dugme-sekundarno" data-i18n="primerProvera" onclick="ucitajRandom()">Sample check</button>
-            </div>
+        <section class="metod-blok">
+            <h3 class="metod-podnaslov" data-i18n="metodMrezaNaslov">Function of the neural network</h3>
+            <p class="metod-tekst" data-i18n="metodMrezaTekst1">A neural network (NN) is a model with an input layer, hidden layers and an output layer. Each layer contains neurons. Each connection between neurons has a weight. A perceptron is a simple artificial neuron: it multiplies each input by a weight, adds the results, and passes the sum through an activation function.</p>
+            <p class="metod-tekst" data-i18n="metodMrezaTekst2">The network learns its weights from labelled examples. It is trained offline on SpamAssassin data. A single-neuron model learns the keyword lexicons. A separate MLP (16, 8) is trained on the same four signals and returns a spam probability for each message.</p>
+            <p class="metod-tekst" data-i18n="metodMrezaTekst3">That probability becomes the fifth fuzzy input, nn_pouzdanje (0–100). Two rules use it only as confirmation: high confidence can raise suspicion when text evidence agrees, and low confidence can soften a "links only" pattern. The network never decides SPAM on its own; the final score is still Mamdani inference plus centroid defuzzification.</p>
+            <table class="metod-tabela metod-tabela-metrike">
+                <thead>
+                    <tr>
+                        <th data-i18n="metodTabelaModel">Model</th>
+                        <th data-i18n="metodTabelaTacnost">Accuracy</th>
+                        <th>F1</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td data-i18n="metodModelFaziEn">Fuzzy + EN lexicon</td>
+                        <td data-i18n="metodTacnostFaziEn">90.4%</td>
+                        <td data-i18n="metodF1FaziEn">0.702</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelFaziOba">Fuzzy + both lexicons</td>
+                        <td data-i18n="metodTacnostFaziOba">90.1%</td>
+                        <td data-i18n="metodF1FaziOba">0.709</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelHibridEn">Neuro-fuzzy + EN lexicon</td>
+                        <td data-i18n="metodTacnostHibridEn">92.8%</td>
+                        <td data-i18n="metodF1HibridEn">0.759</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelHibridOba">Neuro-fuzzy + both lexicons</td>
+                        <td data-i18n="metodTacnostHibridOba">92.3%</td>
+                        <td data-i18n="metodF1HibridOba">0.754</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelMrezaEn">NN standalone, EN</td>
+                        <td data-i18n="metodTacnostMrezaEn">93.6%</td>
+                        <td data-i18n="metodF1MrezaEn">0.784</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="metodModelMrezaOba">NN standalone, both</td>
+                        <td data-i18n="metodTacnostMrezaOba">93.1%</td>
+                        <td data-i18n="metodF1MrezaOba">0.743</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="metod-fusnota" data-i18n="metodMrezaFusnota">Held-out SpamAssassin test set: 750 email messages, 125 spam messages. The Serbian corpus is partly synthetic. The Serbian values do not represent production accuracy.</p>
+        </section>
 
-            <div class="sidebar-sekcija-naslov" data-i18n="prethodneProvere">PREVIOUS CHECKS</div>
-            <div class="istorija" id="istorija">
-            </div>
+        <section class="metod-blok">
+            <h3 class="metod-podnaslov" data-i18n="metodPravilaNaslov">Rules and limitations</h3>
+            <p class="metod-tekst" data-i18n="metodPravilaTekst">The system has 21 rules: 4 legitimate, 13 suspicious, and 4 spam. Nineteen use the four text signals; n01 and n02 add the network confidence. Each rule limits its output set to its activation strength. The system keeps the largest value at each point.</p>
+            <ul class="metod-lista">
+                <li data-i18n="metodOgranicenje1">The four text signals are designed for email. Scores for SMS and chat messages are not reliable.</li>
+                <li data-i18n="metodOgranicenje2">Different emails can receive the same score when the fuzzy sets cannot separate them.</li>
+                <li data-i18n="metodOgranicenje3">The boundaries of the fuzzy sets were calibrated on hand-labelled examples. All reported metrics come from held-out data.</li>
+                <li data-i18n="metodOgranicenje4">The Serbian test set is partly machine-translated and partly synthetic.</li>
+            </ul>
+        </section>
+
+        <div class="dijalog-cipovi">
+            <span class="dijalog-cip" data-i18n="cipPravila">21 rules</span>
+            <span class="dijalog-cip" data-i18n="cipSkupovi">trimf / trapmf</span>
+            <span class="pomoc">
+                <button class="pomoc-dugme" type="button" aria-expanded="false" aria-controls="pomoc-trimf" aria-label="About membership functions" data-i18n-aria="pomocTrimfNaslov">?</button>
+                <span class="pomoc-panel" id="pomoc-trimf" role="tooltip" hidden>
+                    <b data-i18n="pomocTrimfNaslov">Membership functions</b>
+                    <span data-i18n="pomocTrimf">trimf is a triangular membership function. trapmf is a trapezoidal one. Both are defined by the points shown in the method.</span>
+                </span>
+            </span>
+            <span class="dijalog-cip" data-i18n="cipTeziste">centroid</span>
+            <span class="dijalog-cip" data-i18n="cipMreza">Neural network is the fifth signal</span>
         </div>
-    </aside>
 
-    <main class="glavni">
+        <p class="dijalog-napomena"><span>◐</span><span data-i18n="metodNapomena">The category comes from the same defuzzified value that the screen shows. The score and the category cannot disagree.</span></p>
+    </div>
+</dialog>
 
-        <div class="email-panel">
+<div class="obavestenje" id="obavestenje" role="status" aria-live="polite">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>
+    <span id="obavestenje-tekst">Copied</span>
+</div>
 
-            <div class="email-kartica" id="email-kartica">
-                <div class="email-od">
-                    <span class="email-od-labela" data-i18n="od">From:</span>
-                    <span class="email-od-vrednost" data-i18n="odVrednost">testing@spam-filter</span>
-                </div>
-                <textarea
-                    id="tekst"
-                    data-i18n-placeholder="placeholder"
-                    placeholder="Write or paste the email text here..."
-                    oninput="resetujRezultate()"
-                ></textarea>
-            </div>
-
-            <div class="akcija-red">
-                <button class="dugme-analiziraj" data-i18n="pokreniAnalizu" onclick="pokreniAnalizu()">
-                    Run analysis
-                </button>
-                <button class="dugme-sporedni" id="dugme-zasto" data-i18n="zasto" onclick="toggleObjasnjenje()" disabled>
-                    Why?
-                </button>
-                <button class="dugme-sporedni" id="dugme-ocisti" data-i18n="ocisti" onclick="novaProvera()">
-                    Clear
-                </button>
-                <button class="dugme-sporedni" id="dugme-kopiraj" data-i18n="kopiraj" onclick="kopirajRezultat()" disabled>
-                    Copy result
-                </button>
-            </div>
-
-            <div class="objasnjenje-panel" id="objasnjenje-panel" hidden></div>
-
-            <div class="rezultati-grid" id="rezultati-grid">
-                <div class="rezultat-kartica rezultat-score" id="kartica-score">
-                    <div class="rezultat-broj" id="vrednost-score">—</div>
-                    <div class="rezultat-labela" data-i18n="spamScore">SPAM SCORE</div>
-                    <div class="rezultat-indikator" id="indikator-score"></div>
-                </div>
-                <div class="rezultat-kartica" id="kartica-kljucne">
-                    <div class="rezultat-broj" id="vrednost-kljucne">—</div>
-                    <div class="rezultat-labela" data-i18n="kljucneReci">KEYWORDS</div>
-                </div>
-                <div class="rezultat-kartica" id="kartica-linkovi">
-                    <div class="rezultat-broj" id="vrednost-linkovi">—</div>
-                    <div class="rezultat-labela" data-i18n="brojLinkova">LINK COUNT</div>
-                </div>
-                <div class="rezultat-kartica" id="kartica-caps">
-                    <div class="rezultat-broj" id="vrednost-caps">—</div>
-                    <div class="rezultat-labela" data-i18n="caps">CAPS</div>
-                </div>
-                <div class="rezultat-kartica" id="kartica-interpunkcija">
-                    <div class="rezultat-broj" id="vrednost-interpunkcija">—</div>
-                    <div class="rezultat-labela" data-i18n="interpunkcija">PUNCTUATION</div>
-                </div>
-            </div>
-
-        </div>
-
-    </main>
-
-    <script src="{{ url_for('static', filename='engine.js') }}"></script>
+    <script src="{{ url_for('static', filename='prevodi.js') }}?v={{ verzija_fajla('prevodi.js') }}"></script>
+<script src="{{ url_for('static', filename='engine.js') }}?v={{ verzija_fajla('engine.js') }}"></script>
 
 </body>
 </html>

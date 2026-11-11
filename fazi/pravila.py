@@ -4,6 +4,7 @@ from fazi.skupovi import (
     x_broj_linkova,  linkovi_minimalni,    linkovi_umereni,     linkovi_brojni,
     x_caps_procenat, caps_uobicajen,       caps_poviseni,       caps_blago_povisen, caps_agresivan,
     x_interpunkcija, interpunkcija_retka,  interpunkcija_blago, interpunkcija_umerena, interpunkcija_agresivna,
+    x_nn_pouzdanje,  nn_nisko,             nn_srednje,          nn_visoko,
     score_legitiman, score_legitiman_energicno, score_blago_sumnjiv,
     score_sumnjiv, score_visoko_sumnjiv, score_spam,
     stepen_pripadnosti,
@@ -15,6 +16,7 @@ def fuzzifikuj(
     val_linkovi:       float,
     val_caps:          float,
     val_interpunkcija: float,
+    val_nn:            float,
 ) -> dict:
     return {
         "kljucne_reci": {
@@ -39,6 +41,11 @@ def fuzzifikuj(
             "umerena":   stepen_pripadnosti(x_interpunkcija, interpunkcija_umerena,   val_interpunkcija),
             "agresivna": stepen_pripadnosti(x_interpunkcija, interpunkcija_agresivna, val_interpunkcija),
         },
+        "nn_pouzdanje": {
+            "nisko":   stepen_pripadnosti(x_nn_pouzdanje, nn_nisko,   val_nn),
+            "srednje": stepen_pripadnosti(x_nn_pouzdanje, nn_srednje, val_nn),
+            "visoko":  stepen_pripadnosti(x_nn_pouzdanje, nn_visoko,  val_nn),
+        },
     }
 
 
@@ -49,12 +56,17 @@ def sastavi_pravila(mu: dict) -> list:
     Suffiks (p03a, p06a) sme da nosi samo pravilo koje je bliska varijanta
     prethodnog; nikad ne sme da napravi prazninu u numeraciji.
 
+    Neuro-fazi blok (n01-n02) je odvojen prefiksom ``n`` da bi se lako
+    izdvojio u ablaciji. Nijedno ``n`` pravilo ne vodi u SPAM: mreza je
+    potvrda ili ublažavanje, nikad jedini dokaz.
+
     Jacina je fazi AND (min) / OR (max) nad stepenima pripadnosti.
     """
     kljucne_reci  = mu["kljucne_reci"]
     broj_linkova  = mu["broj_linkova"]
     caps_procenat = mu["caps_procenat"]
     interpunkcija = mu["interpunkcija"]
+    nn_pouzdanje  = mu["nn_pouzdanje"]
 
     return [
         # --- LEGITIMNO ---------------------------------------------------
@@ -159,6 +171,21 @@ def sastavi_pravila(mu: dict) -> list:
                     max(caps_procenat["poviseni"], caps_procenat["blago"],
                         caps_procenat["agresivan"])),
          score_spam, "SPAM"),
+
+        # --- NEURO-FAZI POTVRDA ------------------------------------------
+        # Mreza nikad nije jedini uslov. Ako je visoko sigurna, moze samo da
+        # podigne sumnju na "visoko sumnjivo" uz dokaz iz teksta. Ako je nisko
+        # sigurna, moze da ublazi "samo mnogo linkova" obrazac, ali linkovi i
+        # dalje moraju biti brojni. Nijedno n pravilo ne vodi u SPAM.
+        # n01 — mreza visoko + (zastupljene ili dominantne) reci
+        ("n01", min(nn_pouzdanje["visoko"],
+                    max(kljucne_reci["zastupljene"], kljucne_reci["dominantne"])),
+         score_visoko_sumnjiv, "SUMNJIVO"),
+
+        # n02 — mreza nisko + brojni linkovi: mreza kaze da obrazac nije spam,
+        # pa linkovi sami ne smeju da drze ocenu u spam opsegu.
+        ("n02", min(nn_pouzdanje["nisko"], broj_linkova["brojni"]),
+         score_blago_sumnjiv, "SUMNJIVO"),
     ]
 
 
@@ -173,3 +200,92 @@ def kontroler_spam_score(mu: dict):
         alfe[kategorija] = max(alfe[kategorija], float(jacina))
 
     return agregirani_skup, alfe
+
+
+# Kratki, citljivi uslovi za svako pravilo (za panel "Zasto" u interfejsu).
+OPISI_PRAVILA = {
+    "p01": {
+        "sr": "zanemarljive reči + minimalni linkovi + uobičajena velika slova + retka interpunkcija",
+        "en": "negligible keywords + minimal links + normal caps + sparse punctuation",
+    },
+    "p02": {
+        "sr": "blago povišena velika slova + zanemarljive reči + minimalni linkovi",
+        "en": "mildly elevated caps + negligible keywords + minimal links",
+    },
+    "p03": {
+        "sr": "blaga interpunkcija + zanemarljive reči + minimalni linkovi",
+        "en": "mild punctuation + negligible keywords + minimal links",
+    },
+    "p03a": {
+        "sr": "umerena interpunkcija + zanemarljive reči + minimalni linkovi",
+        "en": "moderate punctuation + negligible keywords + minimal links",
+    },
+    "p04": {
+        "sr": "zanemarljive reči + umereni linkovi + uobičajena velika slova + retka interpunkcija",
+        "en": "negligible keywords + moderate links + normal caps + sparse punctuation",
+    },
+    "p05": {
+        "sr": "zastupljene reči + minimalni linkovi",
+        "en": "present keywords + minimal links",
+    },
+    "p06": {
+        "sr": "zastupljene reči + umereni linkovi + uobičajena velika slova + retka interpunkcija",
+        "en": "present keywords + moderate links + normal caps + sparse punctuation",
+    },
+    "p06a": {
+        "sr": "zastupljene reči + umereni linkovi",
+        "en": "present keywords + moderate links",
+    },
+    "p07": {
+        "sr": "umereni/brojni linkovi + povišena/blaga/agresivna velika slova + zanemarljive reči",
+        "en": "moderate/numerous links + elevated/mild/aggressive caps + negligible keywords",
+    },
+    "p08": {
+        "sr": "umereni/brojni linkovi + umerena/blaga/agresivna interpunkcija + zanemarljive reči",
+        "en": "moderate/numerous links + moderate/mild/aggressive punctuation + negligible keywords",
+    },
+    "p09": {
+        "sr": "zastupljene reči + umereni linkovi + povišena velika slova + umerena interpunkcija",
+        "en": "present keywords + moderate links + elevated caps + moderate punctuation",
+    },
+    "p10": {
+        "sr": "dominantne reči + umereni linkovi + uobičajena velika slova + retka interpunkcija",
+        "en": "dominant keywords + moderate links + normal caps + sparse punctuation",
+    },
+    "p11": {
+        "sr": "dominantne reči + uobičajena velika slova",
+        "en": "dominant keywords + normal caps",
+    },
+    "p12": {
+        "sr": "agresivna velika slova + zanemarljive reči + minimalni linkovi",
+        "en": "aggressive caps + negligible keywords + minimal links",
+    },
+    "p13": {
+        "sr": "agresivna interpunkcija + zanemarljive reči + minimalni linkovi",
+        "en": "aggressive punctuation + negligible keywords + minimal links",
+    },
+    "p14": {
+        "sr": "dominantne reči ILI brojni linkovi",
+        "en": "dominant keywords OR numerous links",
+    },
+    "p15": {
+        "sr": "zastupljene reči + (agresivna velika slova ILI agresivna interpunkcija)",
+        "en": "present keywords + (aggressive caps OR aggressive punctuation)",
+    },
+    "p16": {
+        "sr": "umereni linkovi + (agresivna velika slova ILI agresivna interpunkcija)",
+        "en": "moderate links + (aggressive caps OR aggressive punctuation)",
+    },
+    "p17": {
+        "sr": "(zastupljene ili dominantne) reči + (umereni ili brojni) linkovi + (povišena, blaga ili agresivna) velika slova",
+        "en": "(present or dominant) keywords + (moderate or numerous) links + (elevated, mild or aggressive) caps",
+    },
+    "n01": {
+        "sr": "mreža visoko + (zastupljene ili dominantne) reči",
+        "en": "network high + (present or dominant) keywords",
+    },
+    "n02": {
+        "sr": "mreža nisko + brojni linkovi",
+        "en": "network low + numerous links",
+    },
+}
