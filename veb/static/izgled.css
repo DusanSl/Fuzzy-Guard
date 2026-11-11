@@ -417,6 +417,14 @@ button:disabled { cursor: progress; }
     font-size: 11px;
     color: var(--tekst-3);
     font-variant-numeric: tabular-nums;
+    transition: color 0.15s ease;
+}
+
+.znakovi--blizu { color: var(--sumnjivo); }
+
+.znakovi--preko {
+    color: var(--spam);
+    font-weight: 600;
 }
 
 .uzorci {
@@ -614,13 +622,28 @@ button:disabled { cursor: progress; }
     font-variant-numeric: tabular-nums;
 }
 
-.skor-jedinica {
-    margin-top: 9px;
-    font-size: 17px;
+.skor-jedinice {
+    display: flex;
+    flex-direction: column;
+    margin-top: 7px;
+}
+
+.skor-procenat {
+    font-size: 23px;
     font-weight: 500;
-    letter-spacing: -0.02em;
+    line-height: 1;
+    letter-spacing: -0.03em;
     color: var(--tekst-3);
-    white-space: nowrap;
+}
+
+.skor-razlomak {
+    margin-top: 3px;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--tekst-3);
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
 }
 
 .skor-natpis {
@@ -1202,7 +1225,7 @@ button:disabled { cursor: progress; }
 
 .istorija-red {
     display: grid;
-    grid-template-columns: 12px minmax(0, 1fr) 76px 62px;
+    grid-template-columns: 12px minmax(0, 1fr) 58px 62px;
     align-items: center;
     gap: 12px;
     width: 100%;
@@ -1265,13 +1288,6 @@ button:disabled { cursor: progress; }
     letter-spacing: -0.015em;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-}
-
-.istorija-jedinica {
-    color: var(--tekst-3);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0;
 }
 
 .istorija-vreme {
@@ -1637,7 +1653,7 @@ dialog[open] { animation: pojavljivanje 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .uvod h1 { font-size: clamp(30px, 8.8vw, 38px); }
     .pisac, .presuda { padding: 18px; }
     .istorija { padding: 18px 18px 6px; }
-    .istorija-red { grid-template-columns: 12px minmax(0, 1fr) 68px; }
+    .istorija-red { grid-template-columns: 12px minmax(0, 1fr) 50px; }
     .istorija-vreme { display: none; }
     .istorija-meta { display: none; }
     .signali { gap: 14px 16px; }

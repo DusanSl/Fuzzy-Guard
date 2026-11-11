@@ -67,11 +67,12 @@ A traceable score.</h1>
 
             <div class="pisac-telo">
                 <textarea class="pisac-unos" id="tekst" spellcheck="false"
+                          data-maks-znakova="{{ maks_znakova }}"
                           aria-labelledby="naslov-poruke"
                           data-i18n-placeholder="placeholder"
                           placeholder="Paste the email text here…"></textarea>
                 <div class="pisac-podnozje">
-                    <span class="znakovi"><span id="broj-znakova">0</span> <span data-i18n="znakova">characters</span></span>
+                    <span class="znakovi" id="znakovi"><span id="broj-znakova">0</span></span>
                     <div class="uzorci" role="group" aria-label="Samples" data-i18n-aria="uzorci">
                         <button class="cip-dugme" type="button" data-uzorak="legitiman" data-i18n="uzorakLegitiman">Legitimate</button>
                         <button class="cip-dugme" type="button" data-uzorak="sumnjiv" data-i18n="uzorakSumnjiv">Suspicious</button>
@@ -113,7 +114,10 @@ A traceable score.</h1>
             <div class="rezultat" id="rezultat" hidden>
                 <div class="skor-blok">
                     <span class="skor-broj" id="skor-broj">0</span>
-                    <span class="skor-jedinica">/ 100</span>
+                    <span class="skor-jedinice">
+                        <span class="skor-procenat">%</span>
+                        <span class="skor-razlomak">/ 100</span>
+                    </span>
                 </div>
                 <p class="skor-natpis">
                     <span data-i18n="skorNatpis">Spam suspicion · 0–100</span>

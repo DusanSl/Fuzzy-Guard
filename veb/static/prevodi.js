@@ -28,7 +28,7 @@ window.prevodi = {
         tezinaPoPogotku: 'weight per match',
         prazno: 'Run an analysis to see the score, the active fuzzy sets and the rules that produced it.',
         skorNatpis: 'Spam suspicion · 0–100',
-        skraceno: 'The system analyses only the first 50,000 characters.',
+        skraceno: 'The system analyses only the first {maks} characters.',
         dominantniSkup: 'Dominant output set',
         pomocSkorNaslov: 'About the score',
         pomocSkor: 'This is a fuzzy suspicion score from 0 to 100. It is not a probability and not a percentage of confidence.',
@@ -58,7 +58,7 @@ window.prevodi = {
         metodSignaliNaslov: 'Measured signals',
         metodSignaliUvod: 'The system scores only the message body. The From and Subject fields give context. They do not go to the classifier.',
         metodTabelaSignal: 'Signal', metodTabelaNacin: 'Definition', metodTabelaSkala: 'Scale',
-        signaliKljucneReci: 'Keywords', signaliLinkovi: 'Links', signaliCaps: 'Capitals', signaliInterpunkcija: 'Punctuation', signaliNnPouzdanje: 'Network confidence',
+        signaliKljucneReci: 'Keywords', signaliLinkovi: 'Links', signaliCaps: 'Capitals', signaliInterpunkcija: 'Punctuation', signaliNnPouzdanje: 'Neural-network confidence',
         metodKljucneOpis: 'The system looks for words in the selected learned word list. Each word has a weight. The system adds the weights of matched words and limits the sum to 10.',
         metodLinkoviOpis: 'Unique URLs in the text or in href attributes. The count is limited to 10.',
         metodCapsOpis: 'Uppercase letters divided by all letters. The system removes links first.',
@@ -98,15 +98,16 @@ window.prevodi = {
             SUMNJIVO: 'The aggregated output sits in the suspicious band; no rule reaches a spam-level output.',
             SPAM: 'The centroid lands in the spam band. The rules below show what pushed it there.'
         },
-        signali: { kljucne_reci: 'Keywords', broj_linkova: 'Links', caps_procenat: 'Capitals', interpunkcija: 'Punctuation', nn_pouzdanje: 'Network' },
+        signali: { kljucne_reci: 'Keywords', broj_linkova: 'Links', caps_procenat: 'Capitals', interpunkcija: 'Punctuation', nn_pouzdanje: 'Neural network' },
         jedinice: { kljucne_reci: '/10', broj_linkova: '/10', caps_procenat: '%', interpunkcija: '%', nn_pouzdanje: '%' },
         skupovi: {
             kljucne_zanemarljive: 'negligible', kljucne_zastupljene: 'present', kljucne_dominantne: 'dominant',
             linkovi_minimalni: 'minimal', linkovi_umereni: 'moderate', linkovi_brojni: 'numerous',
             caps_uobicajen: 'normal', caps_poviseni: 'elevated', caps_blago_povisen: 'mildly elevated', caps_agresivan: 'aggressive',
             interpunkcija_retka: 'sparse', interpunkcija_blago: 'mild', interpunkcija_umerena: 'moderate', interpunkcija_agresivna: 'aggressive',
-            nn_nisko: 'low', nn_srednje: 'medium', nn_visoko: 'high'
+            nn_iskljucuje_spam: 'rules out spam', nn_sumnja_na_spam: 'suspects spam', nn_potvrdjuje_spam: 'confirms spam'
         },
+        znakoviOdnos: (upotrebljeno, maks) => `${upotrebljeno} of ${maks} characters`,
         metaRec: n => n === 1 ? 'keyword' : 'keywords',
         metaLink: n => n === 1 ? 'link' : 'links',
         metaCaps: 'caps'
@@ -138,7 +139,7 @@ window.prevodi = {
         tezinaPoPogotku: 'težina po pogotku',
         prazno: 'Pokrenite analizu da vidite ocenu, aktivne fazi skupove i pravila koja su je proizvela.',
         skorNatpis: 'Sumnjivost na spam · 0–100',
-        skraceno: 'Sistem analizira samo prvih 50.000 znakova.',
+        skraceno: 'Sistem analizira samo prvih {maks} znakova.',
         dominantniSkup: 'Dominantni izlazni skup',
         pomocSkorNaslov: 'O oceni',
         pomocSkor: 'Ovo je fazi ocena sumnje od 0 do 100. To nije verovatnoća i nije procenat pouzdanosti.',
@@ -168,7 +169,7 @@ window.prevodi = {
         metodSignaliNaslov: 'Signali koji se mere',
         metodSignaliUvod: 'Sistem ocenjuje samo telo poruke. Polja pošiljalac i tema daju kontekst. Ona ne ulaze u klasifikator.',
         metodTabelaSignal: 'Signal', metodTabelaNacin: 'Definicija', metodTabelaSkala: 'Skala',
-        signaliKljucneReci: 'Ključne reči', signaliLinkovi: 'Linkovi', signaliCaps: 'Velika slova', signaliInterpunkcija: 'Interpunkcija', signaliNnPouzdanje: 'Pouzdanje mreže',
+        signaliKljucneReci: 'Ključne reči', signaliLinkovi: 'Linkovi', signaliCaps: 'Velika slova', signaliInterpunkcija: 'Interpunkcija', signaliNnPouzdanje: 'Pouzdanje neuronske mreže',
         metodKljucneOpis: 'Sistem traži reči u izabranoj naučenoj listi reči. Svaka reč ima težinu. Sistem sabira težine pronađenih reči i ograničava zbir na 10.',
         metodLinkoviOpis: 'Jedinstveni linkovi u tekstu ili href atributima. Broj je ograničen na 10.',
         metodCapsOpis: 'Velika slova podeljena sa svim slovima. Sistem prvo uklanja linkove.',
@@ -208,15 +209,16 @@ window.prevodi = {
             SUMNJIVO: 'Agregirani izlaz je u sumnjivom opsegu; nijedno pravilo ne dostiže spam opseg.',
             SPAM: 'Težište pada u spam opseg. Pravila ispod pokazuju šta ga je tamo gurnulo.'
         },
-        signali: { kljucne_reci: 'Ključne reči', broj_linkova: 'Linkovi', caps_procenat: 'Velika slova', interpunkcija: 'Interpunkcija', nn_pouzdanje: 'Mreža' },
+        signali: { kljucne_reci: 'Ključne reči', broj_linkova: 'Linkovi', caps_procenat: 'Velika slova', interpunkcija: 'Interpunkcija', nn_pouzdanje: 'Neuronska mreža' },
         jedinice: { kljucne_reci: '/10', broj_linkova: '/10', caps_procenat: '%', interpunkcija: '%', nn_pouzdanje: '%' },
         skupovi: {
             kljucne_zanemarljive: 'zanemarljive', kljucne_zastupljene: 'zastupljene', kljucne_dominantne: 'dominantne',
             linkovi_minimalni: 'minimalni', linkovi_umereni: 'umereni', linkovi_brojni: 'brojni',
             caps_uobicajen: 'uobičajen', caps_poviseni: 'povišen', caps_blago_povisen: 'blago povišen', caps_agresivan: 'agresivan',
             interpunkcija_retka: 'retka', interpunkcija_blago: 'blaga', interpunkcija_umerena: 'umerena', interpunkcija_agresivna: 'agresivna',
-            nn_nisko: 'nisko', nn_srednje: 'srednje', nn_visoko: 'visoko'
+            nn_iskljucuje_spam: 'isključuje spam', nn_sumnja_na_spam: 'sumnja na spam', nn_potvrdjuje_spam: 'potvrđuje spam'
         },
+        znakoviOdnos: (upotrebljeno, maks) => `${upotrebljeno} od ${maks} znakova`,
         metaRec: n => n === 1 ? 'reč' : 'reči',
         metaLink: n => n === 1 ? 'link' : 'linka',
         metaCaps: 'velikih slova'

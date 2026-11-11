@@ -79,7 +79,7 @@ _UZORAK_LINKA = re.compile(r"(?i)\b(?:https?://|hxxps?://|www\.)[^\s<>\"']+")
 _UZORAK_HREF = re.compile(r"(?i)href\s*=\s*[\"']([^\"']+)[\"']")
 # Oznaka koja otvara ``<script>`` ili ``<style>``. ``[^<>]`` ne prelazi preko
 # druge otvorene zagrade, pa se na ulazu punom znakova "<" ne skenira do kraja
-# teksta za svaku poziciju. Sa ``[^>]*`` je 50.000 znakova "<script>" trošilo
+# teksta za svaku poziciju. Sa ``[^>]*`` je 10.000 znakova "<script>" trošilo
 # preko sekunde procesora po zahtevu, a ``/analiziraj`` je javni endpoint.
 _UZORAK_SKRIPT_OTVARANJE = re.compile(r"(?i)<(script|style)\b[^<>]*>")
 _UZORAK_TAG = re.compile(r"(?s)<[^<>]*>")
@@ -135,7 +135,7 @@ def _izvuci_linkove(tekst: str) -> list:
     """Vraća najviše 10 jedinstvenih linkova iz teksta i href atributa.
 
     Broj linkova se ionako ograničava na 10, pa nema smisla materializovati
-    sve pogotke u tekstu od 50.000 znakova.
+    sve pogotke u tekstu od 10.000 znakova.
     """
     ocisceni = []
     vidjeni = set()

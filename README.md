@@ -170,9 +170,9 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
   - `agresivna` (Aggressive): `trapmf [14, 40, 100, 100]`
 
 * **NN confidence** `[0-100]`
-  - `nn_nisko` (Low): `trapmf [0, 0, 30, 50]`
-  - `nn_srednje` (Medium): `trimf [30, 50, 70]`
-  - `nn_visoko` (High): `trapmf [55, 75, 100, 100]`
+  - `nn_iskljucuje_spam` (Rules out spam): `trapmf [0, 0, 30, 50]`
+  - `nn_sumnja_na_spam` (Suspects spam): `trimf [30, 50, 70]`
+  - `nn_potvrdjuje_spam` (Confirms spam): `trapmf [55, 75, 100, 100]`
 
 * **Spam Score (Output)** `[0-100]`
   - `score_legitiman` (Legitimate): `trapmf [0, 0, 8, 20]`
@@ -223,8 +223,8 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | **p15** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p16** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p17** | (`zastupljene` OR `dominantne`) keywords AND (`umereni` OR `brojni`) links AND (`poviseni` OR `blago_povisen` OR `agresivan`) caps | **SPAM** |
-| **n01** | `nn_visoko` (NN confident) AND (`zastupljene` OR `dominantne`) keywords | **HIGH SUSPICION** |
-| **n02** | `nn_nisko` (NN not confident) AND `brojni` (numerous) links | **MILDLY SUSPICIOUS** |
+| **n01** | `nn_potvrdjuje_spam` (NN confirms spam) AND (`zastupljene` OR `dominantne`) keywords | **HIGH SUSPICION** |
+| **n02** | `nn_iskljucuje_spam` (NN rules out spam) AND `brojni` (numerous) links | **MILDLY SUSPICIOUS** |
 
 Rules are numbered in one continuous run `p01 → p17` for the text-only base.
 The `n` prefix marks the two neuro-fuzzy rules: `n01` lets a confident network
@@ -308,7 +308,7 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
     ],
     "ulazi": {             // values + membership degrees
       "kljucne_reci": { "vrednost": 7.0, "pripadnosti": { "dominantne": 0.667 } },
-      "nn_pouzdanje": { "vrednost": 52.3, "pripadnosti": { "nn_srednje": 1.0 } }
+      "nn_pouzdanje": { "vrednost": 52.3, "pripadnosti": { "nn_sumnja_na_spam": 1.0 } }
     }
   }
 }
@@ -363,7 +363,7 @@ labelled emails → TF-IDF (1-2 grams) → single-neuron classifier
 
 role 2 — runtime signal
 four features → MLP (16, 8) → spam probability → nn_pouzdanje
-              → nn_nisko / nn_srednje / nn_visoko → rules n01, n02
+              → nn_iskljucuje_spam / nn_sumnja_na_spam / nn_potvrdjuje_spam → rules n01, n02
               → Mamdani + centroid (unchanged)
 ```
 
@@ -533,7 +533,7 @@ Dataset sources:
 - The manual dictionary was removed because generic words ("account", "update",
   "confirm") caused false positives. The old list remains only as the `legacy`
   evaluation baseline.
-- Bodies are capped at 50,000 characters and requests at 256 KB. The response
+- Bodies are capped at 10,000 characters and requests at 256 KB. The response
   sets `skraceno: true` when truncation happened.
 
 ---

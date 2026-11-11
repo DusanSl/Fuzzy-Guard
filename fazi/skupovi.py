@@ -115,20 +115,20 @@ ULAZNI_SKUPOVI_DEFINICIJE = {
     },
     # Peti ulaz je izlaz neuronske mreže, ne merenje iz teksta. Mreža daje
     # verovatnoću spama 0–100 za iste četiri karakteristike. Skupovi su namerno
-    # široki: samo vrlo sigurna mreža ulazi u "visoko", pa mreža ostaje
+    # široki: samo vrlo sigurna mreža ulazi u "potvrđuje spam", pa mreža ostaje
     # potvrda, a ne glavni izvor odluke.
     "nn_pouzdanje": {
-        "nn_nisko": {
+        "nn_iskljucuje_spam": {
             "tip": "trapmf", "params": (0, 0, 30, 50),
-            "kategorija": "LEGITIMAN", "naziv": "nisko",
+            "kategorija": "LEGITIMAN", "naziv": "isključuje spam",
         },
-        "nn_srednje": {
+        "nn_sumnja_na_spam": {
             "tip": "trimf", "params": (30, 50, 70),
-            "kategorija": "SUMNJIVO", "naziv": "srednje",
+            "kategorija": "SUMNJIVO", "naziv": "sumnja na spam",
         },
-        "nn_visoko": {
+        "nn_potvrdjuje_spam": {
             "tip": "trapmf", "params": (55, 75, 100, 100),
-            "kategorija": "SPAM", "naziv": "visoko",
+            "kategorija": "SPAM", "naziv": "potvrđuje spam",
         },
     },
 }
@@ -184,9 +184,9 @@ interpunkcija_blago     = fuzz.trimf (x_interpunkcija, [2, 5, 10])
 interpunkcija_umerena   = fuzz.trimf (x_interpunkcija, [6, 12, 25])
 interpunkcija_agresivna = fuzz.trapmf(x_interpunkcija, [14, 40, 100, 100])
 
-nn_nisko   = fuzz.trapmf(x_nn_pouzdanje, [0, 0, 30, 50])
-nn_srednje = fuzz.trimf (x_nn_pouzdanje, [30, 50, 70])
-nn_visoko  = fuzz.trapmf(x_nn_pouzdanje, [55, 75, 100, 100])
+nn_iskljucuje_spam = fuzz.trapmf(x_nn_pouzdanje, [0, 0, 30, 50])
+nn_sumnja_na_spam  = fuzz.trimf (x_nn_pouzdanje, [30, 50, 70])
+nn_potvrdjuje_spam = fuzz.trapmf(x_nn_pouzdanje, [55, 75, 100, 100])
 
 
 score_legitiman           = fuzz.trapmf(x_spam_score, [0, 0, 8, 20])

@@ -18,7 +18,7 @@ from neuronska_mreza.predikcija import pouzdanje_nn
 
 KOREN = Path(__file__).parent
 MAKS_DUŽINA_ZAHTEVA = 256 * 1024
-MAKS_ANALIZIRANIH_ZNAKOVA = 50_000
+MAKS_ANALIZIRANIH_ZNAKOVA = 10_000
 
 # Šabloni dodaju ?v=<mtime> na CSS i JS, pa statika može dugo da se kešira:
 # novi sadržaj uvek dobija novi URL.
@@ -130,7 +130,7 @@ def neocekivana_greska(greska):
 
 @app.route("/")
 def index():
-    return render_template("dashboard.html")
+    return render_template("dashboard.html", maks_znakova=MAKS_ANALIZIRANIH_ZNAKOVA)
 
 
 @app.route("/primeri-svi")
@@ -215,7 +215,7 @@ def analiziraj():
 
     rezultat = {
         # Vidljivi tekst se šalje samo u objasnjenje.tekst; duplo slanje celog
-        # teksta je na ulazu od 50.000 znakova pravilo odgovor većim za ~50 KB.
+        # teksta je na ulazu od 10.000 znakova pravilo odgovor većim za ~10 KB.
         "skraceno":      skraceno,
         "recnik":        ulazi.get("recnik", nacin_recnika),
         "kljucne_reci":  ulazi["kljucne_reci"],

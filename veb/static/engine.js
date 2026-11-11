@@ -84,6 +84,16 @@ function formatirajDva(vrednost) {
     const zaokruzeno = Number.isFinite(broj) ? broj : 0;
     return zaokruzeno.toFixed(2).replace('.', jezik === 'sr' ? ',' : '.');
 }
+
+function formatirajCeoBroj(vrednost) {
+    return new Intl.NumberFormat('en-US').format(vrednost);
+}
+
+function granicaZnakova() {
+    const polje = document.getElementById('tekst');
+    const granica = polje ? Number(polje.dataset.maksZnakova) : NaN;
+    return Number.isFinite(granica) && granica > 0 ? granica : 10000;
+}
 /* ---------- fuzzy sets (loaded from /skupovi) -------------------- */
 
 let SKUPOVI_ULAZA = {};
@@ -216,9 +226,9 @@ async function izracunajRezultat(tekst) {
             agresivna: 'interpunkcija_agresivna'
         },
         nn_pouzdanje: {
-            nisko: 'nn_nisko',
-            srednje: 'nn_srednje',
-            visoko: 'nn_visoko'
+            iskljucuje_spam: 'nn_iskljucuje_spam',
+            sumnja_na_spam: 'nn_sumnja_na_spam',
+            potvrdjuje_spam: 'nn_potvrdjuje_spam'
         }
     };
 
@@ -408,6 +418,10 @@ function prikaziRezultat(rezultat, opcije) {
     }
 
     document.getElementById('skraceno').hidden = !rezultat.skraceno;
+    if (rezultat.skraceno) {
+        document.getElementById('skraceno').textContent =
+            t().skraceno.replace('{maks}', formatirajCeoBroj(granicaZnakova()));
+    }
 
     nacrtajSpektar(document.getElementById('spektar'), rezultat.skor);
     const dominantni = skupSaNajvecomPripadnoscu(rezultat.skor);
@@ -677,7 +691,7 @@ function renderIstorija() {
                 <span class="istorija-pregled">${pobjegni(pregled)}</span>
                 <span class="istorija-meta">${pobjegni(meta)}</span>
             </span>
-            <span class="istorija-skore">${formatirajJedan(rezultat.skor)}<span class="istorija-jedinica"> / 100</span></span>
+            <span class="istorija-skore">${formatirajJedan(rezultat.skor)}%</span>
             <span class="istorija-vreme">${pobjegni(relativnoVreme(stavka.vreme))}</span>
         </button>`;
     }).join('');
@@ -714,7 +728,18 @@ function ucitajIzIstorije(indeks) {
 
 function azurirajBrojZnakova() {
     const tekst = document.getElementById('tekst').value;
-    document.getElementById('broj-znakova').textContent = String(tekst.length);
+    const granica = granicaZnakova();
+    const broj = tekst.length;
+    const omotac = document.getElementById('znakovi');
+
+    document.getElementById('broj-znakova').textContent =
+        `${formatirajCeoBroj(broj)}/${formatirajCeoBroj(granica)}`;
+
+    const blizu = broj >= granica * 0.9 && broj <= granica;
+    const preko = broj > granica;
+    omotac.classList.toggle('znakovi--blizu', blizu);
+    omotac.classList.toggle('znakovi--preko', preko);
+    omotac.setAttribute('aria-label', t().znakoviOdnos(formatirajCeoBroj(broj), formatirajCeoBroj(granica)));
 }
 
 function popuniPolja(uzorak) {
@@ -856,7 +881,7 @@ async function kopirajRezultat() {
     const recnik = t();
     const linije = [
         'Fuzzy Guard',
-        `${recnik.procena}: ${formatirajJedan(rezultat.skor)} / 100 (${recnik.kategorije[rezultat.kategorija]})`,
+        `${recnik.procena}: ${formatirajJedan(rezultat.skor)}% (${recnik.kategorije[rezultat.kategorija]})`,
         `${recnik.signali.kljucne_reci}: ${formatirajBroj(rezultat.vrednosti.kljucne_reci)}/10 | ` +
         `${recnik.signali.broj_linkova}: ${rezultat.vrednosti.broj_linkova}/10 | ` +
         `${recnik.signali.caps_procenat}: ${formatirajBroj(rezultat.vrednosti.caps_procenat)}% | ` +
@@ -945,6 +970,8 @@ function primeniJezik() {
     } else {
         renderIstorija();
     }
+
+    azurirajBrojZnakova();
 }
 
 function promeniJezik() {
@@ -980,6 +1007,7 @@ function poveziDogadjaje() {
     document.getElementById('tekst').addEventListener('input', () => {
         azurirajBrojZnakova();
         skloniGresku();
+        document.getElementById('skraceno').hidden = true;
         if (!document.getElementById('tekst').value.trim()) vratiPraznoStanje();
     });
 
