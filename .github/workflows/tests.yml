@@ -28,7 +28,11 @@ jobs:
         run: python -m pytest -q
 
   ui-smoke:
-    runs-on: ubuntu-latest
+    # Playwright's browsers and system packages are tied to the Ubuntu release.
+    # `ubuntu-latest` is migrating to Ubuntu 26.04 until November 19, 2026, so
+    # pin the image instead of letting the jobs land on a moving target.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -37,13 +41,30 @@ jobs:
           python-version: "3.13"
           cache: pip
 
-      - name: Install dependencies
+      - name: Install Python dependencies
+        timeout-minutes: 5
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-          python -m playwright install --with-deps chromium
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      # Bez --with-deps: taj prekidač pokreće apt-get, a runner je 11.11.2026.
+      # pao upravo tu jer nije mogao da razreši archive.ubuntu.com. Slika
+      # ubuntu-24.04 već ima biblioteke koje Chromium traži; ako neka ipak
+      # nedostaje, pokretanje browsera pada odmah i imenuje biblioteku.
+      - name: Install Playwright Chromium
+        timeout-minutes: 8
+        run: python -m playwright install chromium
 
       - name: Run UI smoke
+        timeout-minutes: 5
         run: |
           PORT=5000 python main.py > server-ui.log 2>&1 &
           for _ in $(seq 1 30); do
@@ -52,11 +73,17 @@ jobs:
             fi
             sleep 1
           done
+          if ! curl -fsS http://127.0.0.1:5000/ > /dev/null; then
+            echo "Server did not answer on port 5000 within 30s. server-ui.log:"
+            cat server-ui.log
+            exit 1
+          fi
           python tests/smoke_ui.py
 
-      - name: Upload server log on failure
-        if: failure()
+      - name: Upload server log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: server-ui-log
           path: server-ui.log
+          if-no-files-found: ignore
