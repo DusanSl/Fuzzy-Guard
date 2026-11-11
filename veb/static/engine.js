@@ -73,7 +73,7 @@ function formatirajBroj(vrednost) {
     return Number.isInteger(zaokruzeno) ? String(zaokruzeno) : zaokruzeno.toFixed(1).replace('.', jezik === 'sr' ? ',' : '.');
 }
 
-function formatirajProcenat(vrednost) {
+function formatirajJedan(vrednost) {
     const broj = Number(vrednost);
     const zaokruzeno = Number.isFinite(broj) ? Math.round(broj * 10) / 10 : 0;
     return zaokruzeno.toFixed(1).replace('.', jezik === 'sr' ? ',' : '.');
@@ -252,6 +252,7 @@ async function izracunajRezultat(tekst) {
 
     return {
         tekst,
+        skraceno: !!podaci.skraceno,
         recnik: podaci.recnik || null,
         vidljivi: objasnjenje.tekst || tekst,
         vrednosti,
@@ -278,6 +279,20 @@ function skupSaNajvecomPripadnoscu(skor) {
     return najjaci;
 }
 
+const KLJUC_NAZIVA_IZLAZA = {
+    legitiman: 'skupLegitiman',
+    energicno: 'skupEnergicno',
+    blago_sumnjiv: 'skupBlagoSumnjiv',
+    sumnjiv: 'skupSumnjiv',
+    visoko_sumnjiv: 'skupVisokoSumnjiv',
+    spam: 'skupSpam'
+};
+
+function nazivIzlaznogSkupa(ime) {
+    const kljuc = KLJUC_NAZIVA_IZLAZA[ime];
+    return kljuc ? (t()[kljuc] || ime) : ime;
+}
+
 function nacrtajSpektar(svg, skor, opcije) {
     if (!svg) return;
     const podesavanja = opcije || {};
@@ -285,7 +300,6 @@ function nacrtajSpektar(svg, skor, opcije) {
     const saIglom = typeof skor === 'number' && !priguseno;
     const aktivni = saIglom ? skupSaNajvecomPripadnoscu(skor) : null;
 
-    const sirina = 420;
     const leva = 2;
     const desna = 418;
     const osnova = 78;
@@ -311,6 +325,12 @@ function nacrtajSpektar(svg, skor, opcije) {
             delovi.push(`<line class="spektar-granica" x1="${x}" y1="${vrh}" x2="${x}" y2="${osnova}"/>`);
             delovi.push(`<line class="spektar-tick" x1="${x}" y1="${osnova}" x2="${x}" y2="${osnova + 4}"/>`);
         });
+
+        [0, 22, 72, 100].forEach(oznaka => {
+            const x = xZa(oznaka).toFixed(2);
+            const poravnanje = oznaka === 0 ? 'start' : oznaka === 100 ? 'end' : 'middle';
+            delovi.push(`<text class="spektar-oznaka" x="${x}" y="${osnova + 16}" text-anchor="${poravnanje}">${oznaka}</text>`);
+        });
     }
 
     const redosled = SKUPOVI_IZLAZA.filter(skup => !aktivni || skup.ime !== aktivni.ime);
@@ -320,8 +340,9 @@ function nacrtajSpektar(svg, skor, opcije) {
         const aktivan = !!aktivni && skup.ime === aktivni.ime;
         const boja = priguseno ? 'var(--tekst-3)' : bojaKategorije(skup.kategorija);
         delovi.push(
-            `<path d="${putanja(skup)}" fill="${boja}" fill-opacity="${aktivan ? 0.14 : 0.045}" ` +
-            `stroke="${boja}" stroke-opacity="${aktivan ? 0.9 : 0.3}" stroke-width="${aktivan ? 1.4 : 1}" stroke-linejoin="round"/>`
+            `<path class="spektar-povrsina${aktivan ? ' spektar-povrsina--aktivna' : ''}" ` +
+            `d="${putanja(skup)}" fill="${boja}" ` +
+            `stroke="${boja}" stroke-width="${aktivan ? 1.4 : 1}" stroke-linejoin="round"/>`
         );
     });
 
@@ -341,7 +362,7 @@ function animirajSkor(konacan) {
     const element = document.getElementById('skor-broj');
     const cilj = Number(konacan) || 0;
 
-    if (smanjenoKretanje) { element.textContent = formatirajProcenat(cilj); return; }
+    if (smanjenoKretanje) { element.textContent = formatirajJedan(cilj); return; }
 
     const pocetak = performance.now();
     const trajanje = 540;
@@ -349,7 +370,7 @@ function animirajSkor(konacan) {
     function korak(sada) {
         const napredak = Math.min(1, (sada - pocetak) / trajanje);
         const ublazeno = 1 - Math.pow(1 - napredak, 3);
-        element.textContent = formatirajProcenat(napredak < 1 ? cilj * ublazeno : cilj);
+        element.textContent = formatirajJedan(napredak < 1 ? cilj * ublazeno : cilj);
         if (napredak < 1) requestAnimationFrame(korak);
     }
 
@@ -381,12 +402,18 @@ function prikaziRezultat(rezultat, opcije) {
 
     document.getElementById('skor-opis').textContent = t().opisiKategorija[rezultat.kategorija];
     if (podesavanja.animiraj === false) {
-        document.getElementById('skor-broj').textContent = formatirajProcenat(rezultat.skor);
+        document.getElementById('skor-broj').textContent = formatirajJedan(rezultat.skor);
     } else {
         animirajSkor(rezultat.skor);
     }
 
+    document.getElementById('skraceno').hidden = !rezultat.skraceno;
+
     nacrtajSpektar(document.getElementById('spektar'), rezultat.skor);
+    const dominantni = skupSaNajvecomPripadnoscu(rezultat.skor);
+    const stepen = pripadnost(dominantni.tip, dominantni.params, rezultat.skor);
+    document.getElementById('spektar-dominantni').textContent =
+        `${t().dominantniSkup}: ${nazivIzlaznogSkupa(dominantni.ime)} · ${formatirajDva(stepen)}`;
 
     renderSignali(rezultat);
     renderPogled();
@@ -409,7 +436,7 @@ function renderSignali(rezultat) {
         return `<div class="signal">
             <div class="signal-vrh">
                 <span class="signal-naziv">${pobjegni(t().signali[kljuc])}</span>
-                <span class="signal-skup">${pobjegni(t().skupovi[dominantan.ime] || dominantan.ime)} <b>${Number(dominantaMu).toFixed(2)}</b></span>
+                <span class="signal-skup">${pobjegni(t().skupovi[dominantan.ime] || dominantan.ime)} <b>${pobjegni(formatirajDva(dominantaMu))}</b></span>
             </div>
             <div class="signal-vrednost"><b>${pobjegni(formatirajBroj(vrednost))}</b><span>${pobjegni(t().jedinice[kljuc])}</span></div>
             <div class="signal-traka" style="--boja: ${bojaKategorije(dominantan.kategorija)}"><i style="width:${sirina}%"></i></div>
@@ -443,10 +470,7 @@ function napraviZasto(rezultat) {
     const elementi = [];
     const pregled = napraviPregled(rezultat);
 
-    elementi.push(`<div class="pogled-naslov-red"><p class="pogled-naslov">${pobjegni(t().doprinosiNaslov)}</p>${pomoc('doprinosi', t().pomocDoprinosiNaslov, t().pomocDoprinosi)}</div>`);
-    elementi.push(napraviDoprinose(rezultat));
-
-    elementi.push(`<p class="pogled-naslov" style="margin-top:13px">${pobjegni(t().pronasli)}</p>`);
+    elementi.push(`<p class="pogled-naslov">${pobjegni(t().pronasli)}</p>`);
     elementi.push(`<div class="pregled">${pregled.html}</div>`);
 
     if (pregled.kombinacije.size) {
@@ -491,27 +515,6 @@ function napraviZasto(rezultat) {
     }
 
     return elementi.join('');
-}
-
-function napraviDoprinose(rezultat) {
-    const redosled = ['kljucne_reci', 'broj_linkova', 'caps_procenat', 'interpunkcija', 'nn_pouzdanje'];
-
-    return '<div class="doprinosi">' + redosled.map(kljuc => {
-        const vrednost = rezultat.vrednosti[kljuc];
-        const pripadnosti = rezultat.mu[kljuc] || {};
-        const najjaci = Object.keys(pripadnosti).reduce((najbolji, ime) => {
-            const mu = Number(pripadnosti[ime]) || 0;
-            return mu > najbolji.mu ? { ime, mu } : najbolji;
-        }, { ime: '', mu: -1 });
-        const skup = najjaci.ime ? (t().skupovi[najjaci.ime] || najjaci.ime) : '—';
-        const mu = najjaci.mu >= 0 ? formatirajDva(najjaci.mu) : '—';
-
-        return `<div class="doprinos">
-            <span class="doprinos-signal">${pobjegni(t().signali[kljuc])}</span>
-            <span class="doprinos-vrednost">${pobjegni(formatirajBroj(vrednost))}<small>${pobjegni(t().jedinice[kljuc])}</small></span>
-            <span class="doprinos-skup">${pobjegni(skup)} <b>${pobjegni(mu)}</b></span>
-        </div>`;
-    }).join('') + '</div>';
 }
 
 const OZNAKA_BIT = { keyword: 1, link: 2, caps: 4, interpunkcija: 8 };
@@ -600,7 +603,7 @@ function napraviUlaze(rezultat) {
             .map(imeSkupa => ({ ime: imeSkupa, mu: rezultat.mu[kljuc][imeSkupa] }))
             .filter(stavka => stavka.mu > 0.05)
             .sort((prva, druga) => druga.mu - prva.mu)
-            .map(stavka => `${t().skupovi[stavka.ime]} ${stavka.mu.toFixed(2)}`)
+            .map(stavka => `${t().skupovi[stavka.ime]} ${formatirajDva(stavka.mu)}`)
             .join(' · ');
 
         return `<div class="ulaz">
@@ -632,7 +635,7 @@ function napraviPravila(rezultat) {
             <div class="pravilo-dno">
                 <div class="pravilo-traka"><i style="width:${Math.max(2, pravilo.jacina * 100)}%"></i></div>
                 <span class="pravilo-kat">${pobjegni(t().kategorije[pravilo.kategorija])}</span>
-                <span class="pravilo-jacina">${pravilo.jacina.toFixed(2)}</span>
+                <span class="pravilo-jacina">${pobjegni(formatirajDva(pravilo.jacina))}</span>
             </div>
         </li>`;
     }).join('');
@@ -674,7 +677,7 @@ function renderIstorija() {
                 <span class="istorija-pregled">${pobjegni(pregled)}</span>
                 <span class="istorija-meta">${pobjegni(meta)}</span>
             </span>
-            <span class="istorija-skore">${formatirajProcenat(rezultat.skor)}%</span>
+            <span class="istorija-skore">${formatirajJedan(rezultat.skor)}<span class="istorija-jedinica"> / 100</span></span>
             <span class="istorija-vreme">${pobjegni(relativnoVreme(stavka.vreme))}</span>
         </button>`;
     }).join('');
@@ -738,10 +741,11 @@ function vratiPraznoStanje() {
     document.getElementById('prazno').hidden = false;
     document.getElementById('status').hidden = true;
     document.getElementById('kopiraj-dugme').hidden = true;
+    document.getElementById('skraceno').hidden = true;
     renderIstorija();
 }
 
-function pokreniAnalizu() {
+async function pokreniAnalizu() {
     if (analizaUToku) return;
 
     const tekst = document.getElementById('tekst').value.trim();
@@ -759,24 +763,22 @@ function pokreniAnalizu() {
     dugme.disabled = true;
     natpis.textContent = t().analiziram;
 
-    window.setTimeout(async () => {
-        try {
-            const rezultat = await izracunajRezultat(tekst);
-            prikaziRezultat(rezultat, { animiraj: true });
-            dodajUIstoriju(
-                tekst,
-                document.getElementById('polje-posaljilac').value.trim(),
-                document.getElementById('polje-tema').value.trim(),
-                rezultat
-            );
-        } catch (greska) {
-            prikaziGresku(greska.message || t().greskaMreza);
-        } finally {
-            natpis.textContent = t().pokreni;
-            dugme.disabled = false;
-            analizaUToku = false;
-        }
-    }, smanjenoKretanje ? 140 : 360);
+    try {
+        const rezultat = await izracunajRezultat(tekst);
+        prikaziRezultat(rezultat, { animiraj: true });
+        dodajUIstoriju(
+            tekst,
+            document.getElementById('polje-posaljilac').value.trim(),
+            document.getElementById('polje-tema').value.trim(),
+            rezultat
+        );
+    } catch (greska) {
+        prikaziGresku(greska.message || t().greskaMreza);
+    } finally {
+        natpis.textContent = t().pokreni;
+        dugme.disabled = false;
+        analizaUToku = false;
+    }
 }
 
 let primeriKes = { en: null, sr: null };
@@ -854,7 +856,7 @@ async function kopirajRezultat() {
     const recnik = t();
     const linije = [
         'Fuzzy Guard',
-        `${recnik.procena}: ${formatirajProcenat(rezultat.skor)}% (${recnik.kategorije[rezultat.kategorija]})`,
+        `${recnik.procena}: ${formatirajJedan(rezultat.skor)} / 100 (${recnik.kategorije[rezultat.kategorija]})`,
         `${recnik.signali.kljucne_reci}: ${formatirajBroj(rezultat.vrednosti.kljucne_reci)}/10 | ` +
         `${recnik.signali.broj_linkova}: ${rezultat.vrednosti.broj_linkova}/10 | ` +
         `${recnik.signali.caps_procenat}: ${formatirajBroj(rezultat.vrednosti.caps_procenat)}% | ` +
@@ -869,7 +871,7 @@ async function kopirajRezultat() {
         linije.push(`${recnik.prepoznate}: ${rezultat.pogodjene.map(stavka => stavka.rec).join(', ')}`);
     }
     if (rezultat.aktivnaPravila.length) {
-        linije.push(`${recnik.pravilaNaslov}: ${rezultat.aktivnaPravila.map(pravilo => `${pravilo.naziv} (${pravilo.jacina.toFixed(2)})`).join(', ')}`);
+        linije.push(`${recnik.pravilaNaslov}: ${rezultat.aktivnaPravila.map(pravilo => `${pravilo.naziv} (${formatirajDva(pravilo.jacina)})`).join(', ')}`);
     }
 
     const sadrzaj = linije.join('\n');
