@@ -16,6 +16,7 @@ def pokreni_fis(
     val_caps:          float,
     val_interpunkcija: float,
     val_nn:            float,
+    nn_pravila=("n01", "n02"),
 ) -> dict:
 
     mu = fuzzifikuj(val_kljucne, val_linkova, val_caps, val_interpunkcija, val_nn)
@@ -43,7 +44,7 @@ def pokreni_fis(
         },
     }
 
-    agregirani_skup, alfe = kontroler_spam_score(mu)
+    agregirani_skup, alfe = kontroler_spam_score(mu, nn_pravila)
 
     spam_score = defazifikuj(agregirani_skup)
 
@@ -84,7 +85,7 @@ def pokreni_fis(
             "uslov_sr": OPISI_PRAVILA.get(naziv, {}).get("sr", ""),
             "uslov_en": OPISI_PRAVILA.get(naziv, {}).get("en", ""),
         }
-        for naziv, jacina, _, kategorija in sastavi_pravila(mu)
+        for naziv, jacina, _, kategorija in sastavi_pravila(mu, nn_pravila)
         if float(jacina) > 0.05
     ]
     aktivna_pravila.sort(key=lambda stavka: stavka["jacina"], reverse=True)
