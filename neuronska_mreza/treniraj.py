@@ -207,6 +207,34 @@ def metrike(istinite, predvidjene) -> dict:
     }
 
 
+def indeksi_podela(oznake: np.ndarray) -> tuple:
+    """Vraća (trening, test) indekse za fiksnu stratifikovanu podelu.
+
+    Ista funkcija se koristi za ablaciju i za ocenu na testu, pa oba koraka
+    gledaju isti test skup. To je uslov za tvrdnju da je test otvoren samo
+    jednom.
+    """
+    indeksi = np.arange(len(oznake))
+    indeksi_train, indeksi_test = train_test_split(
+        indeksi, test_size=TEST_SIZE, random_state=SEME_TESTA, stratify=oznake
+    )
+    return indeksi_train, indeksi_test
+
+
+def indeksi_interne_validacije(oznake_treninga: np.ndarray) -> tuple:
+    """Vraća (unutrašnji trening, validacija) unutar trening skupa.
+
+    Indeksi su pozicije u ``oznake_treninga``, ne globalni indeksi.
+    """
+    indeksi_unutra, indeksi_validacije = train_test_split(
+        np.arange(len(oznake_treninga)),
+        test_size=INTERNA_VALIDACIJA,
+        random_state=SEME_INTERNE_VALIDACIJE,
+        stratify=oznake_treninga,
+    )
+    return indeksi_unutra, indeksi_validacije
+
+
 def izaberi_nn_pravila(tekstovi: list, oznake: np.ndarray, nacin_recnik: str) -> tuple:
     """Ablacija ``n`` pravila na internoj validaciji trening skupa.
 
@@ -215,22 +243,11 @@ def izaberi_nn_pravila(tekstovi: list, oznake: np.ndarray, nacin_recnik: str) ->
     and Limitations"). Test skup se ovde ne dodiruje. Mreža za ablaciju se
     trenira samo na unutrašnjem trening delu, da validacija ostane čista.
     """
-    indeksi = np.arange(len(oznake))
-    indeksi_train, _ = train_test_split(
-        indeksi,
-        test_size=TEST_SIZE,
-        random_state=SEME_TESTA,
-        stratify=oznake,
-    )
+    indeksi_train, _ = indeksi_podela(oznake)
     y_train = oznake[indeksi_train]
     tekst_train = [tekstovi[i] for i in indeksi_train]
 
-    indeksi_unutra, indeksi_valid = train_test_split(
-        np.arange(len(y_train)),
-        test_size=INTERNA_VALIDACIJA,
-        random_state=SEME_INTERNE_VALIDACIJE,
-        stratify=y_train,
-    )
+    indeksi_unutra, indeksi_valid = indeksi_interne_validacije(y_train)
 
     X_unutra = izvuci_karakteristike(
         [tekst_train[i] for i in indeksi_unutra], nacin_recnik
@@ -294,10 +311,7 @@ def obradi_korpus(
     print(f"\n================ {naziv} ================")
     tekstovi, oznake = ucitaj_podatke(putanja)
 
-    indeksi = np.arange(len(oznake))
-    indeksi_train, indeksi_test = train_test_split(
-        indeksi, test_size=TEST_SIZE, random_state=SEME_TESTA, stratify=oznake
-    )
+    indeksi_train, indeksi_test = indeksi_podela(oznake)
     y_train, y_test = oznake[indeksi_train], oznake[indeksi_test]
     tekst_train = [tekstovi[i] for i in indeksi_train]
     tekst_test = [tekstovi[i] for i in indeksi_test]
