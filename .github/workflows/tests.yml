@@ -5,9 +5,15 @@ on:
     branches: [master, razvoj]
   pull_request:
 
+# Brzi uzastopni push-evi otkazuju prethodni run, umesto da čekaju u redu.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 

@@ -70,6 +70,8 @@ The defuzzified `spam_score` (0-100%) is then interpreted linguistically: each o
 ## Accessibility
 
 - The interface supports keyboard navigation, including arrow-key movement between the **Why / Inputs / Rules** tabs.
+- A skip link jumps straight to the message field, so keyboard users do not
+  pass the whole header on every visit.
 - The message box has an accessible name, and form errors are announced with `role="alert"`.
 - Focus outlines follow `:focus-visible`; reduced-motion preferences disable animations.
 - Secondary text sizes have an 11px floor, and the light theme uses contrast-checked text colours.
@@ -86,9 +88,12 @@ The defuzzified `spam_score` (0-100%) is then interpreted linguistically: each o
 - `/analiziraj` is rate-limited per client address (120 requests per 60 seconds
   by default). Set `FUZZY_GUARD_GRANICA_ZAHTEVA` and
   `FUZZY_GUARD_PROZOR_ZAHTEVA` to change it.
-- The limiter uses the address reported by the WSGI server (`REMOTE_ADDR`).
-  Behind a reverse proxy, configure the proxy to pass the real client address.
-  Do not trust `X-Forwarded-For` from arbitrary clients.
+- The limiter uses `REMOTE_ADDR` and ignores `X-Forwarded-For` by default. If the
+  app runs behind a reverse proxy, set `FUZZY_GUARD_PROXY_SLOJEVI` to the number
+  of proxy layers, and only then trust the forwarded address. A wrong value
+  either merges all visitors into one address or lets a client spoof its own.
+- Text responses are gzip-compressed when the client accepts it. Static files
+  keep their immutable cache, because the URL changes with each file version.
 
 ## Project Structure
 
@@ -591,6 +596,17 @@ cd ~/fuzzy-guard && git pull
 ```
 
 followed by **Reload** on the Web tab.
+
+`.github/dependabot.yml` opens weekly pull requests for Python packages and for
+GitHub Actions. Review every `scikit-learn` bump with care: the committed
+`podaci/model_nn_*.joblib` files store the training version, so after an upgrade
+the app falls back to the neutral `50` until the models are retrained. Run
+`python -m neuronska_mreza.treniraj --korpus email --recnik svi` and commit the
+new models in the same change.
+
+`GET /healthz` answers `{"status": "ok"}` without touching the lexicons or the
+models. The Docker image uses it as a `HEALTHCHECK`; an uptime monitor can use
+it as well. `GET /robots.txt` and `GET /sitemap.xml` are served for crawlers.
 
 ### Docker (optional)
 

@@ -1,11 +1,13 @@
+import gzip
 import os
 from collections import OrderedDict, deque
 from pathlib import Path
 from threading import Lock
 from time import monotonic
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request, url_for
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from obrada_teksta.analizator import (
     VALIDNI_RECNICI,
@@ -50,6 +52,33 @@ app = Flask(
 )
 app.config["MAX_CONTENT_LENGTH"] = MAKS_DUŽINA_ZAHTEVA
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = KEŠIRANJE_STATIKE_SEKUNDI
+
+# Broj slojeva obrnutog proksija ispred aplikacije. Podrazumevano 0: tada se
+# X-Forwarded-* ignorišu, pa klijent ne može da lažira svoju IP adresu i zaobiđe
+# ograničenje zahteva. Na hostingu iza proksija postaviti na broj slojeva:
+#
+#     FUZZY_GUARD_PROXY_SLOJEVI=1
+#
+# Bez toga bi svi posetioci delili jednu IP adresu, a HSTS se ne bi slao.
+PROXY_SLOJEVI = int(os.environ.get("FUZZY_GUARD_PROXY_SLOJEVI", "0"))
+if PROXY_SLOJEVI > 0:
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app, x_for=PROXY_SLOJEVI, x_proto=PROXY_SLOJEVI
+    )
+
+# Gzip se primenjuje samo na tekstualne odgovore. Ispod ovog praga kompresija
+# troši više bajtova na zaglavlja nego što uštedi.
+MAKS_NEKOMPRESOVANO = 512
+TIPOVI_ZA_KOMPRESIJU = frozenset({
+    "text/html",
+    "text/css",
+    "text/plain",
+    "text/javascript",
+    "application/javascript",
+    "application/json",
+    "application/xml",
+    "image/svg+xml",
+})
 
 # Jednostavan klizni prozor po IP adresi. Dovoljno za javni demo i zaštitu od
 # slučajnog ili namernog spamovanja skupog /analiziraj endpointa. Granice se
@@ -117,8 +146,62 @@ def cache_busting():
     return dict(verzija_fajla=verzija_fajla)
 
 
+def _treba_kompresiju(odgovor) -> bool:
+    if not 200 <= odgovor.status_code < 300:
+        return False
+    if odgovor.headers.get("Content-Encoding"):
+        return False
+    if (odgovor.mimetype or "").lower() not in TIPOVI_ZA_KOMPRESIJU:
+        return False
+    # ``no-transform`` zabranjuje posrednicima da menjaju telo odgovora.
+    return "no-transform" not in odgovor.headers.get("Cache-Control", "")
+
+
+@app.after_request
+def kompresuj_odgovor(odgovor):
+    """Gzip za tekstualne odgovore, uključujući statiku.
+
+    Waitress ne kompresuje sam, a HTML, CSS i JS su najveći prenos na prvom
+    učitavanju. ``Vary`` se postavlja i kada klijent ne šalje ``Accept-Encoding``,
+    da keš ne bi servirao gzip verziju klijentu koji je ne razume.
+    """
+    if not _treba_kompresiju(odgovor):
+        return odgovor
+
+    odgovor.headers["Vary"] = "Accept-Encoding"
+
+    if "gzip" not in request.accept_encodings:
+        return odgovor
+
+    # Statika se šalje u passthrough režimu; telo mora prvo da se pročita.
+    if odgovor.direct_passthrough:
+        odgovor.direct_passthrough = False
+    podaci = odgovor.get_data()
+    if len(podaci) < MAKS_NEKOMPRESOVANO:
+        return odgovor
+
+    kompresovano = gzip.compress(podaci, compresslevel=6)
+    if len(kompresovano) >= len(podaci):
+        return odgovor
+
+    odgovor.set_data(kompresovano)
+    odgovor.headers["Content-Encoding"] = "gzip"
+    # ETag je izračunat za nekompresovano telo, pa više ne važi. Keširanje
+    # statike ionako nosi ``immutable`` i verziju u URL-u.
+    odgovor.headers.pop("ETag", None)
+    return odgovor
+
+
 @app.errorhandler(HTTPException)
 def http_greska(greska):
+    # Pregledač koji je otvorio pogrešan URL treba HTML stranicu. API klijenti
+    # ne šalju ``Accept: text/html``, pa za njih odgovor ostaje JSON.
+    if request.method in ("GET", "HEAD") and (
+        request.accept_mimetypes.best == "text/html"
+    ):
+        return render_template(
+            "greska.html", kod=greska.code
+        ), greska.code
     return jsonify({"greska": greska.description}), greska.code
 
 
@@ -131,6 +214,37 @@ def neocekivana_greska(greska):
 @app.route("/")
 def index():
     return render_template("dashboard.html", maks_znakova=MAKS_ANALIZIRANIH_ZNAKOVA)
+
+
+@app.route("/healthz")
+def healthz():
+    """Brza provera da proces odgovara. Ne dira rečnike ni model."""
+    return jsonify({"status": "ok"})
+
+
+@app.route("/robots.txt")
+def robots():
+    linije = [
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /analiziraj",
+        "Disallow: /primeri-svi",
+        f"Sitemap: {url_for('sitemap', _external=True)}",
+        "",
+    ]
+    return Response("\n".join(linije), mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap():
+    url = url_for("index", _external=True)
+    return Response(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"  <url><loc>{url}</loc><changefreq>monthly</changefreq></url>\n"
+        "</urlset>\n",
+        mimetype="application/xml",
+    )
 
 
 @app.route("/primeri-svi")

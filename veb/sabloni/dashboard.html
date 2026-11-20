@@ -3,12 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuzzy Guard</title>
+    <meta name="description" content="Fuzzy Guard scores an email for spam with a Mamdani fuzzy system and a small neural network. Every result shows the keywords, the inputs and the rules behind it.">
+    <meta name="theme-color" content="#060607" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Fuzzy Guard">
+    <meta property="og:title" content="Fuzzy Guard — interpretable spam scoring">
+    <meta property="og:description" content="A Mamdani fuzzy system and a small neural network score an email. The result shows which keywords, inputs and rules produced the score.">
+    <meta property="og:url" content="{{ request.url_root }}">
+    <meta name="twitter:card" content="summary">
+    <link rel="canonical" href="{{ request.url_root }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+    <title>Fuzzy Guard — interpretable spam scoring</title>
     <link rel="icon" href="{{ url_for('static', filename='ikona.svg') }}" type="image/svg+xml">
     <script src="{{ url_for('static', filename='inicijalizacija.js') }}?v={{ verzija_fajla('inicijalizacija.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='izgled.css') }}?v={{ verzija_fajla('izgled.css') }}">
 </head>
 <body>
+
+<a class="preskoci" href="#naslov-poruke" data-i18n="preskoci">Skip to content</a>
 
 <header class="traka">
     <div class="traka-unutrasnjost">

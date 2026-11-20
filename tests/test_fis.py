@@ -594,6 +594,73 @@ def test_izbor_n_pravila_menja_samo_n_pravila():
     ]
 
 
+def test_gzip_kompresuje_html_i_statiku():
+    import gzip
+
+    from main import app
+    klijent = app.test_client()
+
+    stranica = klijent.get("/", headers={"Accept-Encoding": "gzip"})
+    assert stranica.headers.get("Content-Encoding") == "gzip"
+    assert "Accept-Encoding" in stranica.headers.get("Vary", "")
+    assert b"Fuzzy Guard" in gzip.decompress(stranica.data)
+
+    # CSS se šalje u passthrough režimu; kompresija mora i tu da radi.
+    stil = klijent.get("/static/izgled.css", headers={"Accept-Encoding": "gzip"})
+    assert stil.headers.get("Content-Encoding") == "gzip"
+    assert b"--pozadina" in gzip.decompress(stil.data)
+
+    # Bez zaglavlja nema kompresije, ali Vary ostaje.
+    obican = klijent.get("/")
+    assert "Content-Encoding" not in obican.headers
+    assert "Accept-Encoding" in obican.headers.get("Vary", "")
+
+
+def test_healthz_robots_i_sitemap():
+    from main import app
+    klijent = app.test_client()
+
+    assert klijent.get("/healthz").get_json() == {"status": "ok"}
+
+    robots = klijent.get("/robots.txt")
+    assert robots.status_code == 200
+    assert robots.mimetype == "text/plain"
+    assert "User-agent: *" in robots.get_data(as_text=True)
+    assert "Sitemap:" in robots.get_data(as_text=True)
+
+    sitemap = klijent.get("/sitemap.xml")
+    assert sitemap.status_code == 200
+    assert sitemap.mimetype == "application/xml"
+    assert "<urlset" in sitemap.get_data(as_text=True)
+
+
+def test_404_vraca_html_pregledacu_a_json_klijentu():
+    from main import app
+    klijent = app.test_client()
+
+    pregledac = klijent.get("/nema-ove-stranice", headers={"Accept": "text/html"})
+    assert pregledac.status_code == 404
+    assert pregledac.mimetype == "text/html"
+    assert "not found" in pregledac.get_data(as_text=True).lower()
+
+    # API klijent ne šalje Accept: text/html, pa ostaje JSON.
+    api = klijent.get("/nema-ove-stranice")
+    assert api.status_code == 404
+    assert api.mimetype == "application/json"
+    assert "greska" in api.get_json()
+
+
+def test_dashboard_ima_preskoci_link_i_meta_opis():
+    from main import app
+    tekst = app.test_client().get("/").get_data(as_text=True)
+
+    assert 'class="preskoci"' in tekst
+    assert 'href="#naslov-poruke"' in tekst
+    assert 'name="description"' in tekst
+    assert 'property="og:title"' in tekst
+    assert 'rel="canonical"' in tekst
+
+
 
 
 
