@@ -4,7 +4,7 @@ from fazi.skupovi import (
     x_broj_linkova,  linkovi_minimalni,    linkovi_umereni,     linkovi_brojni,
     x_caps_procenat, caps_uobicajen,       caps_poviseni,       caps_blago_povisen, caps_agresivan,
     x_interpunkcija, interpunkcija_retka,  interpunkcija_blago, interpunkcija_umerena, interpunkcija_agresivna,
-    x_nn_pouzdanje,  nn_nisko,             nn_srednje,          nn_visoko,
+    x_nn_pouzdanje,  nn_iskljucuje_spam,    nn_sumnja_na_spam,   nn_potvrdjuje_spam,
     score_legitiman, score_legitiman_energicno, score_blago_sumnjiv,
     score_sumnjiv, score_visoko_sumnjiv, score_spam,
     stepen_pripadnosti,
@@ -42,14 +42,14 @@ def fuzzifikuj(
             "agresivna": stepen_pripadnosti(x_interpunkcija, interpunkcija_agresivna, val_interpunkcija),
         },
         "nn_pouzdanje": {
-            "nisko":   stepen_pripadnosti(x_nn_pouzdanje, nn_nisko,   val_nn),
-            "srednje": stepen_pripadnosti(x_nn_pouzdanje, nn_srednje, val_nn),
-            "visoko":  stepen_pripadnosti(x_nn_pouzdanje, nn_visoko,  val_nn),
+            "iskljucuje_spam":  stepen_pripadnosti(x_nn_pouzdanje, nn_iskljucuje_spam,    val_nn),
+            "sumnja_na_spam":   stepen_pripadnosti(x_nn_pouzdanje, nn_sumnja_na_spam,     val_nn),
+            "potvrdjuje_spam":  stepen_pripadnosti(x_nn_pouzdanje, nn_potvrdjuje_spam,    val_nn),
         },
     }
 
 
-def sastavi_pravila(mu: dict) -> list:
+def sastavi_pravila(mu: dict, nn_pravila=("n01", "n02")) -> list:
     """Vraca listu pravila kao (naziv, jacina, izlazni skup, kategorija).
 
     Pravila su numerisana u jednom neprekinutom nizu p01, p02, ... p17.
@@ -60,6 +60,10 @@ def sastavi_pravila(mu: dict) -> list:
     izdvojio u ablaciji. Nijedno ``n`` pravilo ne vodi u SPAM: mreza je
     potvrda ili ublažavanje, nikad jedini dokaz.
 
+    ``nn_pravila`` bira koja ``n`` pravila ulaze u bazu. Podrazumevano su oba.
+    Evaluacija ovo koristi da izabere skup na internoj validaciji; runtime
+    uvek poziva funkciju bez argumenta i zato se ponasa kao ranije.
+
     Jacina je fazi AND (min) / OR (max) nad stepenima pripadnosti.
     """
     kljucne_reci  = mu["kljucne_reci"]
@@ -68,7 +72,7 @@ def sastavi_pravila(mu: dict) -> list:
     interpunkcija = mu["interpunkcija"]
     nn_pouzdanje  = mu["nn_pouzdanje"]
 
-    return [
+    pravila = [
         # --- LEGITIMNO ---------------------------------------------------
         # p01 — zanemarljive reci, minimalni linkovi, uobicajena slova, retka interpunkcija
         ("p01", min(kljucne_reci["zanemarljive"], broj_linkova["minimalni"],
@@ -172,25 +176,34 @@ def sastavi_pravila(mu: dict) -> list:
                         caps_procenat["agresivan"])),
          score_spam, "SPAM"),
 
-        # --- NEURO-FAZI POTVRDA ------------------------------------------
-        # Mreza nikad nije jedini uslov. Ako je visoko sigurna, moze samo da
-        # podigne sumnju na "visoko sumnjivo" uz dokaz iz teksta. Ako je nisko
-        # sigurna, moze da ublazi "samo mnogo linkova" obrazac, ali linkovi i
-        # dalje moraju biti brojni. Nijedno n pravilo ne vodi u SPAM.
-        # n01 — mreza visoko + (zastupljene ili dominantne) reci
-        ("n01", min(nn_pouzdanje["visoko"],
+    ]
+
+    # --- NEURO-FAZI POTVRDA ------------------------------------------
+    # Mreza nikad nije jedini uslov. Ako je visoko sigurna, moze samo da
+    # podigne sumnju na "visoko sumnjivo" uz dokaz iz teksta. Ako je nisko
+    # sigurna, moze da ublazi "samo mnogo linkova" obrazac, ali linkovi i
+    # dalje moraju biti brojni. Nijedno n pravilo ne vodi u SPAM.
+    neuro_fazi_pravila = [
+        # n01 — mreza potvrdjuje spam + (zastupljene ili dominantne) reci
+        ("n01", min(nn_pouzdanje["potvrdjuje_spam"],
                     max(kljucne_reci["zastupljene"], kljucne_reci["dominantne"])),
          score_visoko_sumnjiv, "SUMNJIVO"),
 
-        # n02 — mreza nisko + brojni linkovi: mreza kaze da obrazac nije spam,
-        # pa linkovi sami ne smeju da drze ocenu u spam opsegu.
-        ("n02", min(nn_pouzdanje["nisko"], broj_linkova["brojni"]),
+        # n02 — mreza iskljucuje spam + brojni linkovi: mreza kaze da obrazac
+        # nije spam, pa linkovi sami ne smeju da drze ocenu u spam opsegu.
+        ("n02", min(nn_pouzdanje["iskljucuje_spam"], broj_linkova["brojni"]),
          score_blago_sumnjiv, "SUMNJIVO"),
     ]
 
+    izabrana = frozenset(nn_pravila)
+    pravila.extend(
+        pravilo for pravilo in neuro_fazi_pravila if pravilo[0] in izabrana
+    )
+    return pravila
 
-def kontroler_spam_score(mu: dict):
-    pravila = sastavi_pravila(mu)
+
+def kontroler_spam_score(mu: dict, nn_pravila=("n01", "n02")):
+    pravila = sastavi_pravila(mu, nn_pravila)
 
     aktivacije = [np.fmin(jacina, izlazni_skup) for _, jacina, izlazni_skup, _ in pravila]
     agregirani_skup = np.fmax.reduce(aktivacije)
@@ -281,11 +294,11 @@ OPISI_PRAVILA = {
         "en": "(present or dominant) keywords + (moderate or numerous) links + (elevated, mild or aggressive) caps",
     },
     "n01": {
-        "sr": "mreža visoko + (zastupljene ili dominantne) reči",
-        "en": "network high + (present or dominant) keywords",
+        "sr": "neuronska mreža potvrđuje spam + (zastupljene ili dominantne) reči",
+        "en": "neural network confirms spam + (present or dominant) keywords",
     },
     "n02": {
-        "sr": "mreža nisko + brojni linkovi",
-        "en": "network low + numerous links",
+        "sr": "neuronska mreža isključuje spam + brojni linkovi",
+        "en": "neural network rules out spam + numerous links",
     },
 }

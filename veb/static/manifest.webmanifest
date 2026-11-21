@@ -1,0 +1,17 @@
+{
+  "name": "Fuzzy Guard",
+  "short_name": "Fuzzy Guard",
+  "description": "Interpretable spam scoring with a Mamdani fuzzy system and a small neural network.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060607",
+  "theme_color": "#060607",
+  "icons": [
+    {
+      "src": "/static/ikona.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

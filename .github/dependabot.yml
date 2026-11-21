@@ -1,0 +1,17 @@
+version: 2
+
+updates:
+  # Python dependencies. A scikit-learn bump invalidates the committed
+  # podaci/model_nn_*.joblib files: the models store the training version and
+  # the app falls back to the neutral 50 until they are retrained.
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

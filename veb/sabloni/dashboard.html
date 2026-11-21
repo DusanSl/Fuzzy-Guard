@@ -3,12 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuzzy Guard</title>
+    <meta name="description" content="Fuzzy Guard scores an email for spam with a Mamdani fuzzy system and a small neural network. Every result shows the keywords, the inputs and the rules behind it.">
+    <meta name="theme-color" content="#060607" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Fuzzy Guard">
+    <meta property="og:title" content="Fuzzy Guard — interpretable spam scoring">
+    <meta property="og:description" content="A Mamdani fuzzy system and a small neural network score an email. The result shows which keywords, inputs and rules produced the score.">
+    <meta property="og:url" content="{{ request.url_root }}">
+    <meta name="twitter:card" content="summary">
+    <link rel="canonical" href="{{ request.url_root }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+    <title>Fuzzy Guard — interpretable spam scoring</title>
     <link rel="icon" href="{{ url_for('static', filename='ikona.svg') }}" type="image/svg+xml">
     <script src="{{ url_for('static', filename='inicijalizacija.js') }}?v={{ verzija_fajla('inicijalizacija.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='izgled.css') }}?v={{ verzija_fajla('izgled.css') }}">
 </head>
 <body>
+
+<a class="preskoci" href="#naslov-poruke" data-i18n="preskoci">Skip to content</a>
 
 <header class="traka">
     <div class="traka-unutrasnjost">
@@ -24,7 +37,7 @@
 
         <div class="traka-alati">
             <nav class="traka-nav" aria-label="Primary" data-i18n-aria="navPrimarna">
-                <button class="nav-dugme" aria-current="page" data-i18n="navProvera">Check</button>
+                <a class="nav-dugme" href="#naslov-poruke" aria-current="page" data-i18n="navProvera">Check</a>
                 <button class="nav-dugme" data-otvori-metod data-i18n="navMetod">Method</button>
             </nav>
             <button class="jezik-dugme" id="jezik-dugme" aria-label="Switch language">SR</button>
@@ -67,11 +80,12 @@ A traceable score.</h1>
 
             <div class="pisac-telo">
                 <textarea class="pisac-unos" id="tekst" spellcheck="false"
+                          data-maks-znakova="{{ maks_znakova }}"
                           aria-labelledby="naslov-poruke"
                           data-i18n-placeholder="placeholder"
                           placeholder="Paste the email text here…"></textarea>
                 <div class="pisac-podnozje">
-                    <span class="znakovi"><span id="broj-znakova">0</span> <span data-i18n="znakova">characters</span></span>
+                    <span class="znakovi" id="znakovi"><span id="broj-znakova">0</span></span>
                     <div class="uzorci" role="group" aria-label="Samples" data-i18n-aria="uzorci">
                         <button class="cip-dugme" type="button" data-uzorak="legitiman" data-i18n="uzorakLegitiman">Legitimate</button>
                         <button class="cip-dugme" type="button" data-uzorak="sumnjiv" data-i18n="uzorakSumnjiv">Suspicious</button>
@@ -80,6 +94,8 @@ A traceable score.</h1>
                     </div>
                 </div>
             </div>
+
+            <p class="skraceno" id="skraceno" data-i18n="skraceno" hidden></p>
 
             <button class="glavno-dugme" id="pokreni-dugme" type="button">
                 <span id="pokreni-tekst" data-i18n="pokreni">Run analysis</span>
@@ -104,14 +120,17 @@ A traceable score.</h1>
             </div>
 
             <div class="prazno" id="prazno">
-                <svg class="prazno-spektar" id="spektar-prazno" viewBox="0 0 420 92" aria-hidden="true"></svg>
+                <svg class="prazno-spektar" id="spektar-prazno" viewBox="0 0 420 100" preserveAspectRatio="none" aria-hidden="true"></svg>
                 <p class="prazno-tekst" data-i18n="prazno">Run an analysis to see the score, the active fuzzy sets and the rules that produced it.</p>
             </div>
 
             <div class="rezultat" id="rezultat" hidden>
                 <div class="skor-blok">
                     <span class="skor-broj" id="skor-broj">0</span>
-                    <span class="skor-procenat">%</span>
+                    <span class="skor-jedinice">
+                        <span class="skor-procenat">%</span>
+                        <span class="skor-razlomak">/ 100</span>
+                    </span>
                 </div>
                 <p class="skor-natpis">
                     <span data-i18n="skorNatpis">Spam suspicion · 0–100</span>
@@ -126,7 +145,8 @@ A traceable score.</h1>
                 <p class="skor-opis" id="skor-opis"></p>
 
                 <figure class="spektar" style="margin-left:0;margin-right:0;">
-                    <svg id="spektar" viewBox="0 0 420 92" role="img" aria-label="Fuzzy output spectrum" data-i18n-aria="spektarAria"></svg>
+                    <svg id="spektar" viewBox="0 0 420 100" preserveAspectRatio="none" role="img" aria-label="Fuzzy output spectrum" data-i18n-aria="spektarAria"></svg>
+                    <p class="spektar-dominantni" id="spektar-dominantni"></p>
                     <div class="spektar-skupovi" aria-hidden="true">
                         <div class="spektar-grupa" style="--boja: var(--legit)">
                             <span class="spektar-grupa-naziv" data-i18n="osaLegitiman">Legitimate</span>
@@ -247,7 +267,7 @@ A traceable score.</h1>
         </section>
 
         <div class="dijalog-spektar">
-            <svg id="spektar-metod" viewBox="0 0 420 92" aria-hidden="true"></svg>
+            <svg id="spektar-metod" viewBox="0 0 420 100" preserveAspectRatio="none" aria-hidden="true"></svg>
             <p data-i18n="metodSpektarOpis">Six output sets in three bands: 2 legitimate (0–22), 3 suspicious (22–72), 1 spam (72–100).</p>
         </div>
 

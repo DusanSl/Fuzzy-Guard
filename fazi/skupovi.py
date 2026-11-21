@@ -40,6 +40,9 @@ UNIVERZUMI = {
 # samo za boju u spektru.
 ULAZNI_SKUPOVI_DEFINICIJE = {
     "kljucne_reci": {
+        # Rame drži punu pripadnost do 1: jedan slab pogodak još nije dokaz.
+        # Desno rame pada na nulu tek na 3, gde ``zastupljene`` dostiže punu
+        # pripadnost, pa dva skupa nisu istovremeno na jedinici.
         "kljucne_zanemarljive": {
             "tip": "trapmf", "params": (0, 0, 1, 3),
             "kategorija": "LEGITIMAN", "naziv": "zanemarljive",
@@ -51,12 +54,18 @@ ULAZNI_SKUPOVI_DEFINICIJE = {
             "tip": "trimf", "params": (1, 3, 7),
             "kategorija": "SUMNJIVO", "naziv": "zastupljene",
         },
+        # Evidencija je u ``podudaranje.py`` ograničena na 10 (``min(..., 10.0)``),
+        # pa desno rame mora da stoji na kraju univerzuma: sa ramenom [5, 8, 8, 10]
+        # bi osam i deset pogodaka dalo istu pripadnost.
         "kljucne_dominantne": {
             "tip": "trapmf", "params": (5, 8, 10, 10),
             "kategorija": "SPAM", "naziv": "dominantne",
         },
     },
     "broj_linkova": {
+        # Nula linkova je puno "minimalno"; jedan link već gasi pripadnost.
+        # Kalibrisano na uzorku iz ``primeri.txt``: legitimni primeri imaju 0-1
+        # link, pa dva linka više ne smeju da se proglase minimalnim.
         "linkovi_minimalni": {
             "tip": "trapmf", "params": (0, 0, 0, 1),
             "kategorija": "LEGITIMAN", "naziv": "minimalni",
@@ -68,20 +77,31 @@ ULAZNI_SKUPOVI_DEFINICIJE = {
             "tip": "trapmf", "params": (0, 1, 3, 5),
             "kategorija": "SUMNJIVO", "naziv": "umereni",
         },
+        # Broj linkova se u ``analizator.py`` seče na 10 (``min(len, 10)``), pa
+        # desno rame stoji na kraju univerzuma iz istog razloga kao kod
+        # ``kljucne_dominantne``: osam i deset linkova ne smeju da se stope.
         "linkovi_brojni": {
             "tip": "trapmf", "params": (3, 8, 10, 10),
             "kategorija": "SPAM", "naziv": "brojni",
         },
     },
     "caps_procenat": {
+        # Legitimni uzorci imaju do ~6% velikih slova (veliko slovo na početku
+        # rečenice, skraćenice), pa je 12% sigurna gornja granica "uobičajenog".
+        # Iznad 12 ostaje samo ``caps_agresivan``, koji traži jasan dokaz.
         "caps_uobicajen": {
             "tip": "trapmf", "params": (0, 0, 1, 12),
             "kategorija": "LEGITIMAN", "naziv": "uobičajen",
         },
+        # Prelazni skup između uobičajenog (12) i agresivnog (45). Temе 16 je
+        # blizu izmerenog proseka spam primera, a levo rame na 7 se preklapa sa
+        # ``caps_uobicajen`` da između 12 i 16 ne postoji mrtav pojas.
         "caps_poviseni": {
             "tip": "trimf", "params": (7, 16, 32),
             "kategorija": "SUMNJIVO", "naziv": "povišeni",
         },
+        # Široki most preko opsega 22-44%. Bez njega bi skok sa 32 na 45 ostao
+        # nepokriven i podizanje caps-a bi moglo da snizi ocenu (regresija 6).
         "caps_blago_povisen": {
             "tip": "trimf", "params": (10, 25, 65),
             "kategorija": "SUMNJIVO", "naziv": "blago povišen",
@@ -94,14 +114,21 @@ ULAZNI_SKUPOVI_DEFINICIJE = {
         },
     },
     "interpunkcija": {
+        # Običan tekst retko prelazi 2% znakova "!" i "?"; pet procenata je
+        # prva granica na kojoj se priča može nazvati naglašenom.
         "interpunkcija_retka": {
             "tip": "trapmf", "params": (0, 0, 2, 5),
             "kategorija": "LEGITIMAN", "naziv": "retka",
         },
+        # Prelazni skup: temе 5 je polazna tačka merenja, a 10 spaja sa
+        # ``interpunkcija_umerena`` (koja počinje na 6) bez praznog pojasa.
         "interpunkcija_blago": {
             "tip": "trimf", "params": (2, 5, 10),
             "kategorija": "SUMNJIVO", "naziv": "blaga",
         },
+        # Umerena interpunkcija je prelaz ka agresivnoj. Temе 12 je blizu gornje
+        # izmerene granice na uzorku (~14%), a desno rame ide do 25 da skup ne
+        # padne na nulu pre nego što ``interpunkcija_agresivna`` preuzme na 14.
         "interpunkcija_umerena": {
             "tip": "trimf", "params": (6, 12, 25),
             "kategorija": "SUMNJIVO", "naziv": "umerena",
@@ -115,20 +142,25 @@ ULAZNI_SKUPOVI_DEFINICIJE = {
     },
     # Peti ulaz je izlaz neuronske mreže, ne merenje iz teksta. Mreža daje
     # verovatnoću spama 0–100 za iste četiri karakteristike. Skupovi su namerno
-    # široki: samo vrlo sigurna mreža ulazi u "visoko", pa mreža ostaje
+    # široki: samo vrlo sigurna mreža ulazi u "potvrđuje spam", pa mreža ostaje
     # potvrda, a ne glavni izvor odluke.
     "nn_pouzdanje": {
-        "nn_nisko": {
+        # Ispod 30 mreza je sigurna da nije spam. Na neutralnom 50 pripadnost
+        # pada na nulu, pa neutralan ulaz ne moze da aktivira nijedno n pravilo.
+        "nn_iskljucuje_spam": {
             "tip": "trapmf", "params": (0, 0, 30, 50),
-            "kategorija": "LEGITIMAN", "naziv": "nisko",
+            "kategorija": "LEGITIMAN", "naziv": "isključuje spam",
         },
-        "nn_srednje": {
+        # Temе je neutralno 50: tu mreza ne kaze nista ni u jednu stranu.
+        "nn_sumnja_na_spam": {
             "tip": "trimf", "params": (30, 50, 70),
-            "kategorija": "SUMNJIVO", "naziv": "srednje",
+            "kategorija": "SUMNJIVO", "naziv": "sumnja na spam",
         },
-        "nn_visoko": {
+        # Potvrda pocinje tek na 55, a puna je od 75. Time samo vrlo sigurna
+        # mreza ulazi u "potvrdjuje spam" i ne moze da zameni dokaz iz teksta.
+        "nn_potvrdjuje_spam": {
             "tip": "trapmf", "params": (55, 75, 100, 100),
-            "kategorija": "SPAM", "naziv": "visoko",
+            "kategorija": "SPAM", "naziv": "potvrđuje spam",
         },
     },
 }
@@ -139,26 +171,32 @@ ULAZNI_SKUPOVI_DEFINICIJE = {
 # savršeno simetričnog trougla težište ne zavisi od jačine aktivacije, pa bi
 # svako pravilo koje se aktivira dalo isti skor bez obzira na stepen.
 IZLAZNI_SKUPOVI_DEFINICIJE = {
+    # Puno legitiman do 8; prelaz traje do 20, gde ``energicno`` već radi.
     "legitiman": {
         "tip": "trapmf", "params": (0, 0, 8, 20),
         "kategorija": "LEGITIMAN", "naziv": "legitiman",
     },
+    # Vrh na 13: ispod 10 nije "energično", a na 22 predaje ``blago_sumnjiv``.
     "energicno": {
         "tip": "trimf", "params": (10, 13, 22),
         "kategorija": "LEGITIMAN", "naziv": "legitiman energično",
     },
+    # Počinje tačno gde ``energicno`` staje (22), vrh na 30.
     "blago_sumnjiv": {
         "tip": "trimf", "params": (22, 30, 42),
         "kategorija": "SUMNJIVO", "naziv": "blago sumnjiv",
     },
+    # Vrh na 44; preklapa se sa susedima da nijedna ocena ne ostane bez skupa.
     "sumnjiv": {
         "tip": "trimf", "params": (38, 44, 58),
         "kategorija": "SUMNJIVO", "naziv": "sumnjiv",
     },
+    # Vrh na 60; desno rame (74) spaja se sa ``spam`` (počinje na 72).
     "visoko_sumnjiv": {
         "tip": "trimf", "params": (54, 60, 74),
         "kategorija": "SUMNJIVO", "naziv": "visoko sumnjiv",
     },
+    # Počinje na 72, puno od 88; desno rame stoji na kraju univerzuma (100).
     "spam": {
         "tip": "trapmf", "params": (72, 88, 100, 100),
         "kategorija": "SPAM", "naziv": "spam",
@@ -184,9 +222,9 @@ interpunkcija_blago     = fuzz.trimf (x_interpunkcija, [2, 5, 10])
 interpunkcija_umerena   = fuzz.trimf (x_interpunkcija, [6, 12, 25])
 interpunkcija_agresivna = fuzz.trapmf(x_interpunkcija, [14, 40, 100, 100])
 
-nn_nisko   = fuzz.trapmf(x_nn_pouzdanje, [0, 0, 30, 50])
-nn_srednje = fuzz.trimf (x_nn_pouzdanje, [30, 50, 70])
-nn_visoko  = fuzz.trapmf(x_nn_pouzdanje, [55, 75, 100, 100])
+nn_iskljucuje_spam = fuzz.trapmf(x_nn_pouzdanje, [0, 0, 30, 50])
+nn_sumnja_na_spam  = fuzz.trimf (x_nn_pouzdanje, [30, 50, 70])
+nn_potvrdjuje_spam = fuzz.trapmf(x_nn_pouzdanje, [55, 75, 100, 100])
 
 
 score_legitiman           = fuzz.trapmf(x_spam_score, [0, 0, 8, 20])

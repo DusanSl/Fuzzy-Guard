@@ -13,22 +13,36 @@ from playwright.sync_api import sync_playwright
 
 URL = os.environ.get("FUZZY_GUARD_URL", "http://127.0.0.1:5000")
 
+# Eksplicitni rokovi da zaglavljena strana padne za nekoliko sekundi, a ne da
+# CI visi do podrazumevanog Playwright roka.
+ROK_KORAKA_MS = 15_000
+ROK_UCITAVANJA_MS = 60_000
+
 
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
-        page.goto(URL, wait_until="networkidle")
+        page.set_default_timeout(ROK_KORAKA_MS)
+        page.set_default_navigation_timeout(ROK_UCITAVANJA_MS)
 
-        assert page.get_by_role("textbox", name="Message").count() == 1
+        # "domcontentloaded" je dovoljno: sve što test čeka posle ovoga ima
+        # sopstveni uslov i rok, a "networkidle" ume da visi na sporoj mreži.
+        page.goto(URL, wait_until="domcontentloaded")
+
+        polje = page.get_by_role("textbox", name="Message")
+        polje.wait_for()
+        assert polje.count() == 1
 
         page.click('[data-uzorak="prevara"]')
         page.click('#pokreni-dugme')
         page.wait_for_function(
             "() => document.getElementById('status') && !document.getElementById('status').hidden"
         )
-        page.wait_for_timeout(800)
 
+        # Status se prikazuje pre spektra, pa čekamo prvu iscrtanu putanju umesto
+        # fiksnog sleep-a.
+        page.locator("#spektar path").first.wait_for()
         kategorija = page.inner_text("#status-tekst").upper()
         skor = page.inner_text("#skor-broj")
         assert "SPAM" in kategorija or "PREVARA" in kategorija, (kategorija, skor)

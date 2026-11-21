@@ -70,6 +70,8 @@ The defuzzified `spam_score` (0-100%) is then interpreted linguistically: each o
 ## Accessibility
 
 - The interface supports keyboard navigation, including arrow-key movement between the **Why / Inputs / Rules** tabs.
+- A skip link jumps straight to the message field, so keyboard users do not
+  pass the whole header on every visit.
 - The message box has an accessible name, and form errors are announced with `role="alert"`.
 - Focus outlines follow `:focus-visible`; reduced-motion preferences disable animations.
 - Secondary text sizes have an 11px floor, and the light theme uses contrast-checked text colours.
@@ -86,9 +88,12 @@ The defuzzified `spam_score` (0-100%) is then interpreted linguistically: each o
 - `/analiziraj` is rate-limited per client address (120 requests per 60 seconds
   by default). Set `FUZZY_GUARD_GRANICA_ZAHTEVA` and
   `FUZZY_GUARD_PROZOR_ZAHTEVA` to change it.
-- The limiter uses the address reported by the WSGI server (`REMOTE_ADDR`).
-  Behind a reverse proxy, configure the proxy to pass the real client address.
-  Do not trust `X-Forwarded-For` from arbitrary clients.
+- The limiter uses `REMOTE_ADDR` and ignores `X-Forwarded-For` by default. If the
+  app runs behind a reverse proxy, set `FUZZY_GUARD_PROXY_SLOJEVI` to the number
+  of proxy layers, and only then trust the forwarded address. A wrong value
+  either merges all visitors into one address or lets a client spoof its own.
+- Text responses are gzip-compressed when the client accepts it. Static files
+  keep their immutable cache, because the URL changes with each file version.
 
 ## Project Structure
 
@@ -170,9 +175,9 @@ The boundaries for membership functions are configured in `fazi/skupovi.py`:
   - `agresivna` (Aggressive): `trapmf [14, 40, 100, 100]`
 
 * **NN confidence** `[0-100]`
-  - `nn_nisko` (Low): `trapmf [0, 0, 30, 50]`
-  - `nn_srednje` (Medium): `trimf [30, 50, 70]`
-  - `nn_visoko` (High): `trapmf [55, 75, 100, 100]`
+  - `nn_iskljucuje_spam` (Rules out spam): `trapmf [0, 0, 30, 50]`
+  - `nn_sumnja_na_spam` (Suspects spam): `trimf [30, 50, 70]`
+  - `nn_potvrdjuje_spam` (Confirms spam): `trapmf [55, 75, 100, 100]`
 
 * **Spam Score (Output)** `[0-100]`
   - `score_legitiman` (Legitimate): `trapmf [0, 0, 8, 20]`
@@ -223,15 +228,18 @@ The rules mapping fuzzy inputs to decisions are set up in `fazi/pravila.py`:
 | **p15** | `zastupljene` (present) AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p16** | `umereni` (moderate) links AND (`agresivan` (aggressive) caps OR `agresivna` (aggressive) punctuation) | **SPAM** |
 | **p17** | (`zastupljene` OR `dominantne`) keywords AND (`umereni` OR `brojni`) links AND (`poviseni` OR `blago_povisen` OR `agresivan`) caps | **SPAM** |
-| **n01** | `nn_visoko` (NN confident) AND (`zastupljene` OR `dominantne`) keywords | **HIGH SUSPICION** |
-| **n02** | `nn_nisko` (NN not confident) AND `brojni` (numerous) links | **MILDLY SUSPICIOUS** |
+| **n01** | `nn_potvrdjuje_spam` (NN confirms spam) AND (`zastupljene` OR `dominantne`) keywords | **HIGH SUSPICION** |
+| **n02** | `nn_iskljucuje_spam` (NN rules out spam) AND `brojni` (numerous) links | **MILDLY SUSPICIOUS** |
 
 Rules are numbered in one continuous run `p01 → p17` for the text-only base.
 The `n` prefix marks the two neuro-fuzzy rules: `n01` lets a confident network
 raise suspicion when visible keywords agree, and `n02` lets an unconfident
 network soften a links-only pattern. **No `n` rule outputs SPAM**, so the network
 can never decide SPAM on its own. The rule base therefore has 21 rules: 4
-legitimate, 13 suspicious and 4 spam. A letter suffix is used only for a close
+legitimate, 13 suspicious and 4 spam. An ablation on the inner validation split
+prefers `n02` alone and rejects `n01`; both rules are kept on purpose, and the
+reason with its measured cost is in [Validation and Limitations](#validation-and-limitations).
+A letter suffix is used only for a close
 variant of the rule directly before it (`p03`/`p03a`, `p06`/`p06a`). `p03a` and
 `p06a` close coverage holes: without them there were input combinations where
 **no rule fired at all** and the score fell back to a constant. A standalone
@@ -308,7 +316,7 @@ Analyzes an email's body text and returns the computed fuzzy attributes and clas
     ],
     "ulazi": {             // values + membership degrees
       "kljucne_reci": { "vrednost": 7.0, "pripadnosti": { "dominantne": 0.667 } },
-      "nn_pouzdanje": { "vrednost": 52.3, "pripadnosti": { "nn_srednje": 1.0 } }
+      "nn_pouzdanje": { "vrednost": 52.3, "pripadnosti": { "nn_sumnja_na_spam": 1.0 } }
     }
   }
 }
@@ -363,7 +371,7 @@ labelled emails → TF-IDF (1-2 grams) → single-neuron classifier
 
 role 2 — runtime signal
 four features → MLP (16, 8) → spam probability → nn_pouzdanje
-              → nn_nisko / nn_srednje / nn_visoko → rules n01, n02
+              → nn_iskljucuje_spam / nn_sumnja_na_spam / nn_potvrdjuje_spam → rules n01, n02
               → Mamdani + centroid (unchanged)
 ```
 
@@ -396,6 +404,12 @@ python -m neuronska_mreza.treniraj --korpus email --recnik svi
 The last command compares three models per lexicon and writes the runtime
 `podaci/model_nn_*.joblib` artifacts. Re-run it whenever a lexicon changes;
 otherwise the lexicon-hash guard makes the runtime use the neutral fallback.
+
+The command also prints the `n`-rule ablation and the score-level metrics
+(AUC, PR-AUC). It uses two splits that never overlap: 25% of the rows form the
+test set (`random_state=42`) and are scored once, and 20% of the remaining
+training rows form the inner validation split (`random_state=7`) used only for
+the ablation. Every number in the tables below comes from that command.
 
 ### The two learned lexicons
 
@@ -514,10 +528,22 @@ Dataset sources:
 - The membership-function boundaries were calibrated on a small set of sample
   emails (`primeri.txt`). All reported model metrics come from held-out test
   data, never from the tuning set.
-- The `n01`/`n02` rules and their output sets were selected on an **inner
-  validation split of the training data** (20%, `random_state=7`). The 750-email
-  test set was used only for the final report, so the rule choice is not fitted
-  to the test labels.
+- The `n` rules were ablated on an **inner validation split of the training data**
+  (20% of the training rows, `random_state=7`). The test set was used only for
+  the final report. On that split the ablation prefers `n02` alone: AUC 0.9302,
+  against 0.9223 for the pair, 0.9103 for `n01` alone and 0.9218 for the pure
+  fuzzy system. **Both rules are kept on purpose.** `n01` never changes the SPAM
+  decision, because its output set is `visoko_sumnjiv`; it only raises the score
+  when the network and the keywords agree. Its cost is 0.008 AUC on the inner
+  split, and that is stated here instead of hidden. The reason to keep it is
+  explainability: when two independent signals agree, the interface must show
+  *high suspicion*, not only *suspicious*.
+- The comparison uses two different decision rules on purpose. The MLP predicts
+  spam at `predict_proba >= 0.50`. The fuzzy system predicts spam when the
+  defuzzified score falls in the `spam` output set, because its threshold comes
+  from the membership functions and is not a chosen number. Accuracy, precision,
+  recall and F1 compare those two decisions. AUC and PR-AUC compare the two
+  continuous scores (`spam_score` and the MLP probability).
 - `primeri.txt` carries `From:`, `Subject:` and `Category:` metadata. Categories
   were auto-assigned by the filter and then **manually corrected for obvious
   misclassifications**; they are not a benchmark.
@@ -533,7 +559,7 @@ Dataset sources:
 - The manual dictionary was removed because generic words ("account", "update",
   "confirm") caused false positives. The old list remains only as the `legacy`
   evaluation baseline.
-- Bodies are capped at 50,000 characters and requests at 256 KB. The response
+- Bodies are capped at 10,000 characters and requests at 256 KB. The response
   sets `skraceno: true` when truncation happened.
 
 ---
@@ -570,6 +596,17 @@ cd ~/fuzzy-guard && git pull
 ```
 
 followed by **Reload** on the Web tab.
+
+`.github/dependabot.yml` opens weekly pull requests for Python packages and for
+GitHub Actions. Review every `scikit-learn` bump with care: the committed
+`podaci/model_nn_*.joblib` files store the training version, so after an upgrade
+the app falls back to the neutral `50` until the models are retrained. Run
+`python -m neuronska_mreza.treniraj --korpus email --recnik svi` and commit the
+new models in the same change.
+
+`GET /healthz` answers `{"status": "ok"}` without touching the lexicons or the
+models. The Docker image uses it as a `HEALTHCHECK`; an uptime monitor can use
+it as well. `GET /robots.txt` and `GET /sitemap.xml` are served for crawlers.
 
 ### Docker (optional)
 
